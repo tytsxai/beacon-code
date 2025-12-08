@@ -10,6 +10,7 @@
 - [常见问题](faq.md)
 
 ## 使用 Code
+- [命令速查表](command-reference.md) ⭐
 - [执行命令](exec.md)
 - [执行策略](execpolicy.md)
 - [斜杠菜单](slash-commands.md)
