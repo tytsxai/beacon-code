@@ -63,7 +63,10 @@ pub async fn run_code_tool_session(
                     annotations: None,
                 })],
                 is_error: Some(true),
-                structured_content: None,
+                structured_content: Some(json!({
+                    "status": "error",
+                    "error": e.to_string(),
+                })),
             };
             outgoing.send_response(id.clone(), result).await;
             return;
@@ -111,6 +114,19 @@ pub async fn run_code_tool_session(
         tracing::error!("Failed to submit initial prompt: {e}");
         // unregister the id so we don't keep it in the map
         running_requests_id_to_code_uuid.lock().await.remove(&id);
+        let result = CallToolResult {
+            content: vec![ContentBlock::TextContent(TextContent {
+                r#type: "text".to_string(),
+                text: format!("Failed to submit initial prompt: {e}"),
+                annotations: None,
+            })],
+            is_error: Some(true),
+            structured_content: Some(json!({
+                "status": "error",
+                "error": e.to_string(),
+            })),
+        };
+        outgoing.send_response(id.clone(), result).await;
         return;
     }
 
@@ -118,6 +134,7 @@ pub async fn run_code_tool_session(
         conversation,
         outgoing,
         id,
+        session_uuid,
         running_requests_id_to_code_uuid,
     )
     .await;
@@ -147,6 +164,20 @@ pub async fn run_code_tool_session_reply(
             .lock()
             .await
             .remove(&request_id);
+        let result = CallToolResult {
+            content: vec![ContentBlock::TextContent(TextContent {
+                r#type: "text".to_string(),
+                text: format!("Failed to submit user input: {e}"),
+                annotations: None,
+            })],
+            is_error: Some(true),
+            structured_content: Some(json!({
+                "status": "error",
+                "sessionId": session_id,
+                "error": e.to_string(),
+            })),
+        };
+        outgoing.send_response(request_id.clone(), result).await;
         return;
     }
 
@@ -154,6 +185,7 @@ pub async fn run_code_tool_session_reply(
         conversation,
         outgoing,
         request_id,
+        session_id,
         running_requests_id_to_code_uuid,
     )
     .await;
@@ -163,6 +195,7 @@ async fn run_code_tool_session_inner(
     codex: Arc<CodexConversation>,
     outgoing: Arc<OutgoingMessageSender>,
     request_id: RequestId,
+    session_id: Uuid,
     running_requests_id_to_code_uuid: Arc<Mutex<HashMap<RequestId, Uuid>>>,
 ) {
     let request_id_str = match &request_id {
@@ -204,9 +237,19 @@ async fn run_code_tool_session_inner(
                     }
                     EventMsg::Error(err_event) => {
                         // Return a response to conclude the tool call when the Codex session reports an error (e.g., interruption).
-                        let result = json!({
-                            "error": err_event.message,
-                        });
+                        let result = CallToolResult {
+                            content: vec![ContentBlock::TextContent(TextContent {
+                                r#type: "text".to_string(),
+                                text: err_event.message.clone(),
+                                annotations: None,
+                            })],
+                            is_error: Some(true),
+                            structured_content: Some(json!({
+                                "status": "error",
+                                "sessionId": session_id,
+                                "error": err_event.message,
+                            })),
+                        };
                         outgoing.send_response(request_id.clone(), result).await;
                         break;
                     }
@@ -231,10 +274,7 @@ async fn run_code_tool_session_inner(
                         continue;
                     }
                     EventMsg::TaskComplete(TaskCompleteEvent { last_agent_message }) => {
-                        let text = match last_agent_message {
-                            Some(msg) => msg.clone(),
-                            None => "".to_string(),
-                        };
+                        let text = last_agent_message.clone().unwrap_or_default();
                         let result = CallToolResult {
                             content: vec![ContentBlock::TextContent(TextContent {
                                 r#type: "text".to_string(),
@@ -242,7 +282,11 @@ async fn run_code_tool_session_inner(
                                 annotations: None,
                             })],
                             is_error: None,
-                            structured_content: None,
+                            structured_content: Some(json!({
+                                "status": "complete",
+                                "sessionId": session_id,
+                                "lastMessage": last_agent_message,
+                            })),
                         };
                         outgoing.send_response(request_id.clone(), result).await;
                         // unregister the id so we don't keep it in the map
@@ -310,16 +354,19 @@ async fn run_code_tool_session_inner(
                 }
             }
             Err(e) => {
+                let text = format!("Codex runtime error: {e}");
                 let result = CallToolResult {
                     content: vec![ContentBlock::TextContent(TextContent {
                         r#type: "text".to_string(),
-                        text: format!("Codex runtime error: {e}"),
+                        text: text.clone(),
                         annotations: None,
                     })],
                     is_error: Some(true),
-                    // TODO(mbolin): Could present the error in a more
-                    // structured way.
-                    structured_content: None,
+                    structured_content: Some(json!({
+                        "status": "error",
+                        "sessionId": session_id,
+                        "error": text,
+                    })),
                 };
                 outgoing.send_response(request_id.clone(), result).await;
                 break;

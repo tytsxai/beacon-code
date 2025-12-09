@@ -120,12 +120,21 @@ pub(crate) fn create_tool_for_code_tool_call_param() -> Tool {
             panic!("failed to create Tool from schema: {e}");
         });
 
+    let tool_output_schema = ToolOutputSchema {
+        r#type: "object".to_string(),
+        properties: Some(json!({
+            "sessionId": { "type": "string" },
+            "status": { "type": "string" },
+            "error": { "type": "string" }
+        })),
+        required: None,
+    };
+
     Tool {
         name: "codex".to_string(),
         title: Some("Codex".to_string()),
         input_schema: tool_input_schema,
-        // TODO(mbolin): This should be defined.
-        output_schema: None,
+        output_schema: Some(tool_output_schema),
         description: Some(
             "Run a Codex session. Accepts configuration parameters matching the Codex Config struct.".to_string(),
         ),

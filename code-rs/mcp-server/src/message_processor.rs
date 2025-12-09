@@ -727,7 +727,11 @@ impl MessageProcessor {
                         annotations: None,
                     })],
                     is_error: Some(true),
-                    structured_content: None,
+                    structured_content: Some(json!({
+                        "status": "error",
+                        "sessionId": session_id,
+                        "error": format!("Session not found for session_id: {session_id}"),
+                    })),
                 };
                 outgoing.send_response(request_id, result).await;
                 return;
