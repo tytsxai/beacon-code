@@ -12,6 +12,7 @@ use mcp_types::ElicitRequestParamsRequestedSchema;
 use mcp_types::JSONRPCErrorError;
 use mcp_types::ModelContextProtocolRequest;
 use mcp_types::RequestId;
+use serde::Deserialize;
 use serde::Serialize;
 use serde_json::json;
 use tokio::time::timeout;
@@ -36,6 +37,13 @@ pub struct PatchApprovalElicitRequestParams {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub code_grant_root: Option<PathBuf>,
     pub code_changes: HashMap<PathBuf, FileChange>,
+}
+
+#[allow(dead_code)]
+#[deprecated(note = "Use mcp_types::ElicitResult with decision mapping instead")]
+#[derive(Debug, Deserialize, Serialize)]
+pub struct PatchApprovalResponse {
+    pub decision: ReviewDecision,
 }
 
 #[allow(clippy::too_many_arguments)]

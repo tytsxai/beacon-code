@@ -733,6 +733,7 @@ impl MessageProcessor {
         let outgoing = self.outgoing.clone();
         let running_requests_id_to_code_uuid = self.running_requests_id_to_code_uuid.clone();
         let session_map = self.session_map.clone();
+        let conversation_manager = self.conversation_manager.clone();
 
         tokio::spawn(async move {
             let codex = {
@@ -765,6 +766,8 @@ impl MessageProcessor {
                 outgoing,
                 request_id,
                 prompt,
+                session_map,
+                conversation_manager,
                 running_requests_id_to_code_uuid,
                 session_id,
             )

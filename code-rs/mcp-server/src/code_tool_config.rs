@@ -126,7 +126,9 @@ pub(crate) fn create_tool_for_code_tool_call_param() -> Tool {
             "sessionId": { "type": "string" },
             "status": { "type": "string" },
             "error": { "type": "string" },
-            "lastMessage": { "type": "string" }
+            "lastMessage": { "type": "string" },
+            "tokenUsage": { "type": "object" },
+            "rateLimits": { "type": "object" }
         })),
         required: None,
     };
@@ -429,6 +431,12 @@ mod tests {
               },
               "sessionId": {
                 "type": "string"
+              },
+              "tokenUsage": {
+                "type": "object"
+              },
+              "rateLimits": {
+                "type": "object"
               },
               "status": {
                 "type": "string"

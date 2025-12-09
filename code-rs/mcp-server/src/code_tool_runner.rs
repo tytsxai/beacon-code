@@ -18,6 +18,8 @@ use code_core::protocol::InputItem;
 use code_core::protocol::Op;
 use code_core::protocol::Submission;
 use code_core::protocol::TaskCompleteEvent;
+use code_core::protocol::TokenCountEvent;
+use code_protocol::ConversationId;
 use mcp_types::CallToolResult;
 use mcp_types::ContentBlock;
 use mcp_types::RequestId;
@@ -34,6 +36,16 @@ use crate::patch_approval::handle_patch_approval_request;
 use crate::session_store::{SessionEntry, SessionMap};
 
 pub(crate) const INVALID_PARAMS_ERROR_CODE: i64 = -32602;
+
+async fn cleanup_session(
+    session_id: Uuid,
+    session_map: &SessionMap,
+    conversation_manager: Arc<ConversationManager>,
+) {
+    session_map.lock().await.remove(&session_id);
+    let conversation_id = ConversationId::from(session_id);
+    conversation_manager.remove_conversation(&conversation_id).await;
+}
 
 /// Run a complete Codex session and stream events back to the client.
 ///
@@ -114,7 +126,7 @@ pub async fn run_code_tool_session(
         tracing::error!("Failed to submit initial prompt: {e}");
         // unregister the id so we don't keep it in the map
         running_requests_id_to_code_uuid.lock().await.remove(&id);
-        session_map.lock().await.remove(&session_uuid);
+        cleanup_session(session_uuid, &session_map, conversation_manager.clone()).await;
         let result = CallToolResult {
             content: vec![ContentBlock::TextContent(TextContent {
                 r#type: "text".to_string(),
@@ -137,6 +149,8 @@ pub async fn run_code_tool_session(
         outgoing,
         id,
         session_uuid,
+        session_map,
+        conversation_manager,
         running_requests_id_to_code_uuid,
     )
     .await;
@@ -147,6 +161,8 @@ pub async fn run_code_tool_session_reply(
     outgoing: Arc<OutgoingMessageSender>,
     request_id: RequestId,
     prompt: String,
+    session_map: SessionMap,
+    conversation_manager: Arc<ConversationManager>,
     running_requests_id_to_code_uuid: Arc<Mutex<HashMap<RequestId, Uuid>>>,
     session_id: Uuid,
 ) {
@@ -188,6 +204,8 @@ pub async fn run_code_tool_session_reply(
         outgoing,
         request_id,
         session_id,
+        session_map,
+        conversation_manager,
         running_requests_id_to_code_uuid,
     )
     .await;
@@ -198,12 +216,15 @@ async fn run_code_tool_session_inner(
     outgoing: Arc<OutgoingMessageSender>,
     request_id: RequestId,
     session_id: Uuid,
+    session_map: SessionMap,
+    conversation_manager: Arc<ConversationManager>,
     running_requests_id_to_code_uuid: Arc<Mutex<HashMap<RequestId, Uuid>>>,
 ) {
     let request_id_str = match &request_id {
         RequestId::String(s) => s.clone(),
         RequestId::Integer(n) => n.to_string(),
     };
+    let mut last_token_count: Option<TokenCountEvent> = None;
 
     // Stream events until the task needs to pause for user interaction or
     // completes.
@@ -239,6 +260,19 @@ async fn run_code_tool_session_inner(
                     }
                     EventMsg::Error(err_event) => {
                         // Return a response to conclude the tool call when the Codex session reports an error (e.g., interruption).
+                        let mut structured = json!({
+                            "status": "error",
+                            "sessionId": session_id,
+                            "error": err_event.message,
+                        });
+                        if let Some(count) = last_token_count.clone() {
+                            if let Some(info) = count.info {
+                                structured["tokenUsage"] = json!(info);
+                            }
+                            if let Some(rates) = count.rate_limits {
+                                structured["rateLimits"] = json!(rates);
+                            }
+                        }
                         let result = CallToolResult {
                             content: vec![ContentBlock::TextContent(TextContent {
                                 r#type: "text".to_string(),
@@ -246,17 +280,15 @@ async fn run_code_tool_session_inner(
                                 annotations: None,
                             })],
                             is_error: Some(true),
-                            structured_content: Some(json!({
-                                "status": "error",
-                                "sessionId": session_id,
-                                "error": err_event.message,
-                            })),
+                            structured_content: Some(structured),
                         };
                         outgoing.send_response(request_id.clone(), result).await;
                         running_requests_id_to_code_uuid
                             .lock()
                             .await
                             .remove(&request_id);
+                        cleanup_session(session_id, &session_map, conversation_manager.clone())
+                            .await;
                         break;
                     }
                     EventMsg::ApplyPatchApprovalRequest(ApplyPatchApprovalRequestEvent {
@@ -286,6 +318,14 @@ async fn run_code_tool_session_inner(
                         });
                         if let Some(msg) = last_agent_message.clone() {
                             structured_content["lastMessage"] = json!(msg);
+                        }
+                        if let Some(count) = last_token_count.clone() {
+                            if let Some(info) = count.info {
+                                structured_content["tokenUsage"] = json!(info);
+                            }
+                            if let Some(rates) = count.rate_limits {
+                                structured_content["rateLimits"] = json!(rates);
+                            }
                         }
                         let text = last_agent_message.unwrap_or_default();
                         let result = CallToolResult {
@@ -317,10 +357,12 @@ async fn run_code_tool_session_inner(
                     EventMsg::AgentMessage(AgentMessageEvent { .. }) => {
                         // TODO: think how we want to support this in the MCP
                     }
+                    EventMsg::TokenCount(ev) => {
+                        last_token_count = Some(ev);
+                    }
                     EventMsg::AgentReasoningRawContent(_)
                     | EventMsg::AgentReasoningRawContentDelta(_)
                     | EventMsg::TaskStarted
-                    | EventMsg::TokenCount(_)
                     | EventMsg::AgentReasoning(_)
                     | EventMsg::AgentReasoningSectionBreak(_)
                     | EventMsg::McpToolCallBegin(_)
@@ -364,6 +406,19 @@ async fn run_code_tool_session_inner(
             }
             Err(e) => {
                 let text = format!("Codex runtime error: {e}");
+                let mut structured = json!({
+                    "status": "error",
+                    "sessionId": session_id,
+                    "error": text,
+                });
+                if let Some(count) = last_token_count.clone() {
+                    if let Some(info) = count.info {
+                        structured["tokenUsage"] = json!(info);
+                    }
+                    if let Some(rates) = count.rate_limits {
+                        structured["rateLimits"] = json!(rates);
+                    }
+                }
                 let result = CallToolResult {
                     content: vec![ContentBlock::TextContent(TextContent {
                         r#type: "text".to_string(),
@@ -371,17 +426,14 @@ async fn run_code_tool_session_inner(
                         annotations: None,
                     })],
                     is_error: Some(true),
-                    structured_content: Some(json!({
-                        "status": "error",
-                        "sessionId": session_id,
-                        "error": text,
-                    })),
+                    structured_content: Some(structured),
                 };
                 outgoing.send_response(request_id.clone(), result).await;
                 running_requests_id_to_code_uuid
                     .lock()
                     .await
                     .remove(&request_id);
+                cleanup_session(session_id, &session_map, conversation_manager.clone()).await;
                 break;
             }
         }

@@ -21,6 +21,13 @@ use crate::outgoing_message::OutgoingMessageSender;
 
 const APPROVAL_TIMEOUT: Duration = Duration::from_secs(300);
 
+#[allow(dead_code)]
+#[deprecated(note = "Use mcp_types::ElicitResult with decision mapping instead")]
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ExecApprovalResponse {
+    pub decision: ReviewDecision,
+}
+
 /// Conforms to [`mcp_types::ElicitRequestParams`] so that it can be used as the
 /// `params` field of an [`ElicitRequest`].
 #[derive(Debug, Deserialize, Serialize)]
