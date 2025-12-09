@@ -7,6 +7,7 @@
 - [快速上手](getting-started.md)
 - [安装](install.md) · [Homebrew](HOMEBREW.md)
 - [认证](authentication.md) · [激活器集成](activator-integration.md)
+- [架构与数据流总览](architecture.md)
 - [常见问题](faq.md)
 
 ## 使用 Code
@@ -30,4 +31,3 @@
 
 ## 项目维护
 - [上游同步指南](upstream-sync.md) ⭐
-

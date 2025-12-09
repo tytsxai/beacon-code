@@ -564,21 +564,7 @@ log_user_prompt = false       # 默认 false；除非显式开启，否则脱敏
   }}
   ```
 
-两种导出器都可接受可选 `tls` 块以信任自定义 CA 或启用 mTLS。相对路径基于 `~/.code/`（也读取旧版 `~/.codex/`）：
-
-```toml
-[otel]
-exporter = { otlp-http = {
-  endpoint = "https://otel.example.com/v1/logs",
-  protocol = "binary",
-  headers = { "x-otlp-api-key" = "${OTLP_TOKEN}" },
-  tls = {
-    ca-certificate = "certs/otel-ca.pem",
-    client-certificate = "/etc/code/certs/client.pem",
-    client-private-key = "/etc/code/certs/client-key.pem",
-  }
-}}
-```
+当前实现仅支持设置 endpoint / headers / protocol，不支持在导出器内配置自定义 CA 或 mTLS 证书。若需私有 CA 或双向 TLS，请在外部代理/sidecar 层完成，或提交需求待后续实现。此前示例中的 `tls` 配置暂不可用。
 
 导出器为 `none` 时不会写出数据；否则需自行运行或指向收集器。所有导出在后台批处理，关闭时会刷新。
 
