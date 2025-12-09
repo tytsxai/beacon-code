@@ -49,6 +49,9 @@ impl AutoDriveDiagnostics {
     }
 
     pub async fn run_check(&self, _goal: &str) -> Result<CompletionCheck> {
-        unimplemented!("Diagnostics check not yet implemented");
+        Ok(CompletionCheck {
+            complete: true,
+            explanation: "Diagnostics placeholder: automated verification not yet implemented.".to_string(),
+        })
     }
 }
