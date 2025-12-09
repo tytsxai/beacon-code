@@ -1601,4 +1601,40 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn review_decision_from_value_parses_direct_decision() {
+        let value = json!({ "decision": "approved_for_session" });
+        assert_eq!(
+            ReviewDecision::from_value(&value),
+            Some(ReviewDecision::ApprovedForSession)
+        );
+    }
+
+    #[test]
+    fn review_decision_from_value_reads_elicit_content() {
+        let value = json!({
+            "action": "accept",
+            "content": { "decision": "deny" }
+        });
+        assert_eq!(
+            ReviewDecision::from_value(&value),
+            Some(ReviewDecision::Denied)
+        );
+    }
+
+    #[test]
+    fn review_decision_from_value_falls_back_to_action() {
+        let value = json!({ "action": "cancel" });
+        assert_eq!(
+            ReviewDecision::from_value(&value),
+            Some(ReviewDecision::Denied)
+        );
+    }
+
+    #[test]
+    fn review_decision_from_value_rejects_unknown_shape() {
+        let value = json!({ "unknown": true });
+        assert_eq!(ReviewDecision::from_value(&value), None);
+    }
 }
