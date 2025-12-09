@@ -9,7 +9,8 @@ use std::error::Error;
 
 /// Build an OpenTelemetry provider from the app Config.
 ///
-/// Returns `None` when OTEL export is disabled.
+/// Returns `Ok(None)` when OTEL export is disabled and propagates exporter
+/// initialization errors.
 pub fn build_provider(
     config: &Config,
     service_version: &str,
@@ -44,17 +45,19 @@ pub fn build_provider(
         },
     };
 
-    OtelProvider::from(&OtelSettings {
+    let provider = OtelProvider::from(&OtelSettings {
         service_name: config.responses_originator_header.clone(),
         service_version: service_version.to_string(),
         code_home: config.code_home.clone(),
         environment: config.otel.environment.to_string(),
         exporter,
-    })
+    })?;
+
+    Ok(provider)
 }
 
 /// Filter predicate for exporting only Codex-owned events via OTEL.
-/// Keeps events that originated from code_otel module
+/// Keeps events that originated from code_otel module.
 pub fn code_export_filter(meta: &tracing::Metadata<'_>) -> bool {
     meta.target().starts_with("code_otel")
 }

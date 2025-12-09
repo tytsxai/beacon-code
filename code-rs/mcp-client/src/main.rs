@@ -15,27 +15,47 @@ use std::time::Duration;
 
 use anyhow::Context;
 use anyhow::Result;
+use code_core::config::Config;
+use code_core::config::ConfigOverrides;
 use code_mcp_client::McpClient;
 use mcp_types::ClientCapabilities;
 use mcp_types::Implementation;
 use mcp_types::InitializeRequestParams;
 use mcp_types::ListToolsRequestParams;
 use mcp_types::MCP_SCHEMA_VERSION;
+use tracing_subscriber::filter::filter_fn;
 use tracing_subscriber::EnvFilter;
+use tracing_subscriber::prelude::*;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let default_level = "debug";
-    let _ = tracing_subscriber::fmt()
-        // Fallback to the `default_level` log filter if the environment
-        // variable is not set _or_ contains an invalid value
-        .with_env_filter(
-            EnvFilter::try_from_default_env()
-                .or_else(|_| EnvFilter::try_new(default_level))
-                .unwrap_or_else(|_| EnvFilter::new(default_level)),
-        )
+    // Fallback to `default_level` when RUST_LOG is unset or invalid.
+    let env_filter = EnvFilter::try_from_default_env()
+        .or_else(|_| EnvFilter::try_new(default_level))
+        .unwrap_or_else(|_| EnvFilter::new(default_level));
+    let fmt_layer = tracing_subscriber::fmt::layer()
         .with_writer(std::io::stderr)
-        .try_init();
+        .with_filter(env_filter);
+
+    let config = Config::load_with_cli_overrides(Vec::new(), ConfigOverrides::default())
+        .context("failed to load config for OTEL setup")?;
+
+    let _otel = code_core::otel_init::build_provider(&config, env!("CARGO_PKG_VERSION"))?;
+
+    let _ = match _otel
+        .as_ref()
+        .map(|provider| {
+            provider
+                .layer()
+                .with_filter(filter_fn(code_core::otel_init::code_export_filter))
+        }) {
+        Some(otel_layer) => tracing_subscriber::registry()
+            .with(fmt_layer)
+            .with(otel_layer)
+            .try_init(),
+        None => tracing_subscriber::registry().with(fmt_layer).try_init(),
+    };
 
     // Collect command-line arguments excluding the program name itself.
     let mut args: Vec<OsString> = std::env::args_os().skip(1).collect();

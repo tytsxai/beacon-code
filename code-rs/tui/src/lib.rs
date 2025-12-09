@@ -40,6 +40,7 @@ use std::sync::Once;
 use std::sync::OnceLock;
 use tracing_appender::non_blocking;
 use tracing_appender::rolling;
+use tracing_subscriber::filter::filter_fn;
 use tracing_subscriber::filter::LevelFilter;
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::EnvFilter;
@@ -622,18 +623,33 @@ pub async fn run_main(
         .with_writer(critical_writer)
         .with_filter(LevelFilter::ERROR);
 
-    let _ = tracing_subscriber::registry()
-        .with(env_layer)
-        .with(critical_layer)
-        .try_init();
-
     if cli.oss {
         code_ollama::ensure_oss_ready(&config)
             .await
             .map_err(|e| std::io::Error::other(format!("OSS setup failed: {e}")))?;
     }
 
-    let _otel = code_core::otel_init::build_provider(&config, env!("CARGO_PKG_VERSION"));
+    // Build OTEL provider + tracing bridge (if enabled); keep it alive for process lifetime.
+    let _otel = code_core::otel_init::build_provider(&config, env!("CARGO_PKG_VERSION"))
+        .map_err(|e| std::io::Error::other(e.to_string()))?;
+
+    let _ = match _otel.as_ref() {
+        Some(provider) => {
+            let otel_layer = provider
+                .layer()
+                .with_filter(filter_fn(code_core::otel_init::code_export_filter));
+
+            tracing_subscriber::registry()
+                .with(env_layer)
+                .with(critical_layer)
+                .with(otel_layer)
+                .try_init()
+        }
+        None => tracing_subscriber::registry()
+            .with(env_layer)
+            .with(critical_layer)
+            .try_init(),
+    };
 
     let latest_upgrade_version = if crate::updates::upgrade_ui_enabled() {
         updates::get_upgrade_version(&config)

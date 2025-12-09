@@ -15,6 +15,8 @@ use std::time::Instant;
 use unicode_segmentation::UnicodeSegmentation;
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::info;
+use tracing_subscriber::filter::filter_fn;
+use tracing_subscriber::prelude::*;
 use tracing_subscriber::EnvFilter;
 use code_tui::public_widgets::composer_input::ComposerAction;
 use util::append_error_log;
@@ -158,15 +160,44 @@ pub async fn run_main(cli: Cli, _code_linux_sandbox_exe: Option<PathBuf>) -> any
     }
     // Very minimal logging setup; mirrors other crates' pattern.
     let default_level = "error";
-    let _ = tracing_subscriber::fmt()
-        .with_env_filter(
-            EnvFilter::try_from_default_env()
-                .or_else(|_| EnvFilter::try_new(default_level))
-                .unwrap_or_else(|_| EnvFilter::new(default_level)),
-        )
+
+    // Parse config the same way as other bins: parse overrides then load.
+    let cli_kv_overrides = cli
+        .config_overrides
+        .parse_overrides()
+        .map_err(|e| anyhow::anyhow!("error parsing -c overrides: {e}"))?;
+    let config = code_core::config::Config::load_with_cli_overrides(
+        cli_kv_overrides,
+        code_core::config::ConfigOverrides::default(),
+    )?;
+
+    let env_filter = EnvFilter::try_from_default_env()
+        .or_else(|_| EnvFilter::try_new(default_level))
+        .unwrap_or_else(|_| EnvFilter::new(default_level));
+
+    let fmt_layer = tracing_subscriber::fmt::layer()
         .with_ansi(std::io::stderr().is_terminal())
         .with_writer(std::io::stderr)
-        .try_init();
+        .with_filter(env_filter);
+
+    let _otel = code_core::otel_init::build_provider(&config, env!("CARGO_PKG_VERSION"))
+        .map_err(|e| std::io::Error::other(e.to_string()))?;
+
+    let _ = match _otel.as_ref() {
+        Some(provider) => {
+            let otel_layer = provider
+                .layer()
+                .with_filter(filter_fn(code_core::otel_init::code_export_filter));
+
+            tracing_subscriber::registry()
+                .with(fmt_layer)
+                .with(otel_layer)
+                .try_init()
+        }
+        None => tracing_subscriber::registry()
+            .with(fmt_layer)
+            .try_init(),
+    };
 
     info!("Launching Cloud Tasks list UI");
     set_user_agent_suffix("code_cloud_tasks_tui");

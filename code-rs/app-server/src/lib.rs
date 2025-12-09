@@ -17,7 +17,9 @@ use tokio::sync::mpsc;
 use tracing::debug;
 use tracing::error;
 use tracing::info;
+use tracing_subscriber::filter::filter_fn;
 use tracing_subscriber::EnvFilter;
+use tracing_subscriber::prelude::*;
 
 use crate::message_processor::MessageProcessor;
 use crate::outgoing_message::OutgoingMessage;
@@ -39,13 +41,6 @@ pub async fn run_main(
     code_linux_sandbox_exe: Option<PathBuf>,
     cli_config_overrides: CliConfigOverrides,
 ) -> IoResult<()> {
-    // Install a simple subscriber so `tracing` output is visible.  Users can
-    // control the log level with `RUST_LOG`.
-    tracing_subscriber::fmt()
-        .with_writer(std::io::stderr)
-        .with_env_filter(EnvFilter::from_default_env())
-        .init();
-
     // Set up channels.
     let (incoming_tx, mut incoming_rx) = mpsc::channel::<JSONRPCMessage>(CHANNEL_CAPACITY);
     let (outgoing_tx, mut outgoing_rx) = mpsc::unbounded_channel::<OutgoingMessage>();
@@ -85,6 +80,31 @@ pub async fn run_main(
         .map_err(|e| {
             std::io::Error::new(ErrorKind::InvalidData, format!("error loading config: {e}"))
         })?;
+
+    // Install a simple subscriber so `tracing` output is visible. Users can
+    // control the log level with `RUST_LOG`.
+    let fmt_layer = tracing_subscriber::fmt::layer()
+        .with_writer(std::io::stderr)
+        .with_filter(EnvFilter::from_default_env());
+
+    let _otel = code_core::otel_init::build_provider(&config, env!("CARGO_PKG_VERSION"))
+        .map_err(|e| std::io::Error::other(e.to_string()))?;
+
+    let _ = match _otel.as_ref() {
+        Some(provider) => {
+            let otel_layer = provider
+                .layer()
+                .with_filter(filter_fn(code_core::otel_init::code_export_filter));
+
+            tracing_subscriber::registry()
+                .with(fmt_layer)
+                .with(otel_layer)
+                .try_init()
+        }
+        None => tracing_subscriber::registry()
+            .with(fmt_layer)
+            .try_init(),
+    };
 
     // Task: process incoming messages.
     let processor_handle = tokio::spawn({

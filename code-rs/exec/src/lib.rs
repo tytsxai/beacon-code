@@ -46,7 +46,9 @@ use supports_color::Stream;
 use tracing::debug;
 use tracing::error;
 use tracing::info;
+use tracing_subscriber::filter::filter_fn;
 use tracing_subscriber::EnvFilter;
+use tracing_subscriber::prelude::*;
 
 use anyhow::Context;
 use crate::cli::Command as ExecCommand;
@@ -174,19 +176,13 @@ pub async fn run_main(cli: Cli, code_linux_sandbox_exe: Option<PathBuf>) -> anyh
         ),
     };
 
-    // Build fmt layer (existing logging) to compose with OTEL layer.
+    // Establish default log level for the tracing layers.
     let default_level = "error";
 
     // Build env_filter separately and attach via with_filter.
     let env_filter = EnvFilter::try_from_default_env()
         .or_else(|_| EnvFilter::try_new(default_level))
         .unwrap_or_else(|_| EnvFilter::new(default_level));
-
-    let _ = tracing_subscriber::fmt()
-        .with_env_filter(env_filter)
-        .with_ansi(stderr_with_ansi)
-        .with_writer(|| std::io::stderr())
-        .try_init();
 
     let sandbox_mode = if full_auto {
         Some(SandboxMode::WorkspaceWrite)
@@ -248,6 +244,29 @@ pub async fn run_main(cli: Cli, code_linux_sandbox_exe: Option<PathBuf>) -> anyh
     };
 
     let config = Config::load_with_cli_overrides(cli_kv_overrides, overrides)?;
+
+    // Build tracing/OTEL subscribers now that config is available.
+    let fmt_layer = tracing_subscriber::fmt::layer()
+        .with_ansi(stderr_with_ansi)
+        .with_writer(|| std::io::stderr());
+
+    let _otel = code_core::otel_init::build_provider(&config, env!("CARGO_PKG_VERSION"))
+        .map_err(|e| std::io::Error::other(e.to_string()))?;
+
+    let fmt_layer = fmt_layer.with_filter(env_filter);
+    let _ = match _otel
+        .as_ref()
+        .map(|provider| {
+            provider
+                .layer()
+                .with_filter(filter_fn(code_core::otel_init::code_export_filter))
+        }) {
+        Some(otel_layer) => tracing_subscriber::registry()
+            .with(fmt_layer)
+            .with(otel_layer)
+            .try_init(),
+        None => tracing_subscriber::registry().with(fmt_layer).try_init(),
+    };
     let stop_on_task_complete = auto_drive_goal.is_none();
     let mut event_processor: Box<dyn EventProcessor> = if json_mode {
         Box::new(EventProcessorWithJsonOutput::new(last_message_file.clone()))

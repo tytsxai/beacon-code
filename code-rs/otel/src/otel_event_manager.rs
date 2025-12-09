@@ -116,6 +116,21 @@ impl OtelEventManager {
         manager
     }
 
+    fn sanitize_log_field(&self, text: &str) -> String {
+        const MAX_LOG_CHARS: usize = 800;
+        if !self.metadata.log_user_prompts {
+            return "[REDACTED]".to_string();
+        }
+
+        let mut iter = text.chars();
+        let taken: String = iter.by_ref().take(MAX_LOG_CHARS).collect();
+        if iter.next().is_some() {
+            format!("{taken}...[truncated]")
+        } else {
+            taken
+        }
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub fn conversation_starts(
         &self,
@@ -418,9 +433,10 @@ impl OtelEventManager {
         let duration = start.elapsed();
 
         let (output, success) = match &result {
-            Ok(content) => (content, true),
-            Err(error) => (&error.to_string(), false),
+            Ok(content) => (self.sanitize_log_field(content), true),
+            Err(error) => (self.sanitize_log_field(&error.to_string()), false),
         };
+        let safe_args = self.sanitize_log_field(arguments);
 
         tracing::event!(
             tracing::Level::INFO,
@@ -435,7 +451,7 @@ impl OtelEventManager {
             slug = %self.metadata.slug,
             tool_name = %tool_name,
             call_id = %call_id,
-            arguments = %arguments,
+            arguments = %safe_args,
             duration_ms = %duration.as_millis(),
             success = %success,
             output = %output,
@@ -445,6 +461,8 @@ impl OtelEventManager {
     }
 
     pub fn log_tool_failed(&self, tool_name: &str, error: &str) {
+        let safe_output = self.sanitize_log_field(error);
+
         tracing::event!(
             tracing::Level::INFO,
             event.name = "codex.tool_result",
@@ -459,7 +477,7 @@ impl OtelEventManager {
             tool_name = %tool_name,
             duration_ms = %Duration::ZERO.as_millis(),
             success = %false,
-            output = %error,
+            output = %safe_output,
         );
     }
 
@@ -473,6 +491,8 @@ impl OtelEventManager {
         output: &str,
     ) {
         let success_str = if success { "true" } else { "false" };
+        let safe_args = self.sanitize_log_field(arguments);
+        let safe_output = self.sanitize_log_field(output);
 
         tracing::event!(
             tracing::Level::INFO,
@@ -487,10 +507,10 @@ impl OtelEventManager {
             slug = %self.metadata.slug,
             tool_name = %tool_name,
             call_id = %call_id,
-            arguments = %arguments,
+            arguments = %safe_args,
             duration_ms = %duration.as_millis(),
             success = %success_str,
-            output = %output,
+            output = %safe_output,
         );
     }
 
