@@ -15760,6 +15760,25 @@ fi\n\
                 }
             }
             AutoCoordinatorStatus::Success => {
+                if std::env::var("CODE_DISABLE_AUTO_DRIVE_DIAGNOSTICS")
+                    .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+                    .unwrap_or(false)
+                {
+                    let normalized = summary_text.trim();
+                    let message = if normalized.is_empty() {
+                        "Coordinator success.".to_string()
+                    } else if normalized
+                        .to_ascii_lowercase()
+                        .starts_with("coordinator success:")
+                    {
+                        summary_text
+                    } else {
+                        format!("Coordinator success: {summary_text}")
+                    };
+                    self.auto_stop(Some(message));
+                    return;
+                }
+
                 let normalized = summary_text.trim();
                 let message = if normalized.is_empty() {
                     "Coordinator success.".to_string()
