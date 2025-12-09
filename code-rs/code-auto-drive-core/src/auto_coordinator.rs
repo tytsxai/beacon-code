@@ -1088,6 +1088,16 @@ fn run_auto_loop(
         schema_features.include_goal_field = true;
     }
     let include_agents = schema_features.include_agents;
+    
+    // Read parallel_instances configuration for same-model concurrent execution
+    let parallel_instances = config.auto_drive.parallel_instances.clamp(1, 5);
+    if parallel_instances > 1 {
+        debug!(
+            "[Auto coordinator] Parallel mode enabled: {} instances of model {}",
+            parallel_instances, config.model
+        );
+    }
+    
     let mut pending_conversation = Some(filter_popular_commands(initial_conversation));
     let mut decision_seq: u64 = 0;
     let mut pending_ack_seq: Option<u64> = None;
@@ -1118,7 +1128,7 @@ fn run_auto_loop(
     }
     let mut schema = build_schema(&active_agent_names, schema_features);
     let platform = std::env::consts::OS;
-    debug!("[Auto coordinator] starting: goal={goal_text} platform={platform}");
+    debug!("[Auto coordinator] starting: goal={goal_text} platform={platform} parallel_instances={parallel_instances}");
 
     let mut stopped = false;
     let mut requests_completed: u64 = 0;

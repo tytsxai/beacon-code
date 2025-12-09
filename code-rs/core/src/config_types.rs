@@ -810,6 +810,12 @@ pub struct AutoDriveSettings {
 
     #[serde(default)]
     pub auto_resolve_review_attempts: AutoResolveAttemptLimit,
+
+    /// Number of parallel instances of the same model to use for concurrent
+    /// role execution (coordinator, executor, reviewer). Range: 1-5.
+    /// When > 1, multiple API calls are made in parallel with different role prompts.
+    #[serde(default = "default_parallel_instances")]
+    pub parallel_instances: u8,
 }
 
 impl Default for AutoDriveSettings {
@@ -825,6 +831,7 @@ impl Default for AutoDriveSettings {
             model: default_auto_drive_model(),
             model_reasoning_effort: default_auto_drive_reasoning_effort(),
             auto_resolve_review_attempts: AutoResolveAttemptLimit::default(),
+            parallel_instances: default_parallel_instances(),
         }
     }
 }
@@ -837,6 +844,13 @@ fn default_auto_drive_model() -> String {
 const fn default_auto_drive_reasoning_effort() -> ReasoningEffort {
     ReasoningEffort::High
 }
+
+/// Default to 1 (serial execution) for backward compatibility.
+/// Valid range: 1-5.
+const fn default_parallel_instances() -> u8 {
+    1
+}
+
 
 #[derive(Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]

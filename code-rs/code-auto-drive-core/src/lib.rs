@@ -6,6 +6,8 @@ mod coordinator_router;
 mod coordinator_user_schema;
 mod controller;
 mod retry;
+pub mod parallel_execution;
+
 
 #[cfg(feature = "dev-faults")]
 mod faults;
