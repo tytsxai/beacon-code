@@ -571,16 +571,19 @@ impl MessageProcessor {
                 Ok(tool_cfg) => match tool_cfg.into_config(self.code_linux_sandbox_exe.clone()) {
                     Ok(cfg) => cfg,
                     Err(e) => {
+                        let message =
+                            format!("Failed to load Codex configuration from overrides: {e}");
                         let result = CallToolResult {
                             content: vec![ContentBlock::TextContent(TextContent {
                                 r#type: "text".to_owned(),
-                                text: format!(
-                                    "Failed to load Codex configuration from overrides: {e}"
-                                ),
+                                text: message.clone(),
                                 annotations: None,
                             })],
                             is_error: Some(true),
-                            structured_content: None,
+                            structured_content: Some(json!({
+                                "status": "error",
+                                "error": message,
+                            })),
                         };
                         self.send_response::<mcp_types::CallToolRequest>(id, result)
                             .await;
@@ -588,14 +591,19 @@ impl MessageProcessor {
                     }
                 },
                 Err(e) => {
+                    let message =
+                        format!("Failed to parse configuration for Codex tool: {e}");
                     let result = CallToolResult {
                         content: vec![ContentBlock::TextContent(TextContent {
                             r#type: "text".to_owned(),
-                            text: format!("Failed to parse configuration for Codex tool: {e}"),
+                            text: message.clone(),
                             annotations: None,
                         })],
                         is_error: Some(true),
-                        structured_content: None,
+                        structured_content: Some(json!({
+                            "status": "error",
+                            "error": message,
+                        })),
                     };
                     self.send_response::<mcp_types::CallToolRequest>(id, result)
                         .await;
@@ -603,16 +611,18 @@ impl MessageProcessor {
                 }
             },
             None => {
+                let message = "Missing arguments for codex tool-call; the `prompt` field is required.".to_string();
                 let result = CallToolResult {
                     content: vec![ContentBlock::TextContent(TextContent {
                         r#type: "text".to_string(),
-                        text:
-                            "Missing arguments for codex tool-call; the `prompt` field is required."
-                                .to_string(),
+                        text: message.clone(),
                         annotations: None,
                     })],
                     is_error: Some(true),
-                    structured_content: None,
+                    structured_content: Some(json!({
+                        "status": "error",
+                        "error": message,
+                    })),
                 };
                 self.send_response::<mcp_types::CallToolRequest>(id, result)
                     .await;
@@ -656,14 +666,18 @@ impl MessageProcessor {
                 Ok(params) => params,
                 Err(e) => {
                     tracing::error!("Failed to parse Codex tool call reply parameters: {e}");
+                    let message = format!("Failed to parse codex-reply parameters: {e}");
                     let result = CallToolResult {
                         content: vec![ContentBlock::TextContent(TextContent {
                             r#type: "text".to_owned(),
-                            text: format!("Failed to parse configuration for Codex tool: {e}"),
+                            text: message.clone(),
                             annotations: None,
                         })],
                         is_error: Some(true),
-                        structured_content: None,
+                        structured_content: Some(json!({
+                            "status": "error",
+                            "error": message,
+                        })),
                     };
                     self.send_response::<mcp_types::CallToolRequest>(request_id, result)
                         .await;
@@ -674,14 +688,18 @@ impl MessageProcessor {
                 tracing::error!(
                     "Missing arguments for codex-reply tool-call; the `session_id` and `prompt` fields are required."
                 );
+                let message = "Missing arguments for codex-reply tool-call; the `session_id` and `prompt` fields are required.".to_owned();
                 let result = CallToolResult {
                     content: vec![ContentBlock::TextContent(TextContent {
                         r#type: "text".to_owned(),
-                        text: "Missing arguments for codex-reply tool-call; the `session_id` and `prompt` fields are required.".to_owned(),
+                        text: message.clone(),
                         annotations: None,
                     })],
                     is_error: Some(true),
-                    structured_content: None,
+                    structured_content: Some(json!({
+                        "status": "error",
+                        "error": message,
+                    })),
                 };
                 self.send_response::<mcp_types::CallToolRequest>(request_id, result)
                     .await;
@@ -692,14 +710,19 @@ impl MessageProcessor {
             Ok(id) => id,
             Err(e) => {
                 tracing::error!("Failed to parse session_id: {e}");
+                let message = format!("Failed to parse session_id: {e}");
                 let result = CallToolResult {
                     content: vec![ContentBlock::TextContent(TextContent {
                         r#type: "text".to_owned(),
-                        text: format!("Failed to parse session_id: {e}"),
+                        text: message.clone(),
                         annotations: None,
                     })],
                     is_error: Some(true),
-                    structured_content: None,
+                    structured_content: Some(json!({
+                        "status": "error",
+                        "sessionId": session_id,
+                        "error": message,
+                    })),
                 };
                 self.send_response::<mcp_types::CallToolRequest>(request_id, result)
                     .await;

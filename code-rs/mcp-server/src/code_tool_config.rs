@@ -125,7 +125,8 @@ pub(crate) fn create_tool_for_code_tool_call_param() -> Tool {
         properties: Some(json!({
             "sessionId": { "type": "string" },
             "status": { "type": "string" },
-            "error": { "type": "string" }
+            "error": { "type": "string" },
+            "lastMessage": { "type": "string" }
         })),
         required: None,
     };
@@ -416,7 +417,24 @@ mod tests {
             "required": [
               "prompt"
             ]
-          }
+          },
+          "outputSchema": {
+            "type": "object",
+            "properties": {
+              "error": {
+                "type": "string"
+              },
+              "lastMessage": {
+                "type": "string"
+              },
+              "sessionId": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              }
+            }
+          },
         });
         assert_eq!(expected_tool_json, tool_json);
     }

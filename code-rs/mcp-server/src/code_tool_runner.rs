@@ -114,6 +114,7 @@ pub async fn run_code_tool_session(
         tracing::error!("Failed to submit initial prompt: {e}");
         // unregister the id so we don't keep it in the map
         running_requests_id_to_code_uuid.lock().await.remove(&id);
+        session_map.lock().await.remove(&session_uuid);
         let result = CallToolResult {
             content: vec![ContentBlock::TextContent(TextContent {
                 r#type: "text".to_string(),
@@ -123,6 +124,7 @@ pub async fn run_code_tool_session(
             is_error: Some(true),
             structured_content: Some(json!({
                 "status": "error",
+                "sessionId": session_uuid,
                 "error": e.to_string(),
             })),
         };
@@ -251,6 +253,10 @@ async fn run_code_tool_session_inner(
                             })),
                         };
                         outgoing.send_response(request_id.clone(), result).await;
+                        running_requests_id_to_code_uuid
+                            .lock()
+                            .await
+                            .remove(&request_id);
                         break;
                     }
                     EventMsg::ApplyPatchApprovalRequest(ApplyPatchApprovalRequestEvent {
@@ -274,7 +280,14 @@ async fn run_code_tool_session_inner(
                         continue;
                     }
                     EventMsg::TaskComplete(TaskCompleteEvent { last_agent_message }) => {
-                        let text = last_agent_message.clone().unwrap_or_default();
+                        let mut structured_content = json!({
+                            "status": "complete",
+                            "sessionId": session_id,
+                        });
+                        if let Some(msg) = last_agent_message.clone() {
+                            structured_content["lastMessage"] = json!(msg);
+                        }
+                        let text = last_agent_message.unwrap_or_default();
                         let result = CallToolResult {
                             content: vec![ContentBlock::TextContent(TextContent {
                                 r#type: "text".to_string(),
@@ -282,11 +295,7 @@ async fn run_code_tool_session_inner(
                                 annotations: None,
                             })],
                             is_error: None,
-                            structured_content: Some(json!({
-                                "status": "complete",
-                                "sessionId": session_id,
-                                "lastMessage": last_agent_message,
-                            })),
+                            structured_content: Some(structured_content),
                         };
                         outgoing.send_response(request_id.clone(), result).await;
                         // unregister the id so we don't keep it in the map
@@ -369,6 +378,10 @@ async fn run_code_tool_session_inner(
                     })),
                 };
                 outgoing.send_response(request_id.clone(), result).await;
+                running_requests_id_to_code_uuid
+                    .lock()
+                    .await
+                    .remove(&request_id);
                 break;
             }
         }
