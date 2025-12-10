@@ -325,8 +325,9 @@ mod tests {
         assert_eq!(ParallelRole::roles_for_count(1).len(), 1);
         assert_eq!(ParallelRole::roles_for_count(3).len(), 3);
         assert_eq!(ParallelRole::roles_for_count(5).len(), 5);
-        // Clamped to max 5
-        assert_eq!(ParallelRole::roles_for_count(10).len(), 5);
+        assert_eq!(ParallelRole::roles_for_count(10).len(), 10);
+        // Clamped to max 10
+        assert_eq!(ParallelRole::roles_for_count(15).len(), 10);
     }
 
     #[test]

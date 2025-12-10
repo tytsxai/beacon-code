@@ -92,6 +92,39 @@ flowchart LR
 - `controller` 管理阶段（launch/active/review/pause/backoff/manual）与倒计时，产出 Effect（SubmitPrompt、CancelCoordinator、ResetHistory、SetTaskRunning）。
 - `exec` 路径将决策拼成提示，等待核心执行，再把转录 `UpdateConversation` 回协调器。
 
+#### Auto Drive 增强功能（实验性）
+`code-auto-drive-core` 包含以下增强组件，通过 `EnhancedCoordinator` 集成：
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              Auto Drive Enhanced                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐          │
+│  │  Checkpoint      │  │  Diagnostics     │  │  Budget          │          │
+│  │  Manager         │  │  Engine          │  │  Controller      │          │
+│  └────────┬─────────┘  └────────┬─────────┘  └────────┬─────────┘          │
+│           └─────────────────────┼─────────────────────┘                     │
+│                    EnhancedCoordinator                                      │
+│           ┌─────────────────────┼─────────────────────┐                     │
+│  ┌────────┴─────────┐  ┌────────┴─────────┐  ┌────────┴─────────┐          │
+│  │  Telemetry       │  │  Audit           │  │  Agent           │          │
+│  │  Collector       │  │  Logger          │  │  Scheduler       │          │
+│  └──────────────────┘  └──────────────────┘  └──────────────────┘          │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+- **CheckpointManager** (`checkpoint.rs`)：会话持久化与恢复，支持原子保存、校验和验证、过期清理。
+- **DiagnosticsEngine** (`diagnostics.rs`)：循环检测（连续相同工具调用）、目标偏离检测、token 异常告警。
+- **BudgetController** (`budget.rs`)：token 预算跟踪、轮次/时长限制、80%/100% 阈值告警。
+- **AgentScheduler** (`scheduler.rs`)：并行/阻塞智能体调度、并发限制、结果排序聚合。
+- **AuditLogger** (`audit.rs`)：操作审计日志、路径/网络权限验证、会话摘要生成。
+- **TelemetryCollector** (`telemetry.rs`)：会话/轮次 span 管理、指标收集、错误记录。
+- **CompactionEngine** (`compaction.rs`)：语义感知历史压缩、目标保留、token 节省统计。
+- **InterventionHandler** (`intervention.rs`)：用户干预状态管理、暂停/恢复/跳过/目标修改。
+- **RetryStrategy** (`retry_enhanced.rs`)：错误分类、指数退避、失败计数器管理。
+
+配置通过 `[auto_drive]` 节启用：`checkpoint_enabled`、`diagnostics_enabled`、`token_budget`、`turn_limit`、`audit_enabled` 等。
+
 ### MCP / app-server
 - `app-server` 作为 stdin/stdout JSON-RPC 网关，使用 `protocol::mcp_protocol` 类型。
 - `code_message_processor` 将 `newConversation` / `sendUserTurn` 等映射到核心 `Op`，监听事件再回推 JSON-RPC 通知。
