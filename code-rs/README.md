@@ -125,3 +125,10 @@ allow_git_writes = false
 - [`exec/`](./exec)：无头 CLI，用于自动化场景。
 - [`tui/`](./tui)：基于 [Ratatui](https://ratatui.rs/) 的全屏终端 UI。
 - [`cli/`](./cli)：多功能入口，提供以上子命令。
+- [`code-auto-drive-core/`](./code-auto-drive-core)：Auto Drive 增强功能模块。
+
+## 上游同步
+
+本项目 fork 自 [openai/codex](https://github.com/openai/codex)，定期从上游同步更新。
+
+同步时需要特别保护本地增强功能，详见 [`docs/UPSTREAM_SYNC_GUIDE.md`](./docs/UPSTREAM_SYNC_GUIDE.md)。
