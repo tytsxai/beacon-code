@@ -42,6 +42,7 @@ use crate::config::Config;
 use crate::config_types::ReasoningEffort as ReasoningEffortConfig;
 use crate::config_types::ReasoningSummary as ReasoningSummaryConfig;
 use crate::config_types::TextVerbosity as TextVerbosityConfig;
+use crate::config_types::UiLocale;
 use crate::debug_logger::DebugLogger;
 use crate::default_client::create_client;
 use crate::error::{CodexErr, RetryAfter};
@@ -976,6 +977,10 @@ impl ModelClient {
         self.provider.clone()
     }
 
+    pub fn ui_locale(&self) -> UiLocale {
+        self.config.ui_locale.clone()
+    }
+
     /// Returns the currently configured model slug.
     #[allow(dead_code)]
     pub fn get_model(&self) -> String {
@@ -1406,7 +1411,7 @@ async fn process_sse<S>(
                             Some(request_id.clone()),
                         ));
                         if let Some(manager) = otel_event_manager.as_ref() {
-                            manager.see_event_completed_failed(&error);
+                            manager.sse_event_completed_failed(&error);
                         }
                         let _ = tx_event.send(Err(error)).await;
                     }

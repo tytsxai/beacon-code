@@ -25,6 +25,10 @@ Every Code 支持多种方式设置配置值：
 model = "o3"  # 覆盖默认 "gpt-5.1-codex"
 ```
 
+## ui_locale
+
+控制系统提示与助手回复使用的语言（BCP 47）。默认值为 `en-US`；设置为 `zh-CN` 可切换为中文提示。
+
 ## model_providers
 
 覆盖或补充默认的模型提供商。该表的键对应 `model_provider` 的取值。

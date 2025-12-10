@@ -29,4 +29,5 @@ pub struct ConfigProfile {
     pub experimental_instructions_file: Option<PathBuf>,
     pub compact_prompt_override: Option<String>,
     pub compact_prompt_override_file: Option<PathBuf>,
+    pub ui_locale: Option<crate::config_types::UiLocale>,
 }

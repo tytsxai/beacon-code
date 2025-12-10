@@ -47,6 +47,9 @@ impl ParallelRole {
                  2. Identify any bugs, edge cases, or inconsistencies\n\
                  3. If multiple solutions exist, select or merge the best parts\n\
                  4. Provide a final, unified result\n\
+                 5. CLEANUP: After merging, delete obsolete code-* branches created by executors.\n\
+                    Run: git branch | grep 'code-' to list, then git branch -D <branch> for obsolete ones.\n\
+                    Keep only the branch with the accepted solution.\n\
                  Now review:",
         }
     }

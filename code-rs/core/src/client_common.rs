@@ -2,6 +2,7 @@ use crate::agent_defaults::model_guide_markdown;
 use crate::config_types::ReasoningEffort as ReasoningEffortConfig;
 use crate::config_types::ReasoningSummary as ReasoningSummaryConfig;
 use crate::config_types::TextVerbosity as TextVerbosityConfig;
+use crate::config_types::UiLocale;
 use crate::environment_context::EnvironmentContext;
 use crate::error::Result;
 use crate::model_family::ModelFamily;
@@ -68,6 +69,9 @@ pub struct Prompt {
     /// Optional override for the built-in BASE_INSTRUCTIONS.
     pub base_instructions_override: Option<String>,
 
+    /// Preferred locale for prompts and assistant replies (BCP 47).
+    pub ui_locale: UiLocale,
+
     /// Whether to prepend the default developer instructions block.
     pub include_additional_instructions: bool,
 
@@ -104,6 +108,7 @@ impl Default for Prompt {
             tools: Vec::new(),
             status_items: Vec::new(),
             base_instructions_override: None,
+            ui_locale: UiLocale::default(),
             include_additional_instructions: true,
             prepend_developer_messages: Vec::new(),
             text_format: None,
@@ -123,7 +128,17 @@ impl Prompt {
         let base = self
             .base_instructions_override
             .as_deref()
-            .unwrap_or(effective_model.base_instructions.deref());
+            .unwrap_or_else(|| {
+                let locale = self.ui_locale.0.as_str();
+                if Self::is_chinese_locale(locale) {
+                    effective_model
+                        .base_instructions_zh
+                        .as_deref()
+                        .unwrap_or(effective_model.base_instructions.deref())
+                } else {
+                    effective_model.base_instructions.deref()
+                }
+            });
         let _sections: Vec<&str> = vec![base];
         // When there are no custom instructions, add apply_patch_tool_instructions if:
         // - the model needs special instructions (4.1)
@@ -146,6 +161,14 @@ impl Prompt {
 
     pub fn set_log_tag<S: Into<String>>(&mut self, tag: S) {
         self.log_tag = Some(tag.into());
+    }
+
+    fn is_chinese_locale(locale: &str) -> bool {
+        let normalized = locale
+            .trim()
+            .replace('_', "-")
+            .to_ascii_lowercase();
+        normalized == "zh-cn" || normalized == "zh" || normalized.starts_with("zh-")
     }
 
     fn additional_instructions(&self) -> Cow<'_, str> {
@@ -503,9 +526,10 @@ mod tests {
     }
     #[test]
     fn get_full_instructions_no_user_content() {
-        let prompt = Prompt {
+        let mut prompt = Prompt {
             ..Default::default()
         };
+        prompt.ui_locale = UiLocale("en-US".to_string());
         let test_cases = vec![
             InstructionsTestCase {
                 slug: "gpt-3.5",
@@ -551,6 +575,19 @@ mod tests {
             let full = prompt.get_full_instructions(&model_family);
             assert_eq!(full, expected);
         }
+    }
+
+    #[test]
+    fn get_full_instructions_prefers_chinese_locale() {
+        let mut prompt = Prompt::default();
+        prompt.ui_locale = UiLocale("zh_CN".to_string());
+        let model_family = find_family_for_model("gpt-4o").expect("known model slug");
+
+        let full = prompt.get_full_instructions(&model_family);
+        assert!(
+            full.contains("基础系统提示"),
+            "expected Chinese base instructions when locale is zh: got {full}"
+        );
     }
 
     #[test]

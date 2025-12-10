@@ -129,6 +129,7 @@ async fn run_llm_request(
     if let Some(custom) = model_guide_markdown_with_custom(&config.agents) {
         prompt.model_descriptions = Some(custom);
     }
+    prompt.ui_locale = config.ui_locale.clone();
     prompt.set_log_tag("cli/manual_prompt");
 
     // Auth + provider

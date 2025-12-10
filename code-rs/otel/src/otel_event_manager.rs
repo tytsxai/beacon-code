@@ -312,7 +312,7 @@ impl OtelEventManager {
         }
     }
 
-    pub fn see_event_completed_failed<T>(&self, error: &T)
+    pub fn sse_event_completed_failed<T>(&self, error: &T)
     where
         T: Display,
     {

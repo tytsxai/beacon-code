@@ -58,6 +58,7 @@ mod agent_tool;
 mod dry_run_guard;
 mod image_comparison;
 pub mod git_worktree;
+pub mod branch_cleanup;
 pub mod slash_commands;
 pub mod parse_command;
 pub mod history;

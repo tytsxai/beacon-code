@@ -352,6 +352,17 @@ fn cleanup_worktrees(
                 Ok(()) => {
                     git_worktree::remove_branch_metadata(&branch_path);
                     purge_session_registry(&working_root.join("_session"), &branch_path);
+                    // Also delete the git branch reference to prevent branch accumulation
+                    if let Some(branch_name) = branch_path.file_name().and_then(|n| n.to_str()) {
+                        if branch_name.starts_with("code-") {
+                            if let Some(repo_root) = detect_repo_root(&branch_path) {
+                                let _ = std::process::Command::new("git")
+                                    .current_dir(&repo_root)
+                                    .args(["branch", "-D", branch_name])
+                                    .output();
+                            }
+                        }
+                    }
                     stats.removed_worktrees += 1;
                     stats.removed_files += dir_stats.files;
                     stats.reclaimed_bytes += dir_stats.bytes;

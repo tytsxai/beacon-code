@@ -228,6 +228,7 @@ pub(crate) struct TurnContext {
     pub(crate) shell_environment_policy: ShellEnvironmentPolicy,
     pub(crate) is_review_mode: bool,
     pub(crate) text_format_override: Option<TextFormat>,
+    pub(crate) ui_locale: UiLocale,
 }
 
 /// Gather ephemeral, per-turn context that should not be persisted to history.
@@ -848,6 +849,7 @@ use crate::user_instructions::UserInstructions;
 use crate::config::{persist_model_selection, Config};
 use crate::config_types::ProjectHookEvent;
 use crate::config_types::ShellEnvironmentPolicy;
+use crate::config_types::UiLocale;
 use crate::conversation_history::ConversationHistory;
 use crate::error::{CodexErr, RetryAfter};
 use crate::error::Result as CodexResult;
@@ -1377,6 +1379,9 @@ pub(crate) struct Session {
 
     /// Default reasoning effort for spawned agents and model calls in this session
     model_reasoning_effort: ReasoningEffortConfig,
+
+    /// Preferred locale for system prompts and assistant replies.
+    ui_locale: UiLocale,
 
     /// External notifier command (will be passed as args to exec()). When
     /// `None` this feature is disabled.
@@ -2110,6 +2115,7 @@ impl Session {
             shell_environment_policy: self.shell_environment_policy.clone(),
             is_review_mode: false,
             text_format_override: self.next_turn_text_format.lock().unwrap().take(),
+            ui_locale: self.ui_locale.clone(),
         })
     }
 
@@ -4557,6 +4563,7 @@ async fn submission_loop(
                     session_manager: crate::exec_command::ExecSessionManager::default(),
                     agents: config.agents.clone(),
                     model_reasoning_effort: config.model_reasoning_effort,
+                    ui_locale: config.ui_locale.clone(),
                     notify,
                     state: Mutex::new(state),
                     rollout: Mutex::new(rollout_recorder),
@@ -5085,6 +5092,7 @@ async fn spawn_review_thread(
         shell_environment_policy: parent_turn_context.shell_environment_policy.clone(),
         is_review_mode: true,
         text_format_override: None,
+        ui_locale: parent_turn_context.ui_locale.clone(),
     });
 
     let review_prompt_text = format!(
@@ -5672,6 +5680,7 @@ async fn run_turn(
             tools: tools.clone(),
             status_items, // Include status items with this request
             base_instructions_override: tc.base_instructions.clone(),
+            ui_locale: tc.ui_locale.clone(),
             include_additional_instructions: true,
             prepend_developer_messages: Vec::new(),
             text_format: tc.text_format_override.clone(),

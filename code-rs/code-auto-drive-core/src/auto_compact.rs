@@ -52,6 +52,7 @@ pub(crate) fn compact_with_endpoint(
                 let family = find_family_for_model(model_slug)
                     .unwrap_or_else(|| derive_default_model_family(model_slug));
                 prompt.model_family_override = Some(family);
+                prompt.ui_locale = client.ui_locale();
                 prompt.set_log_tag("auto/remote-compact");
                 client.compact_conversation_history(&prompt).await
             })
@@ -243,6 +244,7 @@ fn summarize_with_model(
                 let family = find_family_for_model(model_slug)
                     .unwrap_or_else(|| derive_default_model_family(model_slug));
                 prompt.model_family_override = Some(family);
+                prompt.ui_locale = client.ui_locale();
 
                 push_compaction_prompt(&mut prompt, compact_prompt);
 

@@ -48,6 +48,7 @@ use crate::config_types::ReasoningEffort;
 use std::sync::LazyLock;
 use std::sync::Mutex;
 use crate::config_types::ReasoningSummary;
+use crate::config_types::UiLocale;
 use crate::project_features::{load_project_commands, ProjectCommand, ProjectHooks};
 use code_app_server_protocol::AuthMode;
 use code_protocol::config_types::SandboxMode;
@@ -247,6 +248,9 @@ pub struct Config {
 
     /// Optional override for the compaction prompt text.
     pub compact_prompt_override: Option<String>,
+
+    /// Preferred locale for model-facing prompts and assistant replies (BCP 47). Defaults to en-US.
+    pub ui_locale: UiLocale,
 
     /// Optional external notifier command. When set, Codex will spawn this
     /// program after each completed *turn* (i.e. when the agent finishes
@@ -1923,6 +1927,10 @@ pub struct ConfigToml {
     /// Path to a file whose contents should replace the compaction prompt template.
     pub compact_prompt_file: Option<PathBuf>,
 
+    /// Preferred locale for model-facing prompts and assistant replies (BCP 47).
+    #[serde(default = "default_ui_locale")]
+    pub ui_locale: UiLocale,
+
     pub experimental_use_exec_command_tool: Option<bool>,
 
     pub use_experimental_reasoning_summary: Option<bool>,
@@ -2096,6 +2104,10 @@ impl ConfigToml {
     }
 }
 
+fn default_ui_locale() -> UiLocale {
+    UiLocale::default()
+}
+
 fn upgrade_legacy_model_slugs(cfg: &mut ConfigToml) {
     fn maybe_upgrade(field: &mut Option<String>) {
         if let Some(old) = field.clone() {
@@ -2177,6 +2189,7 @@ pub struct ConfigOverrides {
     pub experimental_client_tools: Option<ClientTools>,
     pub compact_prompt_override: Option<String>,
     pub compact_prompt_override_file: Option<PathBuf>,
+    pub ui_locale: Option<UiLocale>,
 }
 
 impl Config {
@@ -2214,6 +2227,7 @@ impl Config {
             experimental_client_tools,
             compact_prompt_override,
             compact_prompt_override_file,
+            ui_locale,
         } = overrides;
 
         if let Some(mcp_servers) = mcp_servers {
@@ -2430,6 +2444,11 @@ impl Config {
         let file_base_instructions =
             Self::get_base_instructions(experimental_instructions_path, &resolved_cwd)?;
         let base_instructions = base_instructions.or(file_base_instructions);
+
+        // Locale selection: override > profile > config file default
+        let ui_locale = ui_locale
+            .or(config_profile.ui_locale.clone())
+            .unwrap_or_else(|| cfg.ui_locale.clone());
 
         let compact_prompt_file = compact_prompt_override_file
             .or(config_profile.compact_prompt_override_file.clone())
@@ -2667,6 +2686,7 @@ impl Config {
                 .map(|t| t.notifications.clone())
                 .unwrap_or_default(),
             auto_drive_observer_cadence: cfg.auto_drive_observer_cadence.unwrap_or(5),
+            ui_locale,
             otel: {
                 let t: OtelConfigToml = cfg.otel.unwrap_or_default();
                 let log_user_prompt = t.log_user_prompt.unwrap_or(false);

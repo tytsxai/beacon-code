@@ -412,6 +412,7 @@ impl ThemeSelectionView {
                 prompt.input = input;
                 prompt.store = true;
                 prompt.text_format = Some(format);
+                prompt.ui_locale = cfg.ui_locale.clone();
                 prompt.set_log_tag("ui/theme_spinner");
 
                 // Stream and collect final JSON
@@ -765,6 +766,7 @@ impl ThemeSelectionView {
                 prompt.input = input;
                 prompt.store = true;
                 prompt.text_format = Some(format);
+                prompt.ui_locale = cfg.ui_locale.clone();
                 prompt.set_log_tag("ui/theme_builder");
 
                 use futures::StreamExt;

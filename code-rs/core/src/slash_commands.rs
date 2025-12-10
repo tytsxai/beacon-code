@@ -186,6 +186,86 @@ pub fn format_code_command(
     res.prompt
 }
 
+/// Format the /cleanup command into a prompt for the LLM
+/// This command instructs the AI to intelligently clean up code-* branches
+pub fn format_cleanup_command(args: &str) -> String {
+    let mut dry_run = false;
+    let mut keep_count = 0usize;
+
+    let mut tokens = args.split_whitespace().peekable();
+    while let Some(token) = tokens.next() {
+        match token {
+            "--dry" | "-n" => dry_run = true,
+            "--keep" => {
+                if let Some(value) = tokens.next().and_then(|v| v.parse::<usize>().ok()) {
+                    keep_count = value;
+                }
+            }
+            _ if token.starts_with("--keep=") => {
+                if let Some(value) = token.split('=').nth(1).and_then(|v| v.parse::<usize>().ok()) {
+                    keep_count = value;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let dry_run_note = if dry_run {
+        "\n\n**DRY RUN MODE**: Only list branches that would be deleted, do NOT actually delete them."
+    } else {
+        ""
+    };
+
+    let keep_note = if keep_count > 0 {
+        format!(
+            "\n   - Protect the {keep_count} most recent code-* branches (sorted by commit time) and do not delete them."
+        )
+    } else {
+        String::new()
+    };
+
+    format!(
+        r#"You are a repository cleanup assistant. Your task is to intelligently clean up `code-*` branches that were created by the Auto Drive/Agent system.
+
+## Instructions
+
+1. Determine the default branch and current branch:
+   ```bash
+   default_branch=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null | sed 's@^origin/@@' || echo main)
+   current_branch=$(git rev-parse --abbrev-ref HEAD)
+   ```
+
+2. List all `code-*` branches sorted by commit time (newest first):
+   ```bash
+   git for-each-ref --sort=-committerdate --format='%(refname:short)|%(committerdate:unix)' refs/heads/code-*
+   ```
+   If none are found, report and stop.
+
+3. For each branch (skipping `current_branch`){keep_note}:
+   - Check unmerged commits: `git log --oneline "${{default_branch}}".."${{branch}}"`.
+   - Check age: use the timestamp from step 2 (or `git log -1 --format="%ct" "$branch"`). Branches older than 1 day are preferred for deletion.
+   - A branch is safe to delete only if it is not the current branch, meets the age rule, and has no meaningful unmerged commits.
+
+4. Delete safe branches:
+   ```bash
+   git branch -D "$branch"
+   ```
+   If running in dry-run mode, only list what would be deleted without deleting anything.
+
+5. Report a summary: how many branches were deleted and which ones were retained (with reasons).
+{dry_run_note}
+
+## Safety Rules
+- NEVER delete branches that don't start with `code-`.
+- NEVER delete the current branch (`$current_branch`).
+- Prefer to keep a branch if uncertain; explain why it was retained.
+
+Now proceed with the cleanup."#,
+        dry_run_note = dry_run_note,
+        keep_note = keep_note
+    )
+}
+
 /// Parse a slash command and return the formatted prompt
 pub fn handle_slash_command(input: &str, agents: Option<&[AgentConfig]>) -> Option<String> {
     let input = input.trim();
@@ -224,6 +304,9 @@ pub fn handle_slash_command(input: &str, agents: Option<&[AgentConfig]>) -> Opti
             } else {
                 Some(format_code_command(&args, None, agents))
             }
+        }
+        "/cleanup" => {
+            Some(format_cleanup_command(&args))
         }
         _ => None,
     }

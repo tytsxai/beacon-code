@@ -18,6 +18,9 @@ use strum_macros::Display;
 
 pub const DEFAULT_OTEL_ENVIRONMENT: &str = "dev";
 
+/// Default UI/assistant locale when none is configured. Defaults to English.
+pub const DEFAULT_UI_LOCALE: &str = "en-US";
+
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub enum OtelHttpProtocol {
@@ -240,6 +243,18 @@ pub struct ConfirmGuardPattern {
     /// Optional custom guidance text surfaced when the guard triggers.
     #[serde(default)]
     pub message: Option<String>,
+}
+
+/// Language/locale preference for user-visible prompts and system messages.
+/// Stored as a BCP 47 tag (e.g., "zh-CN", "en-US").
+#[derive(Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(transparent)]
+pub struct UiLocale(pub String);
+
+impl Default for UiLocale {
+    fn default() -> Self {
+        Self(DEFAULT_UI_LOCALE.to_string())
+    }
 }
 
 fn default_confirm_guard_patterns() -> Vec<ConfirmGuardPattern> {

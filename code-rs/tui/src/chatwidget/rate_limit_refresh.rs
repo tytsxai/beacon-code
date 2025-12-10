@@ -70,6 +70,7 @@ fn run_refresh(
                 text: "Yield immediately with only the message \"ok\"".to_string(),
             }],
         });
+        prompt.ui_locale = config.ui_locale.clone();
         prompt.set_log_tag("tui/rate_limit_refresh");
 
         let mut stream = client

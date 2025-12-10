@@ -94,7 +94,9 @@ async fn run_remote_compact_task_inner(
         prompt.input = turn_items.clone();
         prompt.base_instructions_override = turn_context.base_instructions.clone();
         prompt.include_additional_instructions = false;
+        prompt.ui_locale = turn_context.ui_locale.clone();
         prompt.log_tag = Some("codex/remote-compact".to_string());
+        prompt.ui_locale = turn_context.ui_locale.clone();
 
         match turn_context
             .client

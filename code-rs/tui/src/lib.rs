@@ -400,6 +400,7 @@ pub async fn run_main(
         experimental_client_tools: None,
         compact_prompt_override: cli.compact_prompt_override.clone(),
         compact_prompt_override_file: cli.compact_prompt_file.clone(),
+        ui_locale: None,
     };
 
     // Parse `-c` overrides from the CLI.
@@ -1233,6 +1234,7 @@ mod tests {
             cwd: Some(workspace.path().to_path_buf()),
             compact_prompt_override: None,
             compact_prompt_override_file: None,
+            ui_locale: None,
             ..Default::default()
         };
 

@@ -7,7 +7,7 @@ use std::time::{Duration, Instant, SystemTime};
 use anyhow::{anyhow, Context, Result};
 use code_core::config::Config;
 use code_core::agent_defaults::build_model_guide_description;
-use code_core::config_types::{AutoDriveSettings, ReasoningEffort, TextVerbosity};
+use code_core::config_types::{AutoDriveSettings, ReasoningEffort, TextVerbosity, UiLocale};
 use code_core::debug_logger::DebugLogger;
 use code_core::codex::compact::resolve_compact_prompt_text;
 use code_core::model_family::{derive_default_model_family, find_family_for_model};
@@ -1982,6 +1982,7 @@ fn request_decision_with_model(
                     &schema,
                     &conversation,
                     model_slug,
+                    client.ui_locale(),
                     instructions.as_deref(),
                 );
                 let tx_inner = tx.clone();
@@ -2134,10 +2135,12 @@ fn build_user_turn_prompt(
     schema: &Value,
     conversation: &Vec<ResponseItem>,
     model_slug: &str,
+    ui_locale: UiLocale,
     auto_instructions: Option<&str>,
 ) -> Prompt {
     let mut prompt = Prompt::default();
     prompt.store = true;
+    prompt.ui_locale = ui_locale;
     prompt.session_id_override = Some(Uuid::new_v4());
     if let Some(instructions) = auto_instructions {
         let trimmed = instructions.trim();

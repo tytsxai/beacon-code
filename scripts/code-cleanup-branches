@@ -1,0 +1,35 @@
+#!/bin/bash
+# Code 分支清理脚本
+# 用法: code-cleanup-branches [仓库路径]
+
+set -e
+
+cd "${1:-.}"
+
+if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    echo "✗ 当前目录不是 Git 仓库"
+    exit 1
+fi
+
+branches=$(git branch --format='%(refname:short)' | grep '^code-' || true)
+
+count=$(printf "%s\n" "$branches" | sed '/^$/d' | wc -l | xargs)
+
+if [ "$count" -eq "0" ]; then
+    echo "✓ 没有需要清理的 code-* 分支"
+    exit 0
+fi
+
+echo "发现 $count 个 code-* 分支，正在清理..."
+
+current_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
+
+printf "%s\n" "$branches" | sed '/^$/d' | while read -r branch; do
+    if [ "$branch" = "$current_branch" ]; then
+        echo "  跳过当前分支: $branch"
+        continue
+    fi
+    git branch -D "$branch" 2>/dev/null && echo "  删除: $branch" || true
+done
+
+echo "✓ 清理完成"

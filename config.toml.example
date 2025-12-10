@@ -10,8 +10,11 @@ model = "gpt-5.1-codex-max"           # 最强模型
 model_reasoning_effort = "xhigh"       # 推理力度: minimal/low/medium/high/xhigh
 
 # 权限设置 (Permission Settings)
-approval_policy = "never"              # 跳过审批提示
-sandbox_mode = "danger-full-access"    # 完全访问权限
+approval_policy = "untrusted"          # 非内置白名单命令前提示审批
+sandbox_mode = "workspace-write"       # 仅允许当前工作区可写，限制网络
+
+# 语言/本地化 (Language / Locale)
+ui_locale = "en-US"                    # 默认英文；设为 "zh-CN" 可切换为中文
 
 # 性能设置 (Performance Settings)
 enable_compaction = true               # 自动压缩长对话
@@ -31,7 +34,7 @@ parallel_instances = 1                  # 并行实例数（1-5）：>1 时同�
 [[agents]]
 name = "claude"
 command = "claude"
-enabled = true
+enabled = false
 read-only = false
 description = "Claude AI assistant with full capabilities"
 args = ["--dangerously-skip-permissions"]
@@ -39,7 +42,7 @@ args = ["--dangerously-skip-permissions"]
 [[agents]]
 name = "claude-safe"
 command = "claude"
-enabled = true
+enabled = false
 read-only = true
 description = "Claude AI assistant in read-only mode"
 args = []
@@ -47,7 +50,7 @@ args = []
 [[agents]]
 name = "gemini"
 command = "gemini"
-enabled = true
+enabled = false
 read-only = false
 description = "Google Gemini AI assistant"
 args = ["-y"]
@@ -55,7 +58,7 @@ args = ["-y"]
 [[agents]]
 name = "gemini-safe"
 command = "gemini"
-enabled = true
+enabled = false
 read-only = true
 description = "Google Gemini AI assistant in read-only mode"
 args = []
@@ -63,7 +66,7 @@ args = []
 [[agents]]
 name = "qwen"
 command = "qwen"
-enabled = true
+enabled = false
 read-only = false
 description = "Qwen Coder assistant (tracks latest default model)"
 # No default -m: let the CLI choose its current default model
@@ -76,7 +79,7 @@ args = ["-y"]
 [[agents]]
 name = "qwen-safe"
 command = "qwen"
-enabled = true
+enabled = false
 read-only = true
 description = "Qwen Coder assistant in read-only mode"
 # No -y in read-only; omit -m to track latest default. To pin:
@@ -86,7 +89,7 @@ args = []
 [[agents]]
 name = "codex"
 command = "codex"
-enabled = true
+enabled = false
 read-only = false
 description = "Codex AI assistant (self-referential)"
 args = ["-s", "workspace-write", "-a", "never"]
@@ -94,7 +97,7 @@ args = ["-s", "workspace-write", "-a", "never"]
 [[agents]]
 name = "context-collector"
 command = "gemini"
-enabled = true
+enabled = false
 read-only = true
 description = "Gemini 2.5 long-context helper for repository sweeps"
 # Supply the long-context model and default yes flag
@@ -126,7 +129,7 @@ env = { MODEL_PATH = "/models/custom.bin", TEMP = "0.7" }
 [[agents]]
 name = "cloud"    # keep name = "cloud" so built-in /plan,/solve default lists include it
 command = "cloud"  # can be any CLI or path (e.g., "cloud-agent"); behavior keys off the agent name
-enabled = true
+enabled = false
 read-only = true   # cloud work typically runs remotely; local writes aren't needed
 description = "Submit tasks to a remote cloud worker"
 # By default no extra flags are passed; the prompt is appended positionally.

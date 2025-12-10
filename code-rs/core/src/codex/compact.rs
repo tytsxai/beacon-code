@@ -248,6 +248,7 @@ pub(super) async fn perform_compaction(
         ));
         prompt.model_descriptions = sess.model_descriptions.clone();
         prompt.log_tag = Some("codex/compact".to_string());
+        prompt.ui_locale = turn_context.ui_locale.clone();
 
         match drain_to_completed(&sess, turn_context.as_ref(), &prompt).await {
             Ok(()) => {
@@ -397,6 +398,7 @@ async fn run_compact_task_inner_inline(
         ));
         prompt.model_descriptions = sess.model_descriptions.clone();
         prompt.log_tag = Some("codex/compact".to_string());
+        prompt.ui_locale = turn_context.ui_locale.clone();
 
         match drain_to_completed(&sess, turn_context.as_ref(), &prompt).await {
             Ok(()) => {

@@ -117,6 +117,12 @@ impl Session {
         };
         self.send_event(event).await;
         self.reconcile_running_execs(&sub_id).await;
+
+        // Trigger background cleanup of stale code-* branches
+        let cleanup_cwd = self.cwd.clone();
+        tokio::spawn(async move {
+            crate::branch_cleanup::cleanup_stale_code_branches(cleanup_cwd).await;
+        });
     }
 
     async fn register_new_active_task(&self, sub_id: String, task: RunningTask) {

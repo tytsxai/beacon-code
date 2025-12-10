@@ -284,6 +284,7 @@ impl CodexToolCallParam {
             experimental_client_tools: None,
             compact_prompt_override: None,
             compact_prompt_override_file: None,
+            ui_locale: None,
         };
 
         let cli_overrides = cli_overrides
