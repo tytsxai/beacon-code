@@ -158,7 +158,7 @@ fn try_parse_retry_after(err: &Error, now: DateTime<Utc>) -> Option<RetryAfter> 
 
 fn is_quota_exceeded_error(error: &Error) -> bool {
     matches!(
-        error.code.as_deref().or_else(|| error.r#type.as_deref()),
+        error.code.as_deref().or(error.r#type.as_deref()),
         Some("insufficient_quota")
     )
 }
@@ -356,7 +356,7 @@ impl ModelClient {
                 .map(|spec| spec.slug.to_string())
                 .collect();
         }
-        agent_models.sort_by(|a, b| a.to_ascii_lowercase().cmp(&b.to_ascii_lowercase()));
+        agent_models.sort_by_key(|a| a.to_ascii_lowercase());
         agent_models.dedup_by(|a, b| a.eq_ignore_ascii_case(b));
         tools_config.set_agent_models(agent_models);
 
@@ -366,10 +366,10 @@ impl ModelClient {
             ConfigShellToolType::LocalShell | ConfigShellToolType::StreamableShell
         );
 
-        tools_config.shell_type = match sandbox_policy.clone() {
+        tools_config.shell_type = match sandbox_policy {
             SandboxPolicy::ReadOnly => {
                 if base_uses_native_shell {
-                    base_shell_type.clone()
+                    base_shell_type
                 } else {
                     ConfigShellToolType::ShellWithRequest {
                         sandbox_policy: SandboxPolicy::ReadOnly,
@@ -378,7 +378,7 @@ impl ModelClient {
             }
             sp @ SandboxPolicy::WorkspaceWrite { .. } => {
                 if base_uses_native_shell {
-                    base_shell_type.clone()
+                    base_shell_type
                 } else {
                     ConfigShellToolType::ShellWithRequest { sandbox_policy: sp }
                 }
@@ -610,17 +610,17 @@ impl ModelClient {
             if azure_workaround {
                 attach_item_ids(&mut payload_json, &input_with_instructions);
             }
-            if let Some(openrouter_cfg) = self.provider.openrouter_config() {
-                if let Some(obj) = payload_json.as_object_mut() {
-                    if let Some(provider) = &openrouter_cfg.provider {
-                        obj.insert("provider".to_string(), serde_json::to_value(provider)?);
-                    }
-                    if let Some(route) = &openrouter_cfg.route {
-                        obj.insert("route".to_string(), route.clone());
-                    }
-                    for (key, value) in &openrouter_cfg.extra {
-                        obj.entry(key.clone()).or_insert(value.clone());
-                    }
+            if let Some(openrouter_cfg) = self.provider.openrouter_config()
+                && let Some(obj) = payload_json.as_object_mut()
+            {
+                if let Some(provider) = &openrouter_cfg.provider {
+                    obj.insert("provider".to_string(), serde_json::to_value(provider)?);
+                }
+                if let Some(route) = &openrouter_cfg.route {
+                    obj.insert("route".to_string(), route.clone());
+                }
+                for (key, value) in &openrouter_cfg.extra {
+                    obj.entry(key.clone()).or_insert(value.clone());
                 }
             }
             let payload_body = serde_json::to_string(&payload_json)?;
@@ -644,7 +644,7 @@ impl ModelClient {
             let has_beta_header = req_builder
                 .try_clone()
                 .and_then(|builder| builder.build().ok())
-                .map_or(false, |req| req.headers().contains_key("OpenAI-Beta"));
+                .is_some_and(|req| req.headers().contains_key("OpenAI-Beta"));
 
             if !has_beta_header {
                 let beta_value = if self.provider.is_public_openai_responses_endpoint() {
@@ -762,7 +762,7 @@ impl ModelClient {
                         .headers()
                         .get("x-request-id")
                         .and_then(|v| v.to_str().ok())
-                        .map(|s| s.to_string());
+                        .map(std::string::ToString::to_string);
                     let now = Utc::now();
 
                     // Pull out Retry‑After header if present.
@@ -795,31 +795,29 @@ impl ModelClient {
                     let body_text = res.text().await.unwrap_or_default();
                     let body = serde_json::from_str::<ErrorResponse>(&body_text).ok();
 
-                    if status == StatusCode::BAD_REQUEST {
-                        if let Some(ErrorResponse { ref error }) = body {
-                            if !self.reasoning_summary_disabled.load(Ordering::Relaxed)
-                                && is_reasoning_summary_rejected(error)
-                            {
-                                self.disable_reasoning_summary();
+                    if status == StatusCode::BAD_REQUEST
+                        && let Some(ErrorResponse { ref error }) = body
+                        && !self.reasoning_summary_disabled.load(Ordering::Relaxed)
+                        && is_reasoning_summary_rejected(error)
+                    {
+                        self.disable_reasoning_summary();
 
-                                if let Ok(logger) = self.debug_logger.lock() {
-                                    let _ = logger.append_response_event(
-                                        &request_id,
-                                        "reasoning_summary_disabled",
-                                        &serde_json::json!({
-                                            "status": status.as_u16(),
-                                            "message": error.message.clone(),
-                                            "code": error.code.clone(),
-                                            "param": error.param.clone(),
-                                        }),
-                                    );
-                                }
-
-                                // Retry immediately with reasoning summaries removed.
-                                attempt = 0;
-                                continue;
-                            }
+                        if let Ok(logger) = self.debug_logger.lock() {
+                            let _ = logger.append_response_event(
+                                &request_id,
+                                "reasoning_summary_disabled",
+                                &serde_json::json!({
+                                    "status": status.as_u16(),
+                                    "message": error.message.clone(),
+                                    "code": error.code.clone(),
+                                    "param": error.param.clone(),
+                                }),
+                            );
                         }
+
+                        // Retry immediately with reasoning summaries removed.
+                        attempt = 0;
+                        continue;
                     }
 
                     // The OpenAI Responses endpoint returns structured JSON bodies even for 4xx/5xx
@@ -852,38 +850,37 @@ impl ModelClient {
                         }));
                     }
 
-                    if let Some(ErrorResponse { ref error }) = body {
-                        if is_quota_exceeded_http_error(status, error) {
-                            return Err(CodexErr::QuotaExceeded);
-                        }
+                    if let Some(ErrorResponse { ref error }) = body
+                        && is_quota_exceeded_http_error(status, error)
+                    {
+                        return Err(CodexErr::QuotaExceeded);
                     }
 
-                    if status == StatusCode::UNAUTHORIZED {
-                        if let Some(error) =
+                    if status == StatusCode::UNAUTHORIZED
+                        && let Some(error) =
                             map_unauthorized_outcome(auth.is_some(), auth_refresh_error.as_ref())
-                        {
-                            return Err(error);
-                        }
+                    {
+                        return Err(error);
                     }
 
-                    if status == StatusCode::TOO_MANY_REQUESTS {
-                        if let Some(ErrorResponse { ref error }) = body {
-                            if error.r#type.as_deref() == Some("usage_limit_reached") {
-                                // Prefer the plan_type provided in the error message if present
-                                // because it's more up to date than the one encoded in the auth
-                                // token.
-                                let plan_type = error
-                                    .plan_type
-                                    .clone()
-                                    .or_else(|| auth.and_then(|a| a.get_plan_type()));
-                                let resets_in_seconds = error.resets_in_seconds;
-                                return Err(CodexErr::UsageLimitReached(UsageLimitReachedError {
-                                    plan_type,
-                                    resets_in_seconds,
-                                }));
-                            } else if error.r#type.as_deref() == Some("usage_not_included") {
-                                return Err(CodexErr::UsageNotIncluded);
-                            }
+                    if status == StatusCode::TOO_MANY_REQUESTS
+                        && let Some(ErrorResponse { ref error }) = body
+                    {
+                        if error.r#type.as_deref() == Some("usage_limit_reached") {
+                            // Prefer the plan_type provided in the error message if present
+                            // because it's more up to date than the one encoded in the auth
+                            // token.
+                            let plan_type = error
+                                .plan_type
+                                .clone()
+                                .or_else(|| auth.and_then(|a| a.get_plan_type()));
+                            let resets_in_seconds = error.resets_in_seconds;
+                            return Err(CodexErr::UsageLimitReached(UsageLimitReachedError {
+                                plan_type,
+                                resets_in_seconds,
+                            }));
+                        } else if error.r#type.as_deref() == Some("usage_not_included") {
+                            return Err(CodexErr::UsageNotIncluded);
                         }
                     }
 
@@ -952,10 +949,10 @@ impl ModelClient {
                     }
 
                     let mut retry_after_delay = retry_after_hint;
-                    if retry_after_delay.is_none() {
-                        if let Some(ErrorResponse { ref error }) = body {
-                            retry_after_delay = try_parse_retry_after(error, now);
-                        }
+                    if retry_after_delay.is_none()
+                        && let Some(ErrorResponse { ref error }) = body
+                    {
+                        retry_after_delay = try_parse_retry_after(error, now);
                     }
 
                     let delay = retry_after_delay
@@ -971,7 +968,7 @@ impl ModelClient {
                         if let Ok(logger) = self.debug_logger.lock() {
                             let _ = logger.log_error(
                                 &endpoint,
-                                &format!("Network error: {}", e),
+                                &format!("Network error: {e}"),
                                 log_tag,
                             );
                         }
@@ -1040,7 +1037,7 @@ impl ModelClient {
         let has_beta_header = request
             .try_clone()
             .and_then(|builder| builder.build().ok())
-            .map_or(false, |req| req.headers().contains_key("OpenAI-Beta"));
+            .is_some_and(|req| req.headers().contains_key("OpenAI-Beta"));
 
         if !has_beta_header {
             let beta_value = if self.provider.is_public_openai_responses_endpoint() {
@@ -1286,7 +1283,7 @@ fn format_rate_limit_headers(headers: &HeaderMap) -> String {
         .iter()
         .map(|(name, value)| {
             let value_str = value.to_str().unwrap_or("<invalid>");
-            format!("{}: {}", name, value_str)
+            format!("{name}: {value_str}")
         })
         .collect();
     pairs.sort();
@@ -1323,13 +1320,13 @@ fn parse_retry_after_header(value: &str, now: DateTime<Utc>) -> Option<RetryAfte
     if let Ok(secs) = normalized.parse::<u64>() {
         return Some(RetryAfter::from_duration(Duration::from_secs(secs), now));
     }
-    if let Ok(float_secs) = normalized.parse::<f64>() {
-        if !float_secs.is_sign_negative() {
-            return Some(RetryAfter::from_duration(
-                Duration::from_secs_f64(float_secs),
-                now,
-            ));
-        }
+    if let Ok(float_secs) = normalized.parse::<f64>()
+        && !float_secs.is_sign_negative()
+    {
+        return Some(RetryAfter::from_duration(
+            Duration::from_secs_f64(float_secs),
+            now,
+        ));
     }
     if let Ok(system_time) = parse_http_date(normalized) {
         let resume_at: DateTime<Utc> = system_time.into();
@@ -1467,10 +1464,10 @@ async fn process_sse<S>(
         trace!("SSE event: {}", raw);
 
         // Log the raw SSE event data
-        if let Ok(logger) = debug_logger.lock() {
-            if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(&sse.data) {
-                let _ = logger.append_response_event(&request_id, "sse_event", &json_value);
-            }
+        if let Ok(logger) = debug_logger.lock()
+            && let Ok(json_value) = serde_json::from_str::<serde_json::Value>(&sse.data)
+        {
+            let _ = logger.append_response_event(&request_id, "sse_event", &json_value);
         }
 
         let event: SseEvent = match serde_json::from_str(&sse.data) {
@@ -1498,10 +1495,10 @@ async fn process_sse<S>(
         };
 
         if let Some(seq) = event.sequence_number {
-            if let Some(last) = global_last_seq {
-                if seq <= last {
-                    continue;
-                }
+            if let Some(last) = global_last_seq
+                && seq <= last
+            {
+                continue;
             }
             global_last_seq = Some(seq);
             if let Ok(mut guard) = checkpoint.write() {
@@ -1545,7 +1542,7 @@ async fn process_sse<S>(
                         .get("action")
                         .and_then(|a| a.get("query"))
                         .and_then(|v| v.as_str())
-                        .map(|s| s.to_string());
+                        .map(std::string::ToString::to_string);
                     let ev = ResponseEvent::WebSearchCallCompleted { call_id, query };
                     if tx_event.send(Ok(ev)).await.is_err() {
                         return;
@@ -1616,7 +1613,7 @@ async fn process_sse<S>(
                         } else {
                             // Best-effort: drop exact duplicate text for same key when seq is missing
                             let key = (id.clone(), out_idx, sum_idx);
-                            if last_text_reasoning_summary.get(&key).map_or(false, |prev| prev == &delta) {
+                            if last_text_reasoning_summary.get(&key) == Some(&delta) {
                                 continue;
                             }
                             last_text_reasoning_summary.insert(key, delta.clone());
@@ -1657,7 +1654,7 @@ async fn process_sse<S>(
                         } else {
                             // Best-effort: drop exact duplicate text for same key when seq is missing
                             let key = (id.clone(), out_idx, content_idx);
-                            if last_text_reasoning_content.get(&key).map_or(false, |prev| prev == &delta) {
+                            if last_text_reasoning_content.get(&key) == Some(&delta) {
                                 continue;
                             }
                             last_text_reasoning_content.insert(key, delta.clone());
@@ -1739,11 +1736,11 @@ async fn process_sse<S>(
             | "response.in_progress"
             | "response.output_item.added"
             | "response.output_text.done" => {
-                if event.kind == "response.output_item.added" {
-                    if let Some(item) = event.item.as_ref() {
+                if event.kind == "response.output_item.added"
+                    && let Some(item) = event.item.as_ref() {
                         // Detect web_search_call begin and forward a synthetic event upstream.
-                        if let Some(ty) = item.get("type").and_then(|v| v.as_str()) {
-                            if ty == "web_search_call" {
+                        if let Some(ty) = item.get("type").and_then(|v| v.as_str())
+                            && ty == "web_search_call" {
                                 let call_id = item
                                     .get("id")
                                     .and_then(|v| v.as_str())
@@ -1754,9 +1751,7 @@ async fn process_sse<S>(
                                     return;
                                 }
                             }
-                        }
                     }
-                }
             }
             "response.reasoning_summary_part.added" => {
                 // Boundary between reasoning summary sections (e.g., titles).
@@ -1832,9 +1827,9 @@ mod tests {
         let outcome = map_unauthorized_outcome(true, Some(&err)).expect("should produce CodexErr");
         match outcome {
             CodexErr::AuthRefreshPermanent(msg) => {
-                assert!(msg.contains("token revoked"), "unexpected message: {}", msg);
+                assert!(msg.contains("token revoked"), "unexpected message: {msg}");
             }
-            other => panic!("unexpected outcome: {:?}", other),
+            other => panic!("unexpected outcome: {other:?}"),
         }
     }
 
@@ -1845,7 +1840,7 @@ mod tests {
             CodexErr::AuthRefreshPermanent(msg) => {
                 assert_eq!(msg, AUTH_REQUIRED_MESSAGE);
             }
-            other => panic!("unexpected outcome: {:?}", other),
+            other => panic!("unexpected outcome: {other:?}"),
         }
     }
 
@@ -1885,7 +1880,7 @@ mod tests {
         let has_beta = builder
             .try_clone()
             .and_then(|b| b.build().ok())
-            .map_or(false, |req| req.headers().contains_key("OpenAI-Beta"));
+            .is_some_and(|req| req.headers().contains_key("OpenAI-Beta"));
         if !has_beta {
             builder = builder.header("OpenAI-Beta", RESPONSES_BETA_HEADER_V1);
         }
@@ -1932,7 +1927,7 @@ mod tests {
         let has_beta = builder
             .try_clone()
             .and_then(|b| b.build().ok())
-            .map_or(false, |req| req.headers().contains_key("OpenAI-Beta"));
+            .is_some_and(|req| req.headers().contains_key("OpenAI-Beta"));
         if !has_beta {
             builder = builder.header("OpenAI-Beta", RESPONSES_BETA_HEADER_EXPERIMENTAL);
         }
@@ -2434,7 +2429,7 @@ mod tests {
     fn retry_after_prefers_header_over_body_hint() {
         let now = fixed_now();
         let header_retry = parse_retry_after_header("5", now);
-        let mut chosen = header_retry.clone();
+        let mut chosen = header_retry;
         if chosen.is_none() {
             let err = Error {
                 r#type: None,

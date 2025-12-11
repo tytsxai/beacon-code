@@ -9,12 +9,11 @@ use crossterm::event::KeyEventKind;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::Stylize;
-use ratatui::text::Line;
 use ratatui::widgets::Paragraph;
 use ratatui::widgets::WidgetRef;
 use ratatui::widgets::Wrap;
 
-use crate::key_hint;
+use crate::i18n::Strings;
 use crate::onboarding::onboarding_screen::KeyboardHandler;
 use crate::onboarding::onboarding_screen::StepStateProvider;
 use crate::render::Insets;
@@ -31,6 +30,7 @@ pub(crate) struct TrustDirectoryWidget {
     pub selection: Option<TrustDirectorySelection>,
     pub highlighted: TrustDirectorySelection,
     pub error: Option<String>,
+    pub strings: Strings,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -43,52 +43,32 @@ impl WidgetRef for &TrustDirectoryWidget {
     fn render_ref(&self, area: Rect, buf: &mut Buffer) {
         let mut column = ColumnRenderable::new();
 
-        column.push(Line::from(vec![
-            "> ".into(),
-            "You are running Codex in ".bold(),
-            self.cwd.to_string_lossy().to_string().into(),
-        ]));
+        column.push(self.strings.trust_heading(&self.cwd));
         column.push("");
 
-        let guidance = if self.is_git_repo {
-            "Since this folder is version controlled, you may wish to allow Codex to work in this folder without asking for approval."
-        } else {
-            "Since this folder is not version controlled, we recommend requiring approval of all edits and commands."
-        };
+        let guidance = self.strings.trust_guidance(self.is_git_repo);
 
         column.push(
-            Paragraph::new(guidance.to_string())
+            Paragraph::new(guidance)
                 .wrap(Wrap { trim: true })
                 .inset(Insets::tlbr(0, 2, 0, 0)),
         );
         column.push("");
 
-        let mut options: Vec<(&str, TrustDirectorySelection)> = Vec::new();
-        if self.is_git_repo {
-            options.push((
-                "Yes, allow Codex to work in this folder without asking for approval",
+        let options = self.strings.trust_options(self.is_git_repo);
+        let options = [
+            (
+                options.allow_without_approval,
                 TrustDirectorySelection::Trust,
-            ));
-            options.push((
-                "No, ask me to approve edits and commands",
-                TrustDirectorySelection::DontTrust,
-            ));
-        } else {
-            options.push((
-                "Allow Codex to work in this folder without asking for approval",
-                TrustDirectorySelection::Trust,
-            ));
-            options.push((
-                "Require approval of edits and commands",
-                TrustDirectorySelection::DontTrust,
-            ));
-        }
+            ),
+            (options.require_approval, TrustDirectorySelection::DontTrust),
+        ];
 
-        for (idx, (text, selection)) in options.iter().enumerate() {
+        for (idx, (text, selection)) in options.into_iter().enumerate() {
             column.push(selection_option_row(
                 idx,
                 text.to_string(),
-                self.highlighted == *selection,
+                self.highlighted == selection,
             ));
         }
 
@@ -105,12 +85,9 @@ impl WidgetRef for &TrustDirectoryWidget {
         }
 
         column.push(
-            Line::from(vec![
-                "Press ".dim(),
-                key_hint::plain(KeyCode::Enter).into(),
-                " to continue".dim(),
-            ])
-            .inset(Insets::tlbr(0, 2, 0, 0)),
+            self.strings
+                .trust_continue_hint()
+                .inset(Insets::tlbr(0, 2, 0, 0)),
         );
 
         column.render(area, buf);
@@ -202,6 +179,7 @@ mod tests {
             selection: None,
             highlighted: TrustDirectorySelection::DontTrust,
             error: None,
+            strings: Strings::new(codex_common::locale::Language::English),
         };
 
         let release = KeyEvent {
@@ -226,6 +204,7 @@ mod tests {
             selection: None,
             highlighted: TrustDirectorySelection::Trust,
             error: None,
+            strings: Strings::new(codex_common::locale::Language::English),
         };
 
         let mut terminal = Terminal::new(VT100Backend::new(70, 14)).expect("terminal");

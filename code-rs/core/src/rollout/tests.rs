@@ -491,12 +491,7 @@ async fn test_pagination_cursor() {
             .join(format!("rollout-2025-03-01T09-00-00-{u1}.jsonl")),
         "2025-03-01T09-00-00",
     )];
-    assert_page_summary(
-        &page3,
-        &expected_page3_items,
-        Some(expected_cursor3.clone()),
-        5,
-    );
+    assert_page_summary(&page3, &expected_page3_items, Some(expected_cursor3), 5);
 }
 
 #[tokio::test]
@@ -657,12 +652,7 @@ async fn test_stable_ordering_same_second_pagination() {
             .join(format!("rollout-2025-07-01T00-00-00-{u1}.jsonl")),
         ts,
     )];
-    assert_page_summary(
-        &page2,
-        &expected_page2_items,
-        Some(expected_cursor2.clone()),
-        3,
-    );
+    assert_page_summary(&page2, &expected_page2_items, Some(expected_cursor2), 3);
 }
 
 #[tokio::test]

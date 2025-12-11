@@ -15,6 +15,7 @@ use codex_app_server_protocol::AuthMode;
 use codex_protocol::config_types::ForcedLoginMethod;
 
 use crate::LoginStatus;
+use crate::i18n::Strings;
 use crate::onboarding::auth::AuthModeWidget;
 use crate::onboarding::auth::SignInState;
 use crate::onboarding::trust_directory::TrustDirectorySelection;
@@ -79,6 +80,8 @@ impl OnboardingScreen {
             auth_manager,
             config,
         } = args;
+        let language = codex_common::locale::Language::detect();
+        let strings = Strings::new(language);
         let cwd = config.cwd.clone();
         let forced_chatgpt_workspace_id = config.forced_chatgpt_workspace_id.clone();
         let forced_login_method = config.forced_login_method;
@@ -89,6 +92,7 @@ impl OnboardingScreen {
             !matches!(login_status, LoginStatus::NotAuthenticated),
             tui.frame_requester(),
             config.animations,
+            strings,
         )));
         if show_login_screen {
             let highlighted_mode = match forced_login_method {
@@ -124,6 +128,7 @@ impl OnboardingScreen {
                 selection: None,
                 highlighted,
                 error: None,
+                strings,
             }))
         }
         // TODO: add git warning.

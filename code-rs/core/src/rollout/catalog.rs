@@ -272,10 +272,10 @@ impl SessionCatalog {
         }
 
         // Remove from git root index
-        if let Some(ref git_root) = entry.git_project_root {
-            if let Some(ids) = self.by_git_root.get_mut(git_root) {
-                ids.retain(|id| id != session_id);
-            }
+        if let Some(ref git_root) = entry.git_project_root
+            && let Some(ids) = self.by_git_root.get_mut(git_root)
+        {
+            ids.retain(|id| id != session_id);
         }
     }
 
@@ -308,12 +308,12 @@ impl SessionCatalog {
         // Remove entries that no longer exist on disk.
         let existing_ids: Vec<Uuid> = self.entries.keys().copied().collect();
         for session_id in existing_ids {
-            if !discovered_ids.contains(&session_id) {
-                if let Some(entry) = self.entries.remove(&session_id) {
-                    self.remove_from_indexes(&session_id, &entry);
-                    result.removed += 1;
-                    changed = true;
-                }
+            if !discovered_ids.contains(&session_id)
+                && let Some(entry) = self.entries.remove(&session_id)
+            {
+                self.remove_from_indexes(&session_id, &entry);
+                result.removed += 1;
+                changed = true;
             }
         }
 
@@ -383,21 +383,20 @@ async fn scan_rollout_files(sessions_root: &Path) -> io::Result<HashMap<Uuid, Se
 
             if metadata.is_dir() {
                 queue.push(path);
-            } else if metadata.is_file() {
-                if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                    if name.ends_with(".jsonl") && name.starts_with("rollout-") {
-                        if let Some(index_entry) = parse_rollout_file(&path, sessions_root).await {
-                            match discovered.get(&index_entry.session_id) {
-                                Some(existing) => {
-                                    if should_replace(existing, &index_entry) {
-                                        discovered.insert(index_entry.session_id, index_entry);
-                                    }
-                                }
-                                None => {
-                                    discovered.insert(index_entry.session_id, index_entry);
-                                }
-                            }
+            } else if metadata.is_file()
+                && let Some(name) = path.file_name().and_then(|n| n.to_str())
+                && name.ends_with(".jsonl")
+                && name.starts_with("rollout-")
+                && let Some(index_entry) = parse_rollout_file(&path, sessions_root).await
+            {
+                match discovered.get(&index_entry.session_id) {
+                    Some(existing) => {
+                        if should_replace(existing, &index_entry) {
+                            discovered.insert(index_entry.session_id, index_entry);
                         }
+                    }
+                    None => {
+                        discovered.insert(index_entry.session_id, index_entry);
                     }
                 }
             }
@@ -465,17 +464,17 @@ async fn parse_rollout_file(path: &Path, sessions_root: &Path) -> Option<Session
             RolloutItem::ResponseItem(response_item) => {
                 message_count += 1;
 
-                if let ResponseItem::Message { role, content, .. } = response_item {
-                    if role.eq_ignore_ascii_case("user") {
-                        let snippet = snippet_from_content(&content);
-                        if snippet.as_deref().map_or(false, is_system_status_snippet) {
-                            continue;
-                        }
+                if let ResponseItem::Message { role, content, .. } = response_item
+                    && role.eq_ignore_ascii_case("user")
+                {
+                    let snippet = snippet_from_content(&content);
+                    if snippet.as_deref().is_some_and(is_system_status_snippet) {
+                        continue;
+                    }
 
-                        user_message_count += 1;
-                        if let Some(snippet) = snippet {
-                            last_user_snippet = Some(snippet);
-                        }
+                    user_message_count += 1;
+                    if let Some(snippet) = snippet {
+                        last_user_snippet = Some(snippet);
                     }
                 }
             }
@@ -509,7 +508,7 @@ async fn parse_rollout_file(path: &Path, sessions_root: &Path) -> Option<Session
             snapshot_file
                 .strip_prefix(code_home)
                 .ok()
-                .map(|p| p.to_path_buf())
+                .map(std::path::Path::to_path_buf)
         } else {
             None
         }
@@ -720,7 +719,7 @@ mod tests {
         };
 
         let mut catalog = SessionCatalog::load(code_home)?;
-        catalog.upsert(entry1.clone())?;
+        catalog.upsert(entry1)?;
         catalog.upsert(entry2.clone())?;
 
         // Test by_cwd index
@@ -770,10 +769,10 @@ mod tests {
             last_event_at: "2025-01-01T10:15:00.000Z".to_string(),
             message_count: 10,
             last_user_snippet: Some("updated message".to_string()),
-            ..entry1.clone()
+            ..entry1
         };
 
-        catalog.upsert(entry2.clone())?;
+        catalog.upsert(entry2)?;
 
         // Verify update
         let loaded = SessionCatalog::load(code_home)?;
@@ -1007,7 +1006,7 @@ mod tests {
         let entry2 = SessionIndexEntry {
             cwd_real: cwd2.clone(),
             cwd_display: cwd2.to_string_lossy().to_string(),
-            ..entry1.clone()
+            ..entry1
         };
 
         catalog.upsert(entry2)?;

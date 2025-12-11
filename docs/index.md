@@ -1,5 +1,7 @@
 # Every Code 文档
 
+> 中文入口：[docs/zh/index.md](zh/index.md)
+
 使用这些文档来安装、配置并运行 Every Code（Code）。
 
 ## 从这里开始

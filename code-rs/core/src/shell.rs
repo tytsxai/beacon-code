@@ -337,10 +337,7 @@ mod tests {
                 .format_default_shell_invocation(input.iter().map(ToString::to_string).collect());
             let expected_cmd = expected_cmd
                 .iter()
-                .map(|s| {
-                    s.replace("BASHRC_PATH", bashrc_path.to_str().unwrap())
-                        .to_string()
-                })
+                .map(|s| s.replace("BASHRC_PATH", bashrc_path.to_str().unwrap()))
                 .collect();
 
             assert_eq!(actual_cmd, Some(expected_cmd));
@@ -448,10 +445,7 @@ mod macos_tests {
                 .format_default_shell_invocation(input.iter().map(ToString::to_string).collect());
             let expected_cmd = expected_cmd
                 .iter()
-                .map(|s| {
-                    s.replace("ZSHRC_PATH", zshrc_path.to_str().unwrap())
-                        .to_string()
-                })
+                .map(|s| s.replace("ZSHRC_PATH", zshrc_path.to_str().unwrap()))
                 .collect();
 
             assert_eq!(actual_cmd, Some(expected_cmd));

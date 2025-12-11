@@ -11,7 +11,7 @@ use super::timeline::ContextTimeline;
 /// Storage configuration for timeline persistence.
 ///
 /// Phase 2A: Not yet implemented, placeholder for future phases.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct StorageConfig {
     /// Path to the storage directory.
     pub storage_path: Option<std::path::PathBuf>,
@@ -21,16 +21,6 @@ pub struct StorageConfig {
 
     /// Whether to compress stored data.
     pub compress: bool,
-}
-
-impl Default for StorageConfig {
-    fn default() -> Self {
-        Self {
-            storage_path: None,
-            auto_persist: false,
-            compress: false,
-        }
-    }
 }
 
 #[allow(dead_code)]

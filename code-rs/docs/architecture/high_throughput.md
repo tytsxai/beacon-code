@@ -8,4 +8,4 @@
 - **选择性测试**：根据 `git diff` 触发 Backlog 特性匹配；严格 TDD (`tdd_mode=strict`) 缺少 `test_requirements.unit` 时标记为缺测。
 - **事件与告警**：`SessionSlow/SessionStuck/SessionMigrated` 诊断告警，`BackpressureWarning/Exceeded` 预算告警；并发低于 8 会生成 `LowConcurrency` 告警。
 
-> 目标：支撑“20 并发会话 × 8 角色”吞吐，并在背压、卡死、迁移等场景下输出可观测事件。***
+> 目标：支撑“20 并发会话 × 8 角色”吞吐，并在背压、卡死、迁移等场景下输出可观测事件。

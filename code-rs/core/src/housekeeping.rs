@@ -161,23 +161,23 @@ fn perform_housekeeping(
 ) -> io::Result<CleanupOutcome> {
     let mut outcome = CleanupOutcome::default();
 
-    if let Some(days) = config.session_retention_days {
-        if let Some(stats) = cleanup_sessions(code_home, now.date(), days)? {
-            outcome.session_days_removed = stats.removed_days;
-            outcome.session_files_removed = stats.removed_files;
-            outcome.session_bytes_reclaimed = stats.reclaimed_bytes;
-            outcome.errors += stats.errors;
-        }
+    if let Some(days) = config.session_retention_days
+        && let Some(stats) = cleanup_sessions(code_home, now.date(), days)?
+    {
+        outcome.session_days_removed = stats.removed_days;
+        outcome.session_files_removed = stats.removed_files;
+        outcome.session_bytes_reclaimed = stats.reclaimed_bytes;
+        outcome.errors += stats.errors;
     }
 
-    if let Some(days) = config.worktree_retention_days {
-        if let Some(stats) = cleanup_worktrees(code_home, now, days)? {
-            outcome.worktrees_removed = stats.removed_worktrees;
-            outcome.worktree_files_removed = stats.removed_files;
-            outcome.worktree_bytes_reclaimed = stats.reclaimed_bytes;
-            outcome.worktrees_skipped_active = stats.skipped_active;
-            outcome.errors += stats.errors;
-        }
+    if let Some(days) = config.worktree_retention_days
+        && let Some(stats) = cleanup_worktrees(code_home, now, days)?
+    {
+        outcome.worktrees_removed = stats.removed_worktrees;
+        outcome.worktree_files_removed = stats.removed_files;
+        outcome.worktree_bytes_reclaimed = stats.reclaimed_bytes;
+        outcome.worktrees_skipped_active = stats.skipped_active;
+        outcome.errors += stats.errors;
     }
 
     Ok(outcome)
@@ -373,15 +373,14 @@ fn cleanup_worktrees(
                     git_worktree::remove_branch_metadata(&branch_path);
                     purge_session_registry(&working_root.join("_session"), &branch_path);
                     // Also delete the git branch reference to prevent branch accumulation
-                    if let Some(branch_name) = branch_path.file_name().and_then(|n| n.to_str()) {
-                        if branch_name.starts_with("code-") {
-                            if let Some(repo_root) = detect_repo_root(&branch_path) {
-                                let _ = std::process::Command::new("git")
-                                    .current_dir(&repo_root)
-                                    .args(["branch", "-D", branch_name])
-                                    .output();
-                            }
-                        }
+                    if let Some(branch_name) = branch_path.file_name().and_then(|n| n.to_str())
+                        && branch_name.starts_with("code-")
+                        && let Some(repo_root) = detect_repo_root(&branch_path)
+                    {
+                        let _ = std::process::Command::new("git")
+                            .current_dir(&repo_root)
+                            .args(["branch", "-D", branch_name])
+                            .output();
                     }
                     stats.removed_worktrees += 1;
                     stats.removed_files += dir_stats.files;
@@ -537,7 +536,7 @@ fn purge_session_registry(session_dir: &Path, worktree_path: &Path) {
         for line in data.lines() {
             if line
                 .split_once('\t')
-                .map_or(false, |(_, path)| path == worktree_str)
+                .is_some_and(|(_, path)| path == worktree_str)
             {
                 changed = true;
             } else if !line.trim().is_empty() {
@@ -683,7 +682,7 @@ fn list_dir_sorted(path: &Path) -> Vec<fs::DirEntry> {
         Ok(it) => it.flatten().collect(),
         Err(_) => Vec::new(),
     };
-    entries.sort_by(|a, b| a.file_name().cmp(&b.file_name()));
+    entries.sort_by_key(std::fs::DirEntry::file_name);
     entries
 }
 
@@ -739,8 +738,7 @@ fn write_state(path: &Path, state: &CleanupState) -> io::Result<()> {
         opts.mode(0o600);
     }
     let mut file = opts.open(path)?;
-    let data =
-        serde_json::to_vec(state).map_err(|err| io::Error::new(io::ErrorKind::Other, err))?;
+    let data = serde_json::to_vec(state).map_err(io::Error::other)?;
     file.write_all(&data)?;
     file.write_all(b"\n")?;
     file.sync_all()

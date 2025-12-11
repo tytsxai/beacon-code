@@ -20,6 +20,8 @@ use crossterm::event::KeyEventKind;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::widgets::WidgetRef;
+use std::sync::atomic::AtomicI64;
+use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 pub(crate) mod agent_editor_view;
@@ -65,6 +67,8 @@ mod verbosity_selection_view;
 pub(crate) use settings_overlay::SettingsSection;
 pub(crate) mod review_settings_view;
 pub mod settings_panel;
+
+static ACCESS_HINT_TIMER_ID: AtomicI64 = AtomicI64::new(0);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum CancellationEvent {
@@ -153,6 +157,36 @@ pub(crate) struct BottomPaneParams {
     pub(crate) enhanced_keys_supported: bool,
     pub(crate) using_chatgpt_auth: bool,
     pub(crate) auto_drive_variant: AutoDriveVariant,
+}
+
+fn schedule_access_hint_redraw(
+    label: &'static str,
+    dur: Duration,
+    tx: AppEventSender,
+    fallback_tx: AppEventSender,
+) {
+    let timer_id = ACCESS_HINT_TIMER_ID
+        .fetch_add(1, Ordering::SeqCst)
+        .saturating_add(1);
+    let delayed = dur + Duration::from_millis(120);
+
+    if thread_spawner::spawn_lightweight(label, move || {
+        std::thread::sleep(delayed);
+        if ACCESS_HINT_TIMER_ID.load(Ordering::SeqCst) == timer_id {
+            tx.send(AppEvent::RequestRedraw);
+        }
+    })
+    .is_none()
+    {
+        let _ = std::thread::Builder::new()
+            .name(label.to_string())
+            .spawn(move || {
+                std::thread::sleep(delayed);
+                if ACCESS_HINT_TIMER_ID.load(Ordering::SeqCst) == timer_id {
+                    fallback_tx.send(AppEvent::RequestRedraw);
+                }
+            });
+    }
 }
 
 impl BottomPane<'_> {
@@ -1037,14 +1071,7 @@ impl BottomPane<'_> {
         self.composer.set_access_mode_hint_for(dur);
         let tx = self.app_event_tx.clone();
         let fallback_tx = self.app_event_tx.clone();
-        if thread_spawner::spawn_lightweight("access-hint", move || {
-            std::thread::sleep(dur + Duration::from_millis(120));
-            tx.send(AppEvent::RequestRedraw);
-        })
-        .is_none()
-        {
-            fallback_tx.send(AppEvent::RequestRedraw);
-        }
+        schedule_access_hint_redraw("access-hint", dur, tx, fallback_tx);
         self.request_redraw();
     }
 
@@ -1053,14 +1080,7 @@ impl BottomPane<'_> {
         // Schedule a redraw after expiry without blocking other scheduled frames.
         let tx = self.app_event_tx.clone();
         let fallback_tx = self.app_event_tx.clone();
-        if thread_spawner::spawn_lightweight("access-hint-ephemeral", move || {
-            std::thread::sleep(dur + Duration::from_millis(120));
-            tx.send(AppEvent::RequestRedraw);
-        })
-        .is_none()
-        {
-            fallback_tx.send(AppEvent::RequestRedraw);
-        }
+        schedule_access_hint_redraw("access-hint-ephemeral", dur, tx, fallback_tx);
         self.request_redraw();
     }
 

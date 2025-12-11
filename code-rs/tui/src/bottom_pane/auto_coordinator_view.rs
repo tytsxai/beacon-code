@@ -79,9 +79,13 @@ pub(crate) struct AutoActiveViewModel {
     pub intro_started_at: Option<Instant>,
     pub intro_reduced_motion: bool,
     // Enhanced Auto Drive fields
+    #[allow(dead_code)]
     pub budget_alert: Option<String>,
+    #[allow(dead_code)]
     pub diagnostic_alert: Option<String>,
+    #[allow(dead_code)]
     pub intervention_reason: Option<String>,
+    #[allow(dead_code)]
     pub checkpoint_status: Option<String>,
 }
 

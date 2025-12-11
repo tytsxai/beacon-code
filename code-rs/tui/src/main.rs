@@ -29,10 +29,7 @@ fn main() -> anyhow::Result<()> {
             session_id,
         } = run_main(inner, code_linux_sandbox_exe).await?;
         if !token_usage.is_zero() {
-            println!(
-                "{}",
-                code_core::protocol::FinalOutput::from(token_usage.clone())
-            );
+            println!("{}", code_core::protocol::FinalOutput::from(token_usage));
         }
         if let Some(session_id) = session_id {
             println!(

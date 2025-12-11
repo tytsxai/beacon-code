@@ -586,13 +586,17 @@ mod tests {
             prompt: Prompt,
         ) -> Pin<Box<dyn Future<Output = anyhow::Result<ParallelResponseStream>> + Send + '_>>
         {
-            let fail = if self.fail_on.is_empty() { false } else { {
-                prompt
-                    .user_instructions
-                    .as_ref()
-                    .map(|p| p.contains(&self.fail_on))
-                    .unwrap_or(false)
-            } };
+            let fail = if self.fail_on.is_empty() {
+                false
+            } else {
+                {
+                    prompt
+                        .user_instructions
+                        .as_ref()
+                        .map(|p| p.contains(&self.fail_on))
+                        .unwrap_or(false)
+                }
+            };
 
             Box::pin(async move {
                 if fail {

@@ -162,17 +162,17 @@ fn canonicalize_word_boundaries(input: &str) -> String {
         let next_char = chars.peek().copied();
         let mut split = false;
 
-        if !current.is_empty() {
-            if let Some(prev) = prev_char {
-                if prev.is_ascii_lowercase() && ch.is_ascii_uppercase() {
-                    split = true;
-                } else if prev.is_ascii_uppercase()
-                    && ch.is_ascii_uppercase()
-                    && uppercase_run > 0
-                    && next_char.map_or(false, |c| c.is_ascii_lowercase())
-                {
-                    split = true;
-                }
+        if !current.is_empty()
+            && let Some(prev) = prev_char
+        {
+            if prev.is_ascii_lowercase() && ch.is_ascii_uppercase() {
+                split = true;
+            } else if prev.is_ascii_uppercase()
+                && ch.is_ascii_uppercase()
+                && uppercase_run > 0
+                && next_char.is_some_and(|c| c.is_ascii_lowercase())
+            {
+                split = true;
             }
         }
 

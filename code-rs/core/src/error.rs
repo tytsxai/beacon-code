@@ -62,7 +62,7 @@ impl RetryAfter {
         let delay = clamped
             .signed_duration_since(now)
             .to_std()
-            .unwrap_or_else(|_| Duration::ZERO);
+            .unwrap_or(Duration::ZERO);
         Self {
             delay,
             resume_at: clamped,

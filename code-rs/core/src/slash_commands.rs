@@ -124,7 +124,7 @@ pub fn format_subagent_command(
     // Compose unified prompt used for all subagent commands (built-ins and custom)
     let models_str = models
         .iter()
-        .map(|m| format!("\"{}\"", m))
+        .map(|m| format!("\"{m}\""))
         .collect::<Vec<_>>()
         .join(", ");
 
@@ -135,12 +135,7 @@ pub fn format_subagent_command(
 
     let write_flag = !read_only;
     let prompt = format!(
-        "Please perform /{name} using the <tools>, <instructions> and <task> below.\n<tools>\n    To perform /{name} you must use `agent {{\"action\":\"create\",\"create\":{{\"models\":[{models}],\"write\":{write_flag}}}}}` to start a batch of agents.\n    Provide a comprehensive description of the task and context. You may need to briefly research the code base first and to give the agents a head start of where to look. You can include one or two key files but also allow the models to look up the files they need themselves. Using the create action starts all agents at once and returns a `batch_id`.\n\n    Each agent uses a different LLM which allows you to gather diverse results.\n    Monitor progress using `agent {{\"action\":\"wait\",\"wait\":{{\"batch_id\":\"<batch_id>\",\"return_all\":true}}}}` to wait for all agents to complete.\n    If an agent fails or times out, you can ignore it and continue with the other results.\n    Use `agent {{\"action\":\"result\",\"result\":{{\"agent_id\":\"<agent_id>\"}}}}` to fetch detailed output, or inspect the worktree directly when `write` is true.\n</tools>\n<instructions>\n    Instructions for /{name}:\n    {instructions}\n</instructions>\n<task>\n    Task for /{name}:\n    {task}\n</task>",
-        name = name,
-        models = models_str,
-        write_flag = write_flag,
-        instructions = instr_text,
-        task = task,
+        "Please perform /{name} using the <tools>, <instructions> and <task> below.\n<tools>\n    To perform /{name} you must use `agent {{\"action\":\"create\",\"create\":{{\"models\":[{models_str}],\"write\":{write_flag}}}}}` to start a batch of agents.\n    Provide a comprehensive description of the task and context. You may need to briefly research the code base first and to give the agents a head start of where to look. You can include one or two key files but also allow the models to look up the files they need themselves. Using the create action starts all agents at once and returns a `batch_id`.\n\n    Each agent uses a different LLM which allows you to gather diverse results.\n    Monitor progress using `agent {{\"action\":\"wait\",\"wait\":{{\"batch_id\":\"<batch_id>\",\"return_all\":true}}}}` to wait for all agents to complete.\n    If an agent fails or times out, you can ignore it and continue with the other results.\n    Use `agent {{\"action\":\"result\",\"result\":{{\"agent_id\":\"<agent_id>\"}}}}` to fetch detailed output, or inspect the worktree directly when `write` is true.\n</tools>\n<instructions>\n    Instructions for /{name}:\n    {instr_text}\n</instructions>\n<task>\n    Task for /{name}:\n    {task}\n</task>",
     );
 
     SubagentResolution {
@@ -264,9 +259,7 @@ pub fn format_cleanup_command(args: &str) -> String {
 - NEVER delete the current branch (`$current_branch`).
 - Prefer to keep a branch if uncertain; explain why it was retained.
 
-Now proceed with the cleanup."#,
-        dry_run_note = dry_run_note,
-        keep_note = keep_note
+Now proceed with the cleanup."#
     )
 }
 
@@ -282,7 +275,10 @@ pub fn handle_slash_command(input: &str, agents: Option<&[AgentConfig]>) -> Opti
     // Parse the command and arguments
     let parts: Vec<&str> = input.splitn(2, ' ').collect();
     let command = parts[0];
-    let args = parts.get(1).map(|s| s.to_string()).unwrap_or_default();
+    let args = parts
+        .get(1)
+        .map(std::string::ToString::to_string)
+        .unwrap_or_default();
 
     match command {
         "/plan" => {

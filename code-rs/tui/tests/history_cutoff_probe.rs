@@ -255,7 +255,7 @@ fn exec_history_small_viewport_keeps_last_line() {
         msg: EventMsg::ExecCommandBegin(ExecCommandBeginEvent {
             call_id: call_id.clone(),
             command: vec!["bash".into(), "-lc".into(), "printf".into()],
-            cwd: cwd.clone(),
+            cwd,
             parsed_cmd: Vec::new(),
         }),
         order: Some(order(&mut seq)),

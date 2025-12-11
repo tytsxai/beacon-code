@@ -25,7 +25,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::time::Duration;
 use std::time::Instant;
-use tracing::error;
+use tracing::warn;
 
 const AGENT_TOOL_NAMES: &[&str] = &[
     "agent",
@@ -485,20 +485,29 @@ fn agent_start_line(tracker: &AgentRunTracker) -> Line<'static> {
     Line::from(spans)
 }
 
-fn report_missing_batch(
-    chat: &mut ChatWidget<'_>,
+fn warn_missing_batch(
     context: &str,
     call_id: Option<&str>,
     tool_name: Option<&str>,
     extra: Option<&str>,
 ) {
-    error!(
+    warn!(
         %context,
         call_id,
         tool_name,
         extra,
         "missing batch_id for agent event"
     );
+}
+
+fn emit_missing_batch_message(
+    chat: &mut ChatWidget<'_>,
+    context: &str,
+    call_id: Option<&str>,
+    tool_name: Option<&str>,
+    extra: Option<&str>,
+) {
+    warn_missing_batch(context, call_id, tool_name, extra);
 
     let mut message = format!("⚠️ {context}: missing agent batch_id.");
     if let Some(tool) = tool_name {
@@ -512,6 +521,7 @@ fn report_missing_batch(
         }
     }
     if let Some(detail) = extra {
+        let detail = detail.trim();
         if !detail.is_empty() {
             message.push_str(&format!(" {detail}"));
         }
@@ -733,31 +743,69 @@ pub(super) fn handle_custom_tool_begin(
         metadata.action.as_deref(),
         Some("create") | Some("wait") | Some("result") | Some("cancel")
     );
-    if metadata.batch_id.is_none() {
-        if action_requires_batch {
-            report_missing_batch(
-                chat,
-                "custom_tool_begin",
-                Some(call_id),
-                Some(tool_name),
-                metadata.action.as_deref(),
-            );
-        }
+    let (order_key, ordinal) = order_key_and_ordinal(chat, order);
+    let mut batch = metadata
+        .batch_id
+        .clone()
+        .unwrap_or_else(|| call_id.to_string());
+    let mut tracker_from_order = ordinal
+        .and_then(|ord| chat.tools_state.agent_run_by_order.get(&ord).cloned())
+        .and_then(|key| {
+            chat.tools_state
+                .agent_runs
+                .remove(&key)
+                .map(|tracker| (tracker, key))
+        });
+    if metadata.batch_id.is_none() && action_requires_batch && tracker_from_order.is_none() {
+        emit_missing_batch_message(
+            chat,
+            "custom_tool_begin",
+            Some(call_id),
+            Some(tool_name),
+            metadata.action.as_deref(),
+        );
         return true;
     }
+    let existing_key = metadata
+        .agent_ids
+        .iter()
+        .find_map(|id| chat.tools_state.agent_run_by_agent.get(id).cloned());
 
-    let (order_key, ordinal) = order_key_and_ordinal(chat, order);
-    let batch = metadata.batch_id.as_ref().expect("batch id required");
-
-    let (mut tracker, resolved_key) = match chat
-        .tools_state
-        .agent_run_by_batch
-        .get(batch)
-        .cloned()
-        .and_then(|key| chat.tools_state.agent_runs.remove(&key))
-    {
-        Some(existing) => (existing, agent_batch_key(batch)),
-        None => (AgentRunTracker::new(order_key), agent_batch_key(batch)),
+    let (mut tracker, resolved_key) = if let Some((tracker, key)) = tracker_from_order.take() {
+        if let Some(existing_batch) = tracker.batch_id.clone() {
+            batch = existing_batch;
+        }
+        (tracker, key)
+    } else if let Some(key) = existing_key.and_then(|key| {
+        chat.tools_state
+            .agent_runs
+            .remove(&key)
+            .map(|tracker| (tracker, key))
+    }) {
+        let (tracker, key) = key;
+        if let Some(existing_batch) = tracker.batch_id.clone() {
+            batch = existing_batch;
+        }
+        (tracker, key)
+    } else {
+        if metadata.batch_id.is_none()
+            && matches!(metadata.action.as_deref(), Some("result"))
+            && let Some(last_key) = chat.tools_state.agent_last_key.clone()
+            && let Some(existing) = chat.tools_state.agent_runs.remove(&last_key)
+        {
+            (existing, last_key)
+        } else {
+            match chat
+                .tools_state
+                .agent_run_by_batch
+                .get(&batch)
+                .cloned()
+                .and_then(|key| chat.tools_state.agent_runs.remove(&key))
+            {
+                Some(existing) => (existing, agent_batch_key(&batch)),
+                None => (AgentRunTracker::new(order_key), agent_batch_key(&batch)),
+            }
+        }
     };
     tracker.slot.set_order_key(order_key);
 
@@ -843,16 +891,14 @@ pub(super) fn handle_custom_tool_end(
         metadata.action.as_deref(),
         Some("create") | Some("wait") | Some("result") | Some("cancel")
     );
-    if metadata.batch_id.is_none() {
-        if action_requires_batch {
-            report_missing_batch(
-                chat,
-                "custom_tool_end",
-                Some(call_id),
-                Some(tool_name),
-                metadata.action.as_deref(),
-            );
-        }
+    if metadata.batch_id.is_none() && action_requires_batch {
+        emit_missing_batch_message(
+            chat,
+            "custom_tool_end",
+            Some(call_id),
+            Some(tool_name),
+            metadata.action.as_deref(),
+        );
         return true;
     }
 
@@ -860,17 +906,45 @@ pub(super) fn handle_custom_tool_end(
         .map(|meta| chat.provider_order_key_from_order_meta(meta))
         .unwrap_or_else(|| chat.next_internal_key());
     let ordinal = order.map(|m| m.request_ordinal);
-    let batch = metadata.batch_id.as_ref().expect("batch id required");
+    let mut batch = metadata
+        .batch_id
+        .clone()
+        .unwrap_or_else(|| call_id.to_string());
+    let existing_key = metadata
+        .agent_ids
+        .iter()
+        .find_map(|id| chat.tools_state.agent_run_by_agent.get(id).cloned());
 
-    let (mut tracker, resolved_key) = match chat
-        .tools_state
-        .agent_run_by_batch
-        .get(batch)
-        .cloned()
-        .and_then(|key| chat.tools_state.agent_runs.remove(&key))
-    {
-        Some(existing) => (existing, agent_batch_key(batch)),
-        None => return false,
+    let (mut tracker, resolved_key) = if let Some(key) = existing_key.and_then(|key| {
+        chat.tools_state
+            .agent_runs
+            .remove(&key)
+            .map(|tracker| (tracker, key))
+    }) {
+        let (tracker, key) = key;
+        if let Some(existing_batch) = tracker.batch_id.clone() {
+            batch = existing_batch;
+        }
+        (tracker, key)
+    } else {
+        if metadata.batch_id.is_none()
+            && matches!(metadata.action.as_deref(), Some("result"))
+            && let Some(last_key) = chat.tools_state.agent_last_key.clone()
+            && let Some(existing) = chat.tools_state.agent_runs.remove(&last_key)
+        {
+            (existing, last_key)
+        } else {
+            match chat
+                .tools_state
+                .agent_run_by_batch
+                .get(&batch)
+                .cloned()
+                .and_then(|key| chat.tools_state.agent_runs.remove(&key))
+            {
+                Some(existing) => (existing, agent_batch_key(&batch)),
+                None => (AgentRunTracker::new(order_key), agent_batch_key(&batch)),
+            }
+        }
     };
 
     tracker.slot.set_order_key(order_key);
@@ -972,7 +1046,7 @@ pub(super) fn handle_status_update(chat: &mut ChatWidget<'_>, event: &AgentStatu
     if !missing.is_empty() {
         let detail_string = format!("agents={}", missing.join(","));
         let detail = detail_string.as_str();
-        report_missing_batch(
+        emit_missing_batch_message(
             chat,
             "status_update",
             None,
@@ -996,7 +1070,7 @@ fn process_status_update_for_batch(
     agents: &[AgentInfo],
     event: &AgentStatusUpdateEvent,
 ) {
-    let (mut tracker, resolved_key) = match chat
+    let mut tracker_opt = chat
         .tools_state
         .agent_run_by_batch
         .get(batch_id)
@@ -1006,7 +1080,25 @@ fn process_status_update_for_batch(
                 .agent_runs
                 .remove(&key)
                 .map(|tracker| (tracker, key))
-        }) {
+        });
+
+    if tracker_opt.is_none() {
+        for agent in agents {
+            if let Some(key) = chat
+                .tools_state
+                .agent_run_by_agent
+                .get(agent.id.as_str())
+                .cloned()
+            {
+                if let Some(tracker) = chat.tools_state.agent_runs.remove(&key) {
+                    tracker_opt = Some((tracker, key));
+                    break;
+                }
+            }
+        }
+    }
+
+    let (mut tracker, resolved_key) = match tracker_opt {
         Some((tracker, key)) => (tracker, key),
         None => {
             let order_key = chat.next_internal_key();

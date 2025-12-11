@@ -94,7 +94,7 @@ static RESPONSES_ORIGINATOR_OVERRIDE: LazyLock<Mutex<Option<String>>> =
 pub fn set_default_originator(originator: &str) -> std::io::Result<()> {
     let mut guard = RESPONSES_ORIGINATOR_OVERRIDE
         .lock()
-        .map_err(|_| std::io::Error::new(ErrorKind::Other, "originator override lock poisoned"))?;
+        .map_err(|_| std::io::Error::other("originator override lock poisoned"))?;
     *guard = Some(originator.to_string());
     Ok(())
 }
@@ -725,7 +725,7 @@ fn set_project_trusted_inner(doc: &mut DocumentMut, project_path: &Path) -> anyh
         .get_mut(project_key.as_str())
         .and_then(|i| i.as_table_mut())
     else {
-        return Err(anyhow::anyhow!("project table missing for {}", project_key));
+        return Err(anyhow::anyhow!("project table missing for {project_key}"));
     };
     proj_tbl.set_implicit(false);
     proj_tbl["trust_level"] = toml_edit::value("trusted");
@@ -770,11 +770,11 @@ pub fn set_tui_theme_name(code_home: &Path, theme: ThemeName) -> anyhow::Result<
     doc["tui"]["theme"]["name"] = toml_edit::value(theme_str);
     // When switching away from the Custom theme, clear any lingering custom
     // overrides so built-in themes render true to spec on next startup.
-    if theme != ThemeName::Custom {
-        if let Some(tbl) = doc["tui"]["theme"].as_table_mut() {
-            tbl.remove("label");
-            tbl.remove("colors");
-        }
+    if theme != ThemeName::Custom
+        && let Some(tbl) = doc["tui"]["theme"].as_table_mut()
+    {
+        tbl.remove("label");
+        tbl.remove("colors");
     }
 
     // ensure code_home exists
@@ -1200,6 +1200,16 @@ pub fn set_auto_drive_settings(
         doc["auto_drive"]["audit_path"] = toml_edit::value(path.display().to_string());
     }
     doc["auto_drive"]["telemetry_enabled"] = toml_edit::value(settings.telemetry_enabled);
+    doc["auto_drive"]["high_throughput"]["max_sessions"] =
+        toml_edit::value(settings.high_throughput.max_sessions as i64);
+    doc["auto_drive"]["high_throughput"]["min_sessions"] =
+        toml_edit::value(settings.high_throughput.min_sessions as i64);
+    doc["auto_drive"]["high_throughput"]["scale_up_threshold"] =
+        toml_edit::value(settings.high_throughput.scale_up_threshold);
+    doc["auto_drive"]["high_throughput"]["scale_down_threshold"] =
+        toml_edit::value(settings.high_throughput.scale_down_threshold);
+    doc["auto_drive"]["high_throughput"]["backpressure_multiplier"] =
+        toml_edit::value(settings.high_throughput.backpressure_multiplier as i64);
 
     std::fs::create_dir_all(code_home)?;
     let tmp_file = NamedTempFile::new_in(code_home)?;
@@ -1359,18 +1369,16 @@ pub fn set_project_access_mode(
     let proj_tbl = projects_tbl
         .get_mut(project_key.as_str())
         .and_then(|i| i.as_table_mut())
-        .ok_or_else(|| {
-            anyhow::anyhow!(format!("failed to create projects.{} table", project_key))
-        })?;
+        .ok_or_else(|| anyhow::anyhow!(format!("failed to create projects.{project_key} table")))?;
 
     // Write fields
     proj_tbl.insert(
         "approval_policy",
-        TomlItem::Value(toml_edit::Value::from(format!("{}", approval))),
+        TomlItem::Value(toml_edit::Value::from(format!("{approval}"))),
     );
     proj_tbl.insert(
         "sandbox_mode",
-        TomlItem::Value(toml_edit::Value::from(format!("{}", sandbox_mode))),
+        TomlItem::Value(toml_edit::Value::from(format!("{sandbox_mode}"))),
     );
 
     // Harmonize trust_level with selected access mode:
@@ -1439,9 +1447,7 @@ pub fn add_project_allowed_command(
     let project_tbl = projects_tbl
         .get_mut(project_key.as_str())
         .and_then(|i| i.as_table_mut())
-        .ok_or_else(|| {
-            anyhow::anyhow!(format!("failed to create projects.{} table", project_key))
-        })?;
+        .ok_or_else(|| anyhow::anyhow!(format!("failed to create projects.{project_key} table")))?;
 
     let mut argv_array = TomlArray::new();
     for arg in command {
@@ -1520,7 +1526,7 @@ pub fn list_mcp_servers(
                         .and_then(|v| v.as_array())
                         .map(|arr| {
                             arr.iter()
-                                .filter_map(|i| i.as_str().map(|s| s.to_string()))
+                                .filter_map(|i| i.as_str().map(std::string::ToString::to_string))
                                 .collect()
                         })
                         .unwrap_or_default();
@@ -1533,17 +1539,15 @@ pub fn list_mcp_servers(
                                     })
                                     .collect::<HashMap<_, _>>(),
                             )
-                        } else if let Some(table) = v.as_table() {
-                            Some(
+                        } else {
+                            v.as_table().map(|table| {
                                 table
                                     .iter()
                                     .filter_map(|(k, v)| {
                                         v.as_str().map(|s| (k.to_string(), s.to_string()))
                                     })
-                                    .collect::<HashMap<_, _>>(),
-                            )
-                        } else {
-                            None
+                                    .collect::<HashMap<_, _>>()
+                            })
                         }
                     });
 
@@ -1556,7 +1560,7 @@ pub fn list_mcp_servers(
                     let bearer_token = t
                         .get("bearer_token")
                         .and_then(|v| v.as_str())
-                        .map(|s| s.to_string());
+                        .map(std::string::ToString::to_string);
 
                     McpServerTransportConfig::StreamableHttp {
                         url: url.to_string(),
@@ -1576,7 +1580,7 @@ pub fn list_mcp_servers(
                     .flatten()
                     .or_else(|| {
                         t.get("startup_timeout_ms")
-                            .and_then(|v| v.as_integer())
+                            .and_then(toml_edit::Item::as_integer)
                             .map(|ms| Duration::from_millis(ms as u64))
                     });
 
@@ -1628,8 +1632,7 @@ pub fn add_mcp_server(code_home: &Path, name: &str, cfg: McpServerConfig) -> any
         .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
     {
         return Err(anyhow::anyhow!(
-            "invalid server name '{}': must match ^[a-zA-Z0-9_-]+$",
-            name
+            "invalid server name '{name}': must match ^[a-zA-Z0-9_-]+$"
         ));
     }
 
@@ -2141,16 +2144,16 @@ fn default_ui_locale() -> UiLocale {
 
 fn upgrade_legacy_model_slugs(cfg: &mut ConfigToml) {
     fn maybe_upgrade(field: &mut Option<String>) {
-        if let Some(old) = field.clone() {
-            if let Some(new) = upgrade_legacy_model_slug(&old) {
-                tracing::info!(
-                    target: "code.config",
-                    old,
-                    new,
-                    "upgrading legacy model slug to newer default",
-                );
-                *field = Some(new);
-            }
+        if let Some(old) = field.clone()
+            && let Some(new) = upgrade_legacy_model_slug(&old)
+        {
+            tracing::info!(
+                target: "code.config",
+                old,
+                new,
+                "upgrading legacy model slug to newer default",
+            );
+            *field = Some(new);
         }
     }
 
@@ -2379,27 +2382,27 @@ impl Config {
         let history = cfg.history.unwrap_or_default();
 
         let mut always_allow_commands: Vec<ApprovedCommandPattern> = Vec::new();
-        if let Some(project_cfg) = project_override {
-            if let Some(commands) = &project_cfg.always_allow_commands {
-                for cmd in commands {
-                    if cmd.argv.is_empty() {
-                        continue;
-                    }
-                    let kind = match cmd.match_kind {
-                        AllowedCommandMatchKind::Exact => ApprovedCommandMatchKind::Exact,
-                        AllowedCommandMatchKind::Prefix => ApprovedCommandMatchKind::Prefix,
-                    };
-                    let semantic = if matches!(kind, ApprovedCommandMatchKind::Prefix) {
-                        Some(cmd.argv.clone())
-                    } else {
-                        None
-                    };
-                    always_allow_commands.push(ApprovedCommandPattern::new(
-                        cmd.argv.clone(),
-                        kind,
-                        semantic,
-                    ));
+        if let Some(project_cfg) = project_override
+            && let Some(commands) = &project_cfg.always_allow_commands
+        {
+            for cmd in commands {
+                if cmd.argv.is_empty() {
+                    continue;
                 }
+                let kind = match cmd.match_kind {
+                    AllowedCommandMatchKind::Exact => ApprovedCommandMatchKind::Exact,
+                    AllowedCommandMatchKind::Prefix => ApprovedCommandMatchKind::Prefix,
+                };
+                let semantic = if matches!(kind, ApprovedCommandMatchKind::Prefix) {
+                    Some(cmd.argv.clone())
+                } else {
+                    None
+                };
+                always_allow_commands.push(ApprovedCommandPattern::new(
+                    cmd.argv.clone(),
+                    kind,
+                    semantic,
+                ));
             }
         }
 
@@ -2491,7 +2494,7 @@ impl Config {
 
         let responses_originator_header: String = cfg
             .responses_originator_header_internal_override
-            .unwrap_or_else(|| default_responses_originator());
+            .unwrap_or_else(default_responses_originator);
 
         let agents: Vec<AgentConfig> = merge_with_default_agents(cfg.agents);
 
@@ -2512,7 +2515,7 @@ impl Config {
 
         let mut confirm_guard = ConfirmGuardConfig::default();
         if let Some(mut user_guard) = cfg.confirm_guard {
-            confirm_guard.patterns.extend(user_guard.patterns.drain(..));
+            confirm_guard.patterns.append(&mut user_guard.patterns);
         }
         for pattern in &confirm_guard.patterns {
             if let Err(err) = regex_lite::Regex::new(&pattern.regex) {
@@ -2858,7 +2861,7 @@ fn compute_legacy_code_home_dir() -> Option<PathBuf> {
 fn legacy_code_home_dir() -> Option<PathBuf> {
     #[cfg(test)]
     {
-        return compute_legacy_code_home_dir();
+        compute_legacy_code_home_dir()
     }
 
     #[cfg(not(test))]
@@ -2885,10 +2888,10 @@ pub fn resolve_code_path_for_read(code_home: &Path, relative: &Path) -> PathBuf 
         return default_path;
     }
 
-    if let Some(default_home) = default_code_home_dir() {
-        if default_home != code_home {
-            return default_path;
-        }
+    if let Some(default_home) = default_code_home_dir()
+        && default_home != code_home
+    {
+        return default_path;
     }
 
     if let Some(legacy) = legacy_code_home_dir() {
@@ -2940,6 +2943,7 @@ pub fn log_dir(cfg: &Config) -> std::io::Result<PathBuf> {
 #[cfg(test)]
 mod tests {
     #![allow(clippy::expect_used, clippy::unwrap_used)]
+    use crate::config_types::AutoDriveSettings;
     use crate::config_types::HistoryPersistence;
     use crate::config_types::Notifications;
 
@@ -3204,6 +3208,35 @@ args = ["-y", "@upstash/context7-mcp"]
 
         Ok(())
     }
+
+    #[test]
+    fn set_auto_drive_settings_persists_high_throughput_fields() -> anyhow::Result<()> {
+        let code_home = TempDir::new()?;
+        let mut settings = AutoDriveSettings::default();
+        settings.high_throughput.max_sessions = 42;
+        settings.high_throughput.min_sessions = 6;
+        settings.high_throughput.scale_up_threshold = 0.91;
+        settings.high_throughput.scale_down_threshold = 0.21;
+        settings.high_throughput.backpressure_multiplier = 7;
+
+        set_auto_drive_settings(code_home.path(), &settings, false)?;
+
+        let written = std::fs::read_to_string(code_home.path().join(CONFIG_TOML_FILE))?;
+        let parsed: ConfigToml = toml::from_str(&written)?;
+        let ht = parsed
+            .auto_drive
+            .as_ref()
+            .expect("auto_drive section exists")
+            .high_throughput;
+
+        assert_eq!(ht.max_sessions, 42);
+        assert_eq!(ht.min_sessions, 6);
+        assert!((ht.scale_up_threshold - 0.91).abs() < f64::EPSILON);
+        assert!((ht.scale_down_threshold - 0.21).abs() < f64::EPSILON);
+        assert_eq!(ht.backpressure_multiplier, 7);
+        Ok(())
+    }
+
     #[tokio::test]
     async fn persist_model_selection_updates_defaults() -> anyhow::Result<()> {
         let code_home = TempDir::new()?;

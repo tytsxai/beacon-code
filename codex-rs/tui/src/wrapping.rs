@@ -649,4 +649,18 @@ of the kindness of the woman who tended
 them."#
         );
     }
+
+    #[test]
+    fn wrap_ranges_trim_handles_cjk_display_width() {
+        let ranges = wrap_ranges_trim("你好世界", 4);
+        assert_eq!(ranges, vec![0..6, 6..12]);
+    }
+
+    #[test]
+    fn word_wrap_line_wraps_cjk_characters_by_width() {
+        let line = Line::from("你好世界");
+        let out = word_wrap_line(&line, 4);
+        let rendered: Vec<String> = out.iter().map(concat_line).collect();
+        assert_eq!(rendered, vec!["你好", "世界"]);
+    }
 }

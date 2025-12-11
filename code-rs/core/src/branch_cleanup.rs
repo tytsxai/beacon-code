@@ -27,11 +27,11 @@ static LAST_CLEANUP: Mutex<Option<Instant>> = Mutex::const_new(None);
 pub async fn cleanup_stale_code_branches(workdir: PathBuf) {
     {
         let mut last = LAST_CLEANUP.lock().await;
-        if let Some(last_time) = *last {
-            if last_time.elapsed() < MIN_CLEANUP_INTERVAL {
-                debug!("Skipping branch cleanup, ran recently");
-                return;
-            }
+        if let Some(last_time) = *last
+            && last_time.elapsed() < MIN_CLEANUP_INTERVAL
+        {
+            debug!("Skipping branch cleanup, ran recently");
+            return;
         }
         *last = Some(Instant::now());
     }
@@ -57,7 +57,7 @@ fn cleanup_branches_sync(workdir: &Path) -> Result<(), String> {
         .current_dir(workdir)
         .args(["branch", "--show-current"])
         .output()
-        .map_err(|e| format!("Failed to get current branch in {:?}: {}", workdir, e))?;
+        .map_err(|e| format!("Failed to get current branch in {workdir:?}: {e}"))?;
 
     let current = String::from_utf8_lossy(&current_branch.stdout)
         .trim()
@@ -68,7 +68,7 @@ fn cleanup_branches_sync(workdir: &Path) -> Result<(), String> {
         .current_dir(workdir)
         .args(["branch", "--list", "code-*"])
         .output()
-        .map_err(|e| format!("Failed to list branches in {:?}: {}", workdir, e))?;
+        .map_err(|e| format!("Failed to list branches in {workdir:?}: {e}"))?;
 
     if !output.status.success() {
         debug!(
