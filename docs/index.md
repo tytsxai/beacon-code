@@ -18,6 +18,7 @@
 - [执行策略](execpolicy.md)
 - [斜杠菜单](slash-commands.md)
 - [Auto Drive](auto-drive.md)
+- [Auto Drive 概要校验表](auto-drive-validation.md)
 - [Agents 与子智能体](agents.md)
 - [设置界面](settings.md)
 - [提示词](prompts.md)

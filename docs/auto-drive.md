@@ -4,7 +4,7 @@
 
 ## 起始方式
 - TUI：`/auto <goal>`。若省略目标且存在近期历史，Code 会为你提议一个；`/auto settings` 可直接进入 Auto Drive 面板。
-- CLI：`code exec --auto "<goal>"` 或 `code exec "/auto <goal>"`。无头模式必须提供目标。
+- CLI：`code exec --auto "<goal>"` 或 `code exec "/auto <goal>"`，也可用别名 `code auto "<goal>"`（等价 `exec --auto --full-auto`）。无头模式必须提供目标。
 - 前置条件：必须在 TUI 选择全自动模式（danger-full-access + approval=never），否则会看到警告且 Auto Drive 不会启动。
 
 ## 目标处理
@@ -25,7 +25,7 @@
 
 ## 沙箱与审批
 - TUI：需要 `danger-full-access` 且 `approval_policy=never`，避免被审批阻塞。
-- CLI：`--auto` 会关闭审批；如需允许修改与联网命令，添加 `--full-auto`（或 `--dangerously-bypass-approvals-and-sandbox`）。
+- CLI：无头 `exec` 始终使用 `approval_policy=never`；`--auto` 仅启用 Auto Drive。写入/联网能力取决于 sandbox：`--full-auto` 等价于 `--sandbox workspace-write`（默认禁网）；如需联网可在配置中开启 `[sandbox_workspace_write].network_access = true`，或直接用 `--sandbox danger-full-access` / `--dangerously-bypass-approvals-and-sandbox`。
 
 ## 继续与倒计时模式
 - `continue_mode`：`immediate`、`ten-seconds`（默认）、`sixty-seconds`、`manual`。
@@ -77,7 +77,7 @@
 ### 智能体调度
 - 并行执行：多智能体同时运行
 - 阻塞执行：按顺序依次运行
-- 可配置并发限制（默认 4）
+- 可配置并发限制（默认 8）
 
 ### 审计日志
 - 记录所有工具执行、文件修改、网络访问
@@ -111,3 +111,4 @@
 - 想要倒计时与可视状态请留在 TUI；CI 或脚本流程可用 `code exec --auto`。
 - 如因无法推导目标而停止，请用简短具体的指令重新运行 `/auto <goal>`。
 - 想要单模型运行可在 `/auto settings` 关闭智能体。
+- 附：对外中文概要的逐句校验与修订见 `docs/auto-drive-validation.md`。

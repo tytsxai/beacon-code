@@ -32,7 +32,7 @@
 ## Auto Drive（默认只读）
 7) 无头 Auto Drive 烟测  
    - `./bin/code exec --auto "list files"`  
-   - 预期：自动规划并读取文件，不修改。若需写入/联网再加 `--full-auto`，仅在同意的环境下执行。
+   - 预期：自动规划并读取文件，不修改。若需写入加 `--full-auto`；如需联网再配 `[sandbox_workspace_write].network_access = true` 或使用 `--sandbox danger-full-access`，仅在同意的环境下执行。
 
 ## 浏览器与路径选择
 8) 文件搜索  

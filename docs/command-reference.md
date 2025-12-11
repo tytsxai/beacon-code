@@ -19,7 +19,7 @@ code exec "任务描述"          # 非交互模式执行
 | `-m, --model <name>` | 指定模型 | `code -m gpt-5.1` |
 | `-a, --ask-for-approval` | 审批策略 | `code -a never` |
 | `--read-only` | 只读模式 | `code --read-only "..."` |
-| `--full-auto` | 全自动模式（可写入+联网） | `code exec --full-auto "..."` |
+| `--full-auto` | Auto 预设（`workspace-write` + `on-failure`，默认禁网） | `code exec --full-auto "..."` |
 | `--sandbox <mode>` | 沙箱级别 | `code --sandbox danger-full-access` |
 | `-i, --image <path>` | 附加图片 | `code -i img.png "解释这个"` |
 | `-C, --cd <dir>` | 指定工作目录 | `code -C /path/to/project` |

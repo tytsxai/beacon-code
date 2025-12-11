@@ -23,11 +23,11 @@
 3) 运行示例：
    - 只读了解仓库：`code --read-only "explain this repo"`（或在 TUI 输入 `/solve "explain this repo"`）。
    - 修改/执行：在 TUI 输入 `/code "add a healthcheck endpoint"`，按提示审批命令与写入。
-   - 自动化脚本：`code exec "run tests"`（默认只读）；允许修改与联网用 `code exec --full-auto "fix tests"`。
+   - 自动化脚本：`code exec "run tests"`（默认只读沙箱）；允许修改用 `code exec --full-auto "fix tests"`；如需联网可在配置中开启 `[sandbox_workspace_write].network_access = true` 或使用 `code exec --sandbox danger-full-access "..."`（风险更高）。
 
 ## Auto Drive（全自动）
 - TUI：`/auto "<目标>"`。需在设置或 `config.toml` 将 `sandbox_mode=danger-full-access`、`approval_policy=never` 才能无人值守。
-- CLI：`code exec --auto "<目标>"`（等价于 headless Auto Drive），如需写入与联网加 `--full-auto`。
+- CLI：`code exec --auto "<目标>"`（等价于 headless Auto Drive），允许写入加 `--full-auto`；如需联网按上条配置或使用 `--sandbox danger-full-access`。
 - 倒计时/手动确认：在 `/auto settings` 选择 continue 模式；Esc 可随时暂停/停止。
 
 ## 多智能体与配置
