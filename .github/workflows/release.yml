@@ -646,8 +646,8 @@ jobs:
             exit 1
           fi
           # Sanity: ensure ESM import of fs functions exists
-          if ! grep -q "import .*from \"fs\"" "$BIN"; then
-            echo "Missing ESM import from fs in coder.js; unexpected content." >&2
+          if ! grep -q 'from "fs"' "$BIN"; then
+            echo 'Missing ESM import from "fs" in coder.js; unexpected content.' >&2
             sed -n '1,80p' "$BIN" >&2 || true
             exit 1
           fi

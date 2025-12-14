@@ -99,6 +99,7 @@ jobs:
           UPSTREAM_BRANCH: ${{ env.UPSTREAM_BRANCH }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch || 'main' }}
           MERGE_BRANCH: ${{ env.MERGE_BRANCH }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           set -euo pipefail
           git remote add upstream "https://github.com/${UPSTREAM_REPO}.git" 2>/dev/null || true
@@ -121,15 +122,30 @@ jobs:
             upstream_in_merge=true
           fi
 
+          openai_api_key_present=false
+          if [ -n "${OPENAI_API_KEY:-}" ]; then
+            openai_api_key_present=true
+          fi
+
           action=no_work
+          action_reason=no_work
           if [ "$upstream_only" -gt 0 ] && [ "$upstream_in_merge" != true ]; then
             action=merge
+            action_reason=upstream_has_new_commits
           elif [ "$merge_only" -gt 0 ] || [ "$upstream_in_merge" = true ]; then
             action=pr_only
+            action_reason=merge_branch_needs_pr
+          fi
+
+          if [ "$action" = merge ] && [ "$openai_api_key_present" != true ]; then
+            action=no_work
+            action_reason=missing_openai_api_key
           fi
 
           {
             echo "action=$action";
+            echo "action_reason=$action_reason";
+            echo "openai_api_key_present=$openai_api_key_present";
             echo "upstream_only=$upstream_only";
             echo "merge_only=$merge_only";
             echo "upstream_in_merge=$upstream_in_merge";
@@ -138,6 +154,8 @@ jobs:
           {
             echo "### Upstream Merge: Precheck";
             echo "- action: ${action}";
+            echo "- reason: ${action_reason}";
+            echo "- openai_api_key_present: ${openai_api_key_present}";
             echo "- upstream_only: ${upstream_only}";
             echo "- merge_only: ${merge_only}";
             echo "- upstream_in_merge: ${upstream_in_merge}";
