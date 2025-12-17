@@ -146,9 +146,7 @@ pub async fn run_main(cli: Cli, code_linux_sandbox_exe: Option<PathBuf>) -> anyh
             );
             std::process::exit(1);
         }
-        if auto_drive_goal.as_ref().is_some_and(|goal| goal.is_empty()) {
-            auto_drive_goal = Some(trimmed_prompt.to_string());
-        } else if auto_drive_goal.is_none() {
+        if auto_drive_goal.as_ref().is_none_or(|goal| goal.is_empty()) {
             auto_drive_goal = Some(trimmed_prompt.to_string());
         }
     }
@@ -255,7 +253,7 @@ pub async fn run_main(cli: Cli, code_linux_sandbox_exe: Option<PathBuf>) -> anyh
     // Build tracing/OTEL subscribers now that config is available.
     let fmt_layer = tracing_subscriber::fmt::layer()
         .with_ansi(stderr_with_ansi)
-        .with_writer(|| std::io::stderr());
+        .with_writer(std::io::stderr);
 
     let _otel = code_core::otel_init::build_provider(&config, env!("CARGO_PKG_VERSION"))
         .map_err(|e| std::io::Error::other(e.to_string()))?;
@@ -335,8 +333,18 @@ pub async fn run_main(cli: Cli, code_linux_sandbox_exe: Option<PathBuf>) -> anyh
             .new_conversation(config.clone())
             .await?
     };
-    event_processor.print_config_summary(&config, &summary_prompt);
     info!("Codex initialized with event: {session_configured:?}");
+
+    // When running in JSON mode, explicitly emit the session-configured event so
+    // SDK consumers can reliably discover the session id for `exec resume`.
+    if json_mode {
+        let _ = event_processor.process_event(Event {
+            id: String::new(),
+            event_seq: 1,
+            msg: EventMsg::SessionConfigured(session_configured.clone()),
+            order: None,
+        });
+    }
 
     if let Some(goal) = auto_drive_goal {
         return run_auto_drive_session(
@@ -1056,7 +1064,7 @@ mod tests {
         let user_line = RolloutLine {
             timestamp: last_event_at.to_string(),
             item: RolloutItem::ResponseItem(ResponseItem::Message {
-                id: Some(format!("user-{}", session_id)),
+                id: Some(format!("user-{session_id}")),
                 role: "user".to_string(),
                 content: vec![ContentItem::InputText {
                     text: message.to_string(),
@@ -1067,10 +1075,10 @@ mod tests {
         let assistant_line = RolloutLine {
             timestamp: last_event_at.to_string(),
             item: RolloutItem::ResponseItem(ResponseItem::Message {
-                id: Some(format!("msg-{}", session_id)),
+                id: Some(format!("msg-{session_id}")),
                 role: "assistant".to_string(),
                 content: vec![ContentItem::OutputText {
-                    text: format!("Ack: {}", message),
+                    text: format!("Ack: {message}"),
                 }],
             }),
         };
@@ -1125,8 +1133,7 @@ mod tests {
         let path_str = path.to_string_lossy();
         assert!(
             path_str.contains("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"),
-            "resolved path should reference newer session, got {}",
-            path_str
+            "resolved path should reference newer session, got {path_str}"
         );
     }
 
@@ -1157,8 +1164,7 @@ mod tests {
         let path_str = path.to_string_lossy();
         assert!(
             path_str.contains("cccccccc-cccc-4ccc-8ccc-cccccccccccc"),
-            "resolved path should match requested session, got {}",
-            path_str
+            "resolved path should match requested session, got {path_str}"
         );
     }
 
@@ -1210,8 +1216,7 @@ mod tests {
         let path_str = path.to_string_lossy();
         assert!(
             path_str.contains("eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee"),
-            "resolved path should ignore mtime drift, got {}",
-            path_str
+            "resolved path should ignore mtime drift, got {path_str}"
         );
     }
 }

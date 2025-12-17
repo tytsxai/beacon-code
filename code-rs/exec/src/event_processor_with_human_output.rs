@@ -353,7 +353,7 @@ impl EventProcessor for EventProcessorWithHumanOutput {
                         }
                         println!("ERROR");
                         if !truncated_stderr.is_empty() {
-                            println!("{}", truncated_stderr);
+                            println!("{truncated_stderr}");
                         }
                     }
                 }
@@ -586,11 +586,11 @@ impl EventProcessor for EventProcessorWithHumanOutput {
                     "tool".style(self.magenta),
                     event.tool_name.style(self.bold),
                 );
-                if let Some(params) = &event.parameters {
-                    if let Ok(formatted) = serde_json::to_string_pretty(params) {
-                        for line in formatted.lines() {
-                            println!("{}", line.style(self.dimmed));
-                        }
+                if let Some(params) = &event.parameters
+                    && let Ok(formatted) = serde_json::to_string_pretty(params)
+                {
+                    for line in formatted.lines() {
+                        println!("{}", line.style(self.dimmed));
                     }
                 }
             }
@@ -653,7 +653,7 @@ fn escape_command(command: &[String]) -> String {
 fn format_file_change(change: &FileChange) -> &'static str {
     match change {
         FileChange::Add { .. } => "A",
-        FileChange::Delete { .. } => "D",
+        FileChange::Delete => "D",
         FileChange::Update {
             move_path: Some(_), ..
         } => "R",
