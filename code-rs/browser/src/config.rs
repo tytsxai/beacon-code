@@ -89,9 +89,9 @@ impl Default for BrowserConfig {
             connect_host: None,
             user_data_dir: None,
             persist_profile: default_persist_profile(),
-            locale: Some("en-AU".into()),
-            timezone: Some("Australia/Brisbane".into()),
-            accept_language: Some("en-AU,en;q=0.9".into()),
+            locale: None,
+            timezone: None,
+            accept_language: None,
             user_agent: None,
             connect_attempt_timeout_ms: default_connect_attempt_timeout_ms(),
             connect_attempts: default_connect_attempts(),
@@ -145,7 +145,7 @@ fn default_segments_max() -> usize {
 }
 
 fn default_idle_timeout_ms() -> u64 {
-    60000
+    86_400_000
 }
 
 fn default_device_scale_factor() -> f64 {

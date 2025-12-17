@@ -444,16 +444,16 @@ impl BrowserManager {
                 } else {
                     base
                 };
-                return Err(BrowserError::CdpError(msg));
+                Err(BrowserError::CdpError(msg))
             } else {
-                return Err(BrowserError::CdpError(
+                Err(BrowserError::CdpError(
                     "No Chrome instance found with debug port".to_string(),
-                ));
+                ))
             }
         } else {
-            return Err(BrowserError::CdpError(
+            Err(BrowserError::CdpError(
                 "No CDP port configured for Chrome connection".to_string(),
-            ));
+            ))
         }
     }
 
