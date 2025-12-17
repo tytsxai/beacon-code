@@ -83,6 +83,18 @@ jobs:
           cache-workspace-crates: true
           cache-on-failure: false
 
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny@0.18.9
+
+      - name: Dependency security gate (cargo deny)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd code-rs
+          cargo deny check advisories sources
+
       - name: Build CLI (dev-fast)
         shell: bash
         run: |
@@ -516,6 +528,8 @@ jobs:
           set -euo pipefail
           stage_root="npm-binaries"
           rm -rf "$stage_root" && mkdir -p "$stage_root"
+          checksums_tmp="$(mktemp)"
+          echo '{}' > "$checksums_tmp"
 
           map_target() {
             case "$1" in
@@ -576,10 +590,19 @@ jobs:
             rm -rf "$workdir" && mkdir -p "$workdir/bin"
             rawbin="$(decompress_to "$f" "$workdir/bin")"
             chmod +x "$rawbin" || true
+            key="$(basename "$rawbin")"
+            sha="$(sha256sum "$rawbin" | awk '{print $1}')"
+            tmp="$(mktemp)"
+            jq --arg k "$key" --arg v "$sha" '. + {($k): $v}' "$checksums_tmp" > "$tmp" && mv "$tmp" "$checksums_tmp"
             # package.json
             printf '{\n  "name": "%s",\n  "version": "%s",\n  "license": "Apache-2.0",\n  "description": "Platform binary for @just-every/code (%s)",\n  "os": ["%s"],\n  "cpu": ["%s"],\n  "files": ["bin/"],\n  "private": false\n}\n' \
               "$pkg" "$NEW_VERSION" "$t" "$os" "$cpu" > "$workdir/package.json"
           done
+
+          jq -S . "$checksums_tmp" > codex-cli/checksums.json
+          rm -f "$checksums_tmp"
+          echo "Wrote codex-cli/checksums.json:"
+          cat codex-cli/checksums.json
 
           ls -R "$stage_root"
 
@@ -619,7 +642,7 @@ jobs:
             "@just-every/code-linux-arm64-musl": "'"$NEW_VERSION"'",
             "@just-every/code-win32-x64": "'"$NEW_VERSION"'"
           }' package.json > "$tmp" && mv "$tmp" package.json
-          git add package.json
+          git add package.json checksums.json
           if git diff --staged --quiet; then
             echo "skip_push=true" >> "$GITHUB_OUTPUT"
           else
