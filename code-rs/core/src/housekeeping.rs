@@ -8,6 +8,9 @@ use std::ffi::OsStr;
 use std::fs::File;
 use std::fs::OpenOptions;
 use std::fs::{self};
+use std::io::Read;
+use std::io::Seek;
+use std::io::SeekFrom;
 use std::io::Write;
 use std::io::{self};
 use std::path::Path;
@@ -22,6 +25,9 @@ use tracing::warn;
 
 const DEFAULT_SESSION_RETENTION_DAYS: i64 = 7;
 const DEFAULT_WORKTREE_RETENTION_DAYS: i64 = 3;
+const DEFAULT_LOG_RETENTION_DAYS: i64 = 14;
+const DEFAULT_LOG_MAX_BYTES: i64 = 50 * 1024 * 1024;
+const DEFAULT_LOG_TRUNCATE_MIN_AGE_MINUTES: i64 = 10;
 const DEFAULT_MIN_INTERVAL_HOURS: i64 = 6;
 const LOCK_FILE_NAME: &str = "cleanup.lock";
 const STATE_FILE_NAME: &str = "cleanup-state.json";
@@ -42,6 +48,9 @@ pub struct CleanupOutcome {
 struct HousekeepingConfig {
     session_retention_days: Option<i64>,
     worktree_retention_days: Option<i64>,
+    log_retention_days: Option<i64>,
+    log_max_bytes: Option<i64>,
+    log_truncate_min_age_minutes: i64,
     min_interval_hours: i64,
     disabled: bool,
 }
@@ -60,6 +69,16 @@ impl HousekeepingConfig {
             "CODE_CLEANUP_WORKTREE_RETENTION_DAYS",
             DEFAULT_WORKTREE_RETENTION_DAYS,
         );
+        let log_retention_days = parse_days_env(
+            "CODE_CLEANUP_LOG_RETENTION_DAYS",
+            DEFAULT_LOG_RETENTION_DAYS,
+        );
+        let log_max_bytes =
+            parse_optional_positive_i64_env("CODE_CLEANUP_LOG_MAX_BYTES", DEFAULT_LOG_MAX_BYTES);
+        let log_truncate_min_age_minutes = parse_positive_i64_env(
+            "CODE_CLEANUP_LOG_TRUNCATE_MIN_AGE_MINUTES",
+            DEFAULT_LOG_TRUNCATE_MIN_AGE_MINUTES,
+        );
         let min_interval_hours = parse_positive_i64_env(
             "CODE_CLEANUP_MIN_INTERVAL_HOURS",
             DEFAULT_MIN_INTERVAL_HOURS,
@@ -68,6 +87,9 @@ impl HousekeepingConfig {
         Self {
             session_retention_days,
             worktree_retention_days,
+            log_retention_days,
+            log_max_bytes,
+            log_truncate_min_age_minutes,
             min_interval_hours,
             disabled,
         }
@@ -180,7 +202,174 @@ fn perform_housekeeping(
         outcome.errors += stats.errors;
     }
 
+    if let Some(stats) = cleanup_logs(code_home, now, config)? {
+        outcome.errors += stats.errors;
+    }
+
     Ok(outcome)
+}
+
+#[derive(Default)]
+struct LogCleanupStats {
+    errors: usize,
+}
+
+fn cleanup_logs(
+    code_home: &Path,
+    now: OffsetDateTime,
+    config: &HousekeepingConfig,
+) -> io::Result<Option<LogCleanupStats>> {
+    if config.log_retention_days.is_none() && config.log_max_bytes.is_none() {
+        return Ok(None);
+    }
+
+    let mut stats = LogCleanupStats::default();
+
+    if let Some(days) = config.log_retention_days {
+        cleanup_logs_by_age(&code_home.join("log"), now, days, &mut stats, |_| true)?;
+        cleanup_logs_by_age(&code_home.join("logs"), now, days, &mut stats, |name| {
+            name.to_string_lossy().starts_with("critical.log")
+        })?;
+    }
+
+    if let Some(max_bytes) = config.log_max_bytes {
+        let log_dir = code_home.join("log");
+        let log_path = log_dir.join("codex-tui.log");
+        if let Err(err) = truncate_log_if_oversize(&log_path, now, config, max_bytes) {
+            stats.errors += 1;
+            warn!("failed to truncate {:?}: {err}", log_path);
+        }
+    }
+
+    Ok(Some(stats))
+}
+
+fn cleanup_logs_by_age<F>(
+    dir: &Path,
+    now: OffsetDateTime,
+    retention_days: i64,
+    stats: &mut LogCleanupStats,
+    should_consider: F,
+) -> io::Result<()>
+where
+    F: Fn(&OsStr) -> bool,
+{
+    if !dir.is_dir() {
+        return Ok(());
+    }
+
+    let today = now.date();
+    let cutoff = if retention_days <= 0 {
+        None
+    } else {
+        Some(now - time::Duration::days(retention_days))
+    };
+
+    for entry in fs::read_dir(dir)?.flatten() {
+        let name = entry.file_name();
+        if !should_consider(&name) {
+            continue;
+        }
+
+        let metadata = match entry.metadata() {
+            Ok(meta) => meta,
+            Err(err) => {
+                stats.errors += 1;
+                warn!("failed to read metadata for {:?}: {err}", entry.path());
+                continue;
+            }
+        };
+
+        if !metadata.is_file() {
+            continue;
+        }
+
+        let modified = match metadata.modified() {
+            Ok(ts) => ts,
+            Err(err) => {
+                stats.errors += 1;
+                warn!(
+                    "failed to read modified timestamp for {:?}: {err}",
+                    entry.path()
+                );
+                continue;
+            }
+        };
+        let modified_dt = OffsetDateTime::from(modified).to_offset(now.offset());
+
+        let should_remove = if let Some(cutoff) = cutoff {
+            modified_dt < cutoff
+        } else {
+            modified_dt.date() < today
+        };
+
+        if !should_remove {
+            continue;
+        }
+
+        if let Err(err) = fs::remove_file(entry.path()) {
+            stats.errors += 1;
+            warn!("failed to remove log file {:?}: {err}", entry.path());
+        }
+    }
+
+    Ok(())
+}
+
+fn truncate_log_if_oversize(
+    path: &Path,
+    now: OffsetDateTime,
+    config: &HousekeepingConfig,
+    max_bytes: i64,
+) -> io::Result<()> {
+    if max_bytes <= 0 {
+        return Ok(());
+    }
+    if !path.is_file() {
+        return Ok(());
+    }
+
+    let metadata = fs::metadata(path)?;
+    let max_bytes_u64 = max_bytes as u64;
+    if metadata.len() <= max_bytes_u64 {
+        return Ok(());
+    }
+
+    let modified = metadata.modified()?;
+    let modified_dt = OffsetDateTime::from(modified).to_offset(now.offset());
+    let min_age = time::Duration::minutes(config.log_truncate_min_age_minutes.max(0));
+    if !min_age.is_zero() && now - modified_dt < min_age {
+        return Ok(());
+    }
+
+    let _ = truncate_file_to_last_bytes(path, max_bytes)?;
+    Ok(())
+}
+
+fn truncate_file_to_last_bytes(path: &Path, max_bytes: i64) -> io::Result<bool> {
+    if max_bytes <= 0 {
+        return Ok(false);
+    }
+
+    let max_bytes_u64 = max_bytes as u64;
+    let mut file = OpenOptions::new().read(true).write(true).open(path)?;
+    let size = file.metadata()?.len();
+    if size <= max_bytes_u64 {
+        return Ok(false);
+    }
+
+    let start = size - max_bytes_u64;
+    file.seek(SeekFrom::Start(start))?;
+
+    let mut tail = Vec::new();
+    file.read_to_end(&mut tail)?;
+
+    file.set_len(0)?;
+    file.seek(SeekFrom::Start(0))?;
+    file.write_all(&tail)?;
+    file.sync_all()?;
+
+    Ok(true)
 }
 
 fn cleanup_sessions(
@@ -769,6 +958,32 @@ fn parse_days_env(var: &str, default: i64) -> Option<i64> {
     }
 }
 
+fn parse_optional_positive_i64_env(var: &str, default: i64) -> Option<i64> {
+    match std::env::var(var) {
+        Ok(value) => {
+            if matches_ignore_case(&value, &["off", "disable", "disabled"]) {
+                return None;
+            }
+            match value.trim().parse::<i64>() {
+                Ok(num) if num > 0 => Some(num),
+                Ok(_) => None,
+                Err(_) => {
+                    warn!(
+                        "invalid value for {} ({}); falling back to default {}",
+                        var, value, default
+                    );
+                    Some(default)
+                }
+            }
+        }
+        Err(std::env::VarError::NotPresent) => Some(default),
+        Err(err) => {
+            warn!("failed to read {}: {err}; using default {}", var, default);
+            Some(default)
+        }
+    }
+}
+
 fn parse_positive_i64_env(var: &str, default: i64) -> i64 {
     match std::env::var(var) {
         Ok(value) => match value.trim().parse::<i64>() {
@@ -799,6 +1014,7 @@ fn matches_ignore_case(value: &str, options: &[&str]) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use filetime::FileTime;
     use std::fs;
     use tempfile::TempDir;
     use time::macros::datetime;
@@ -817,6 +1033,9 @@ mod tests {
         let config = HousekeepingConfig {
             session_retention_days: Some(7),
             worktree_retention_days: None,
+            log_retention_days: None,
+            log_max_bytes: None,
+            log_truncate_min_age_minutes: DEFAULT_LOG_TRUNCATE_MIN_AGE_MINUTES,
             min_interval_hours: 1,
             disabled: false,
         };
@@ -846,6 +1065,9 @@ mod tests {
         let config = HousekeepingConfig {
             session_retention_days: None,
             worktree_retention_days: Some(0),
+            log_retention_days: None,
+            log_max_bytes: None,
+            log_truncate_min_age_minutes: DEFAULT_LOG_TRUNCATE_MIN_AGE_MINUTES,
             min_interval_hours: 1,
             disabled: false,
         };
@@ -878,6 +1100,9 @@ mod tests {
         let config = HousekeepingConfig {
             session_retention_days: None,
             worktree_retention_days: Some(0),
+            log_retention_days: None,
+            log_max_bytes: None,
+            log_truncate_min_age_minutes: DEFAULT_LOG_TRUNCATE_MIN_AGE_MINUTES,
             min_interval_hours: 1,
             disabled: false,
         };
@@ -903,6 +1128,80 @@ mod tests {
 
         assert!(active.is_empty());
         assert!(!registry_path.exists());
+    }
+
+    #[test]
+    fn prunes_log_files_by_retention() {
+        let temp = TempDir::new().unwrap();
+        let code_home = temp.path();
+        let log_dir = code_home.join("log");
+        let critical_dir = code_home.join("logs");
+        fs::create_dir_all(&log_dir).unwrap();
+        fs::create_dir_all(&critical_dir).unwrap();
+
+        let old_log = log_dir.join("old.log");
+        let new_log = log_dir.join("new.log");
+        fs::write(&old_log, b"old").unwrap();
+        fs::write(&new_log, b"new").unwrap();
+
+        let old_critical = critical_dir.join("critical.log.2025-10-01");
+        let new_critical = critical_dir.join("critical.log.2025-10-10");
+        fs::write(&old_critical, b"old").unwrap();
+        fs::write(&new_critical, b"new").unwrap();
+
+        let now = datetime!(2025-10-10 12:00:00 UTC);
+        let old_ts = FileTime::from_unix_time((now - time::Duration::days(10)).unix_timestamp(), 0);
+        let new_ts = FileTime::from_unix_time((now - time::Duration::hours(2)).unix_timestamp(), 0);
+        filetime::set_file_mtime(&old_log, old_ts).unwrap();
+        filetime::set_file_mtime(&new_log, new_ts).unwrap();
+        filetime::set_file_mtime(&old_critical, old_ts).unwrap();
+        filetime::set_file_mtime(&new_critical, new_ts).unwrap();
+
+        let config = HousekeepingConfig {
+            session_retention_days: None,
+            worktree_retention_days: None,
+            log_retention_days: Some(7),
+            log_max_bytes: None,
+            log_truncate_min_age_minutes: DEFAULT_LOG_TRUNCATE_MIN_AGE_MINUTES,
+            min_interval_hours: 1,
+            disabled: false,
+        };
+
+        perform_housekeeping(code_home, now, &config).unwrap();
+
+        assert!(!old_log.exists());
+        assert!(new_log.exists());
+        assert!(!old_critical.exists());
+        assert!(new_critical.exists());
+    }
+
+    #[test]
+    fn truncates_oversized_tui_log() {
+        let temp = TempDir::new().unwrap();
+        let code_home = temp.path();
+        let log_dir = code_home.join("log");
+        fs::create_dir_all(&log_dir).unwrap();
+        let log_path = log_dir.join("codex-tui.log");
+        fs::write(&log_path, b"0123456789abcdef").unwrap();
+
+        let now = datetime!(2025-10-10 12:00:00 UTC);
+        let old_ts = FileTime::from_unix_time((now - time::Duration::hours(2)).unix_timestamp(), 0);
+        filetime::set_file_mtime(&log_path, old_ts).unwrap();
+
+        let config = HousekeepingConfig {
+            session_retention_days: None,
+            worktree_retention_days: None,
+            log_retention_days: None,
+            log_max_bytes: Some(10),
+            log_truncate_min_age_minutes: 1,
+            min_interval_hours: 1,
+            disabled: false,
+        };
+
+        perform_housekeeping(code_home, now, &config).unwrap();
+
+        let truncated = fs::read_to_string(&log_path).unwrap();
+        assert_eq!(truncated, "6789abcdef");
     }
 
     #[cfg(target_os = "windows")]
