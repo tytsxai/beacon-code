@@ -1,0 +1,32 @@
+# cargo-deny policy for the code-rs workspace.
+#
+# This file is intentionally minimal and focused on release-blocking checks:
+# - `advisories` (RustSec)
+# - `sources` (registry/git allowlist)
+#
+# Run locally:
+#   cd code-rs
+#   cargo deny check advisories sources
+
+[advisories]
+ignore = [
+    # Known unmaintained dependencies with no upstream fix available yet.
+    { id = "RUSTSEC-2024-0320", reason = "yaml-rust is unmaintained; pulled in via syntect for TUI syntax highlighting; no safe upgrade available" },
+    { id = "RUSTSEC-2024-0388", reason = "derivative is unmaintained; pulled in via starlark v0.13.0; no fixed release yet" },
+    { id = "RUSTSEC-2025-0057", reason = "fxhash is unmaintained; pulled in via starlark_map/starlark v0.13.0; no fixed release yet" },
+    { id = "RUSTSEC-2024-0436", reason = "paste is unmaintained; pulled in via ratatui/rmcp/starlark; no fixed release yet" },
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = [
+    "https://github.com/openai/codex.git",
+    "https://github.com/nornagon/ratatui",
+]
+
+[sources.allow-org]
+github = []
+gitlab = []
+bitbucket = []

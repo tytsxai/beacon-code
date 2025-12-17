@@ -250,7 +250,7 @@ codegen-units = 1
 
 [patch.crates-io]
 # ratatui = { path = "../../ratatui" }
-ratatui = { git = "https://github.com/nornagon/ratatui", branch = "nornagon-v0.29.0-patch" }
+ratatui = { git = "https://github.com/nornagon/ratatui", rev = "9b2ad1298408c45918ee9f8241a6f95498cdbed2" }
 
 # Custom build profiles used by build-fast.sh
 [profile.dev-fast]
