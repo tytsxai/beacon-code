@@ -6,6 +6,7 @@ import { fileURLToPath } from "url";
 import { platform as nodePlatform, arch as nodeArch } from "os";
 import { execSync } from "child_process";
 import { get as httpsGet } from "https";
+import { createHash } from "crypto";
 import { runPostinstall } from "../postinstall.js";
 
 // __dirname equivalent in ESM
@@ -97,6 +98,65 @@ import {
   unlinkSync,
   createWriteStream,
 } from "fs";
+
+let cachedChecksums = undefined;
+const loadChecksums = () => {
+  if (cachedChecksums !== undefined) return cachedChecksums;
+  try {
+    const p = path.join(__dirname, "..", "checksums.json");
+    const contents = readFileSync(p, "utf8");
+    const parsed = JSON.parse(contents);
+    if (!parsed || typeof parsed !== "object") {
+      cachedChecksums = null;
+      return cachedChecksums;
+    }
+    const keys = Object.keys(parsed);
+    cachedChecksums = keys.length === 0 ? null : parsed;
+    return cachedChecksums;
+  } catch {
+    cachedChecksums = null;
+    return cachedChecksums;
+  }
+};
+
+const sha256FileSync = (p) => {
+  const hash = createHash("sha256");
+  const fd = openSync(p, "r");
+  try {
+    const buf = Buffer.alloc(1024 * 1024);
+    while (true) {
+      const n = readSync(fd, buf, 0, buf.length, null);
+      if (n === 0) break;
+      hash.update(buf.subarray(0, n));
+    }
+  } finally {
+    closeSync(fd);
+  }
+  return hash.digest("hex");
+};
+
+const verifyBinaryChecksum = (p) => {
+  const checksums = loadChecksums();
+  if (!checksums) return { ok: true, skipped: true };
+
+  const name = path.basename(p);
+  const expected = checksums[name];
+  if (typeof expected !== "string" || expected.trim() === "") {
+    // Don't block legacy fallback names.
+    if (name.startsWith("coder-")) return { ok: true, skipped: true };
+    return { ok: false, reason: `missing checksum for ${name}` };
+  }
+  const actual = sha256FileSync(p);
+  if (actual.toLowerCase() !== expected.trim().toLowerCase()) {
+    return {
+      ok: false,
+      reason: `sha256 mismatch for ${name}`,
+      expected: expected.trim(),
+      actual,
+    };
+  }
+  return { ok: true };
+};
 
 const validateBinary = (p) => {
   try {
@@ -215,7 +275,8 @@ const tryBootstrapBinary = async () => {
     const cachePath = getCachedBinaryPath(version);
     if (existsSync(cachePath)) {
       const v = validateBinary(cachePath);
-      if (v.ok) {
+      const checksum = v.ok ? verifyBinaryChecksum(cachePath) : { ok: false };
+      if (v.ok && checksum.ok) {
         // Prefer running directly from cache; mirror into node_modules on Unix
         if (platform !== "win32") {
           copyFileSync(cachePath, binaryPath);
@@ -252,6 +313,13 @@ const tryBootstrapBinary = async () => {
           if (existsSync(src)) {
             // Always ensure cache has the binary; on Unix mirror into node_modules
             copyFileSync(src, cachePath);
+            const checksum = verifyBinaryChecksum(cachePath);
+            if (!checksum.ok) {
+              try {
+                unlinkSync(cachePath);
+              } catch {}
+              throw new Error(checksum.reason);
+            }
             if (platform !== "win32") {
               copyFileSync(cachePath, binaryPath);
               try {
@@ -382,6 +450,10 @@ const tryBootstrapBinary = async () => {
 
         const v = validateBinary(platform === "win32" ? cachePath : binaryPath);
         if (!v.ok) throw new Error(`invalid binary (${v.reason})`);
+        const checksum = verifyBinaryChecksum(
+          platform === "win32" ? cachePath : binaryPath,
+        );
+        if (!checksum.ok) throw new Error(checksum.reason);
         if (platform !== "win32")
           try {
             chmodSync(binaryPath, 0o755);
@@ -499,6 +571,18 @@ if (!validation.ok) {
     );
     console.error("  npx -y @just-every/code@latest  (inside WSL)");
   }
+  process.exit(1);
+}
+
+const checksum = verifyBinaryChecksum(binaryPath);
+if (!checksum.ok) {
+  console.error(`Checksum verification failed for ${binaryPath}: ${checksum.reason}`);
+  console.error(
+    "This can happen if the binary download was corrupted or tampered with.",
+  );
+  console.error("Please reinstall:");
+  console.error("  npm uninstall -g @just-every/code");
+  console.error("  npm install -g @just-every/code");
   process.exit(1);
 }
 

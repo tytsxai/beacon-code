@@ -13,6 +13,7 @@
   "files": [
     "bin/coder.js",
     "bin/codex.js",
+    "checksums.json",
     "postinstall.js",
     "scripts/preinstall.js",
     "scripts/windows-cleanup.ps1",

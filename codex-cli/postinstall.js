@@ -23,6 +23,7 @@ import { fileURLToPath } from "url";
 import { get } from "https";
 import { platform, arch, tmpdir } from "os";
 import { execSync } from "child_process";
+import { createHash } from "crypto";
 import { createRequire } from "module";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -68,6 +69,60 @@ function getCachedBinaryPath(version, targetTriple, isWindows) {
   const ext = isWindows ? ".exe" : "";
   const cacheDir = getCacheDir(version);
   return join(cacheDir, `code-${targetTriple}${ext}`);
+}
+
+let cachedChecksums = undefined;
+function loadChecksums() {
+  if (cachedChecksums !== undefined) return cachedChecksums;
+  try {
+    const contents = readFileSync(join(__dirname, "checksums.json"), "utf8");
+    const parsed = JSON.parse(contents);
+    if (!parsed || typeof parsed !== "object") {
+      cachedChecksums = null;
+      return cachedChecksums;
+    }
+    const keys = Object.keys(parsed);
+    cachedChecksums = keys.length === 0 ? null : parsed;
+    return cachedChecksums;
+  } catch {
+    cachedChecksums = null;
+    return cachedChecksums;
+  }
+}
+
+function sha256FileSync(path) {
+  const hash = createHash("sha256");
+  const fd = openSync(path, "r");
+  try {
+    const buf = Buffer.alloc(1024 * 1024);
+    while (true) {
+      const n = readSync(fd, buf, 0, buf.length, null);
+      if (n === 0) break;
+      hash.update(buf.subarray(0, n));
+    }
+  } finally {
+    closeSync(fd);
+  }
+  return hash.digest("hex");
+}
+
+function verifyBinaryChecksum(path, binaryName) {
+  const checksums = loadChecksums();
+  if (!checksums) return { ok: true, skipped: true };
+  const expected = checksums[binaryName];
+  if (typeof expected !== "string" || expected.trim() === "") {
+    return { ok: false, reason: `missing checksum for ${binaryName}` };
+  }
+  const actual = sha256FileSync(path);
+  if (actual.toLowerCase() !== expected.trim().toLowerCase()) {
+    return {
+      ok: false,
+      reason: `sha256 mismatch for ${binaryName}`,
+      expected: expected.trim(),
+      actual,
+    };
+  }
+  return { ok: true };
 }
 
 const CODE_SHIM_SIGNATURES = [
@@ -462,6 +517,13 @@ export async function runPostinstall(options = {}) {
       if (existsSync(cachePath)) {
         const valid = validateDownloadedBinary(cachePath);
         if (valid.ok) {
+          const checksum = verifyBinaryChecksum(cachePath, binaryName);
+          if (!checksum.ok) {
+            try {
+              unlinkSync(cachePath);
+            } catch {}
+            throw new Error(checksum.reason);
+          }
           // Avoid mirroring into node_modules on Windows or WSL-on-NTFS.
           const wsl = isWSL();
           const binDirReal = (() => {
@@ -527,6 +589,13 @@ export async function runPostinstall(options = {}) {
         }
         // Populate cache first (canonical location) atomically
         await writeCacheAtomic(src, cachePath);
+        const checksum = verifyBinaryChecksum(cachePath, binaryName);
+        if (!checksum.ok) {
+          try {
+            unlinkSync(cachePath);
+          } catch {}
+          throw new Error(checksum.reason);
+        }
         // Mirror into local bin only on Unix-like filesystems (not Windows/WSL-on-NTFS)
         const wsl = isWSL();
         const binDirReal = (() => {
@@ -753,6 +822,15 @@ export async function runPostinstall(options = {}) {
             : unlinkSync(localPath);
         } catch {}
         throw new Error(`invalid binary (${valid.reason})`);
+      }
+
+      const checksumPath = isWin ? cachePath : mirrorToLocal ? localPath : cachePath;
+      const checksum = verifyBinaryChecksum(checksumPath, binaryName);
+      if (!checksum.ok) {
+        try {
+          isWin || !mirrorToLocal ? unlinkSync(cachePath) : unlinkSync(localPath);
+        } catch {}
+        throw new Error(checksum.reason);
       }
 
       // Make executable on Unix-like systems
