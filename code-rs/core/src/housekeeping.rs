@@ -552,12 +552,11 @@ fn purge_session_registry(session_dir: &Path, worktree_path: &Path) {
             .write(true)
             .truncate(true)
             .open(&file_path)
+            && !kept.is_empty()
         {
-            if !kept.is_empty() {
-                let content = kept.join("\n");
-                let _ = file.write_all(content.as_bytes());
-                let _ = file.write_all(b"\n");
-            }
+            let content = kept.join("\n");
+            let _ = file.write_all(content.as_bytes());
+            let _ = file.write_all(b"\n");
         }
     }
 }
