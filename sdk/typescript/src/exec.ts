@@ -65,8 +65,31 @@ export class CodexExec {
       env,
     });
 
-    let spawnError: unknown | null = null;
-    child.once("error", (err) => (spawnError = err));
+    const stderrChunks: Buffer[] = [];
+    if (child.stderr) {
+      child.stderr.on("data", (data) => {
+        stderrChunks.push(data);
+      });
+    }
+
+    const exitPromise = new Promise<void>((resolve, reject) => {
+      child.once("error", reject);
+      child.once("exit", (code, signal) => {
+        if (signal) {
+          reject(new Error(`Codex Exec terminated by signal ${signal}`));
+          return;
+        }
+        if (code === 0) {
+          resolve();
+          return;
+        }
+        const stderrBuffer = Buffer.concat(stderrChunks);
+        reject(
+          new Error(`Codex Exec exited with code ${code}: ${stderrBuffer.toString("utf8")}`),
+        );
+      });
+    });
+    void exitPromise.catch(() => {});
 
     if (!child.stdin) {
       child.kill();
@@ -79,13 +102,6 @@ export class CodexExec {
       child.kill();
       throw new Error("Child process has no stdout");
     }
-    const stderrChunks: Buffer[] = [];
-
-    if (child.stderr) {
-      child.stderr.on("data", (data) => {
-        stderrChunks.push(data);
-      });
-    }
 
     const rl = readline.createInterface({
       input: child.stdout,
@@ -97,25 +113,11 @@ export class CodexExec {
         // `line` is a string (Node sets default encoding to utf8 for readline)
         yield line as string;
       }
-
-      const exitCode = new Promise((resolve, reject) => {
-        child.once("exit", (code) => {
-          if (code === 0) {
-            resolve(code);
-          } else {
-            const stderrBuffer = Buffer.concat(stderrChunks);
-            reject(
-              new Error(`Codex Exec exited with code ${code}: ${stderrBuffer.toString("utf8")}`),
-            );
-          }
-        });
-      });
-
-      if (spawnError) throw spawnError;
-      await exitCode;
+      await exitPromise;
     } finally {
       rl.close();
       child.removeAllListeners();
+      child.stderr?.removeAllListeners();
       try {
         if (!child.killed) child.kill();
       } catch {
