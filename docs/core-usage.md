@@ -31,17 +31,17 @@
 - 倒计时/手动确认：在 `/auto settings` 选择 continue 模式；Esc 可随时暂停/停止。
 
 ## 多智能体与配置
-- 默认内置多家 CLI；多智能体命令 `/plan` `/code` `/solve` 自动并行/共识调用。
-- 指定/替换 CLI：编辑 `~/.code/config.toml`（兼容读取 `~/.codex/config.toml`），添加 `[[agents]]`：
+- 默认仅内置 Codex 子智能体；多智能体命令 `/plan` `/code` `/solve` 自动并行/共识调用。
+- 指定/替换智能体：编辑 `~/.code/config.toml`（兼容读取 `~/.codex/config.toml`），添加 `[[agents]]`：
   ```toml
   [[agents]]
-  name = "claude-opus-4.5"
-  command = "claude"
-  read_only = false
+  name = "code-gpt-5.1-codex-max"
+  command = "coder"
+  read-only = false
   enabled = true
   ```
 - 全局安全策略：启动参数或配置 `sandbox_mode`（read-only/workspace-write/danger-full-access）、`approval_policy`（never/on-request/on-failure/untrusted）。只读需求时用 `--sandbox read-only` 或在配置文件中设定。
-- 子智能体强制只读：`read_only=true`。
+- 子智能体强制只读：在 `[[subagents.commands]]` 中设置 `read-only = true`。
 
 ## 常用路径与快捷键
 - 配置：`~/.code/config.toml`；项目/个人指令：`AGENTS.md`（支持 `~/.code/`、仓库根、子目录）。
@@ -54,7 +54,3 @@
 - 查看版本：`code --version`
 - CLI 烟测：`code --read-only "explain this repo structure"` 或 `code exec "pwd"`。
 - Auto Drive 烟测（只读）：`code exec --auto "list files"`；如需写入请确认沙箱/审批已放开。
-
-## 快速自检
-- 查看版本：`code --version`
-- 验证 CLI 工作：`code --read-only "explain this repo structure"` 或 `code exec "pwd"`。

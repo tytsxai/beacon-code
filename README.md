@@ -21,7 +21,7 @@
 - **统一设置中心**——`/settings` 集中管理限额、模型路由、主题和 CLI 集成，一处即可审计配置。
 - **卡片式活动视图**——智能体、浏览器会话、网络搜索和 Auto Drive 以卡片呈现，可展开查看完整日志。
 - **性能加速**——历史渲染与流式展示经过优化，即便长时间多智能体会话也保持流畅。
-- **更聪明的智能体**——可为 `/plan`、`/code`、`/solve` 按需选择编排 CLI（Claude、Gemini、GPT-5、Qwen 等）。
+- **更聪明的智能体**——`/plan`、`/code`、`/solve` 使用 Codex 子智能体并行完成任务。
 
 完整变更见 `docs/release-notes/RELEASE_NOTES.md`。
 
@@ -31,7 +31,7 @@
 
 - 🚀 **Auto Drive 编排**——多智能体自动化，能自愈并交付完整任务。
 - 🌐 **浏览器集成**——CDP 支持、无头浏览、截图内嵌。
-- 🤖 **多智能体命令**——`/plan`、`/code`、`/solve` 协同多个 CLI 智能体。
+- 🤖 **多智能体命令**——`/plan`、`/code`、`/solve` 协同多个 Codex 子智能体。
 - 🧭 **统一设置中心**——`/settings` 覆盖限额、主题、审批与提供商接入。
 - 🎨 **主题系统**——可切换无障碍主题、定制强调色、通过 `/themes` 即时预览。
 - 🔌 **MCP 支持**——可扩展文件系统、数据库、API 或自定义工具。
@@ -87,30 +87,7 @@ code // 如果已被 VS Code 占用可用 `coder`
 - **第三方激活器**（如 codex-activator）
   - 本项目特别支持通过激活器使用代理服务，详见下方「激活器集成」章节
 
-### 安装 Claude 与 Gemini（可选）
-
-Every Code 支持编排其他 AI CLI。安装它们并配置后即可与 Code 一起使用。
-
-```bash
-# 确保本地有 Node.js 20+（安装到 ~/.n）
-npm install -g n
-export N_PREFIX="$HOME/.n"
-export PATH="$N_PREFIX/bin:$PATH"
-n 20.18.1
-
-# 安装配套 CLI
-export npm_config_prefix="${npm_config_prefix:-$HOME/.npm-global}"
-mkdir -p "$npm_config_prefix/bin"
-export PATH="$npm_config_prefix/bin:$PATH"
-npm install -g @anthropic-ai/claude-code @google/gemini-cli @qwen-code/qwen-code
-
-# 快速自检
-claude --version
-gemini --version
-qwen --version
-```
-
-> ℹ️ 将 `export N_PREFIX="$HOME/.n"` 与 `export PATH="$N_PREFIX/bin:$PATH"`（加上 `npm_config_prefix` 的 bin 路径）写入 shell 配置，以便下次会话仍可访问这些 CLI。
+Every Code 默认只使用 Codex 相关模型与内置能力，不需要额外安装其他 AI CLI。
 
 &ensp;
 
@@ -131,16 +108,13 @@ qwen --version
 ### Agents
 
 ```bash
-# 规划改动（Claude、Gemini、GPT-5 共识）
-# 所有智能体审阅任务并创建合并计划
+# 规划改动（Codex 多智能体共识）
 /plan "Stop the AI from ordering pizza at 3AM"
 
-# 解决复杂问题（Claude、Gemini、GPT-5 竞速）
-# 最快的优先（参见 https://arxiv.org/abs/2505.17813）
+# 解决复杂问题（Codex 多智能体竞速）
 /solve "Why does deleting one user drop the whole database?"
 
-# 写代码！（Claude、Gemini、GPT-5 共识）
-# 创建多个工作树并实施最优方案
+# 写代码！（Codex 多智能体共识）
 /code "Show dark mode when I feel cranky"
 ```
 
@@ -176,7 +150,7 @@ qwen --version
 code [options] [prompt]
 
 Options:
-  --model <name>        覆盖模型（gpt-5.1、claude-opus 等）
+  --model <name>        覆盖模型（例如 gpt-5.1-codex）
   --read-only          阻止文件修改
   --no-approval        跳过审批提示（谨慎使用）
   --config <key=val>   覆盖配置项
@@ -193,7 +167,7 @@ Options:
 
 Every Code 可在会话间记忆上下文：
 
-1. **在项目根创建 `AGENTS.md` 或 `CLAUDE.md`**：
+1. **在项目根创建 `AGENTS.md`**：
 
 ```markdown
 # Project Context

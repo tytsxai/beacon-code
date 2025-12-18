@@ -1,6 +1,6 @@
 # Agents 与子智能体
 
-Every Code 可以启动外部 CLI “智能体”，并在 `/plan`、`/solve`、`/code` 等多智能体流程中编排它们。
+Every Code 可以启动子智能体，并在 `/plan`、`/solve`、`/code` 等多智能体流程中编排它们。此 fork 默认仅提供 Codex 子智能体（不支持 Claude/Gemini/Qwen 外部 CLI）。
 
 ## 智能体配置（`config.toml` 中的 `[[agents]]`）
 ```toml
@@ -8,33 +8,35 @@ Every Code 可以启动外部 CLI “智能体”，并在 `/plan`、`/solve`、
 name = "code-gpt-5.1-codex-max"   # 在选择器中显示的 slug/别名
 command = "coder"                # 可执行文件；默认等于 name
 args = ["--foo", "bar"]          # 基础 argv
-args_read_only = ["-s", "read-only", "-a", "never", "exec", "--skip-git-repo-check"]
-args_write = ["-s", "workspace-write", "--dangerously-bypass-approvals-and-sandbox", "exec", "--skip-git-repo-check"]
+args-read-only = ["-s", "read-only", "-a", "never", "exec", "--skip-git-repo-check"]
+args-write = ["-s", "workspace-write", "--dangerously-bypass-approvals-and-sandbox", "exec", "--skip-git-repo-check"]
 env = { CODE_FOO = "1" }
-read_only = false                 # 即便会话允许写入也强制只读
+read-only = false                 # 即便会话允许写入也强制只读
 enabled = true                    # 置为 false 时在选择器中隐藏
 description = "Frontline coding agent"
 instructions = "添加到该智能体提示的前言"
 ```
-字段摘要：`name`（slug/别名）、`command`（可用绝对路径）、`args*`（RO/RW 列表会覆盖基础参数）、`env`、`read_only`、`enabled`，可选 `description` 与 `instructions`。
+字段摘要：`name`（slug/别名）、`command`（可用绝对路径）、`args*`（RO/RW 列表会覆盖基础参数）、`env`、`read-only`、`enabled`，可选 `description` 与 `instructions`。
 
 ### 内置默认值
-若未配置任何 `[[agents]]`，Code 会内置一组智能体（云端变体受环境变量 `CODE_ENABLE_CLOUD_AGENT_MODEL` 控制）：`code-gpt-5.1-codex-max`、`claude-opus-4.5`、`gemini-3-pro`、`code-gpt-5.1-codex-mini`、`claude-sonnet-4.5`、`gemini-2.5-flash`、`code-gpt-5.1`、`claude-haiku-4.5`、`qwen-3-coder`、`cloud-gpt-5.1-codex`。内置配置会移除用户提供的 `--model/-m` 以避免冲突，并插入自身参数。
+若未配置任何 `[[agents]]`，Code 会内置一组 Codex 子智能体（云端变体受环境变量 `CODE_ENABLE_CLOUD_AGENT_MODEL` 控制）：`code-gpt-5.1-codex-max`、`code-gpt-5.1-codex-mini`，以及（可选）`cloud-gpt-5.1-codex-max`。内置配置会移除用户提供的 `--model/-m` 以避免冲突，并插入自身参数。
+
+> 注意：本仓库 fork 默认禁用 Claude/Gemini/Qwen 等外部 agent CLI；如在配置中引用这些 name/command，会在运行时直接报错。
 
 ## 子智能体（`[[subagents.commands]]`）
 ```toml
 [[subagents.commands]]
 name = "plan"                     # 斜杠命令（/plan、/solve、/code 或自定义）
-read_only = true                  # plan/solve 默认 true，code 默认 false
-agents = ["code-gpt-5.1-codex-max", "claude-opus-4.5"]  # 为空则回退到已启用智能体或内置列表
-orchestrator_instructions = "编排器在启动智能体前的指导"
-agent_instructions = "附加到每个子智能体提示的前言"
+read-only = true                  # plan/solve 默认 true，code 默认 false
+agents = ["code-gpt-5.1-codex-max", "code-gpt-5.1-codex-mini"]  # 为空则回退到已启用智能体或内置列表
+orchestrator-instructions = "编排器在启动智能体前的指导"
+agent-instructions = "附加到每个子智能体提示的前言"
 ```
 - `name`：创建/覆盖的斜杠命令。
-- `read_only`：为 true 时强制子智能体只读。
+- `read-only`：为 true 时强制子智能体只读。
 - `agents`：显式列表；为空 → 启用的 `[[agents]]`；若未配置则使用内置 roster。
-- `orchestrator_instructions`：在发出 `agent.create` 前附加到 Code 侧提示。
-- `agent_instructions`：附加到每个子智能体提示。
+- `orchestrator-instructions`：在发出 `agent.create` 前附加到 Code 侧提示。
+- `agent-instructions`：附加到每个子智能体提示。
 
 编排器会并行多个智能体，等待结果，并根据你的 `hide_agent_reasoning` / `show_raw_agent_reasoning` 设置合并推理。
 
@@ -81,8 +83,8 @@ enabled = true
 ```toml
 [[subagents.commands]]
 name = "context"
-read_only = true
-agents = ["code-gpt-5.1-codex-max", "claude-opus-4.5"]
-orchestrator_instructions = "让每个智能体总结最相关的文件和测试。"
-agent_instructions = "返回路径并给出 1–2 句理由；不要修改文件。"
+read-only = true
+agents = ["code-gpt-5.1-codex-max", "code-gpt-5.1-codex-mini"]
+orchestrator-instructions = "让每个智能体总结最相关的文件和测试。"
+agent-instructions = "返回路径并给出 1–2 句理由；不要修改文件。"
 ```

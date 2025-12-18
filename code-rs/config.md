@@ -353,7 +353,7 @@ Defines the list of MCP servers that Codex can consult for tool use. Currently, 
 
 **Note:** Codex may cache the list of tools and resources from an MCP server so that Codex can include this information in context at startup without spawning all the servers. This is designed to save resources by loading MCP servers lazily.
 
-This config option is comparable to how Claude and Cursor define `mcpServers` in their respective JSON config files, though because Codex uses TOML for its config language, the format is slightly different. For example, the following config in JSON:
+This config option is comparable to how other tools define `mcpServers` in JSON config files, though because Codex uses TOML for its config language, the format is slightly different. For example, the following config in JSON:
 
 ```json
 {
@@ -381,18 +381,18 @@ env = { "API_KEY" = "value" }
 
 ## agents
 
-Agents are external CLI programs that Code can invoke to handle subtasks. Code includes built-in support for several agents (Claude, Gemini, Qwen, etc.) and allows you to configure custom agents as well.
+Agents are CLI programs that Code can invoke to handle subtasks during multi-agent flows. This fork supports built-in Codex agents (via the `coder` CLI / current executable) and an optional `cloud` agent gated by `CODE_ENABLE_CLOUD_AGENT_MODEL`. External agent CLIs such as `claude`, `gemini`, and `qwen` are intentionally disabled.
 
 Each agent is configured using an `[[agents]]` section in your `config.toml`. Here's the basic structure:
 
 ```toml
 [[agents]]
-name = "claude"           # Agent identifier (required)
-command = "claude"        # Command to execute (required)
+name = "code-gpt-5.1-codex-max"  # Agent identifier (required)
+command = "coder"                # Command to execute (required)
 enabled = true            # Enable/disable this agent (default: true)
 read-only = false         # Restrict to read-only operations (default: false)
-description = "Claude AI assistant"  # Description shown in UI
-args = ["--dangerously-skip-permissions"]  # Default arguments
+description = "Frontline Codex agent"  # Description shown in UI
+args = ["--foo", "bar"]  # Default arguments
 env = { API_KEY = "value" }  # Environment variables
 ```
 
@@ -403,15 +403,15 @@ The `command` field specifies how to invoke the agent. Code supports three appro
 **1. Command name (PATH lookup):**
 ```toml
 [[agents]]
-name = "claude"
-command = "claude"  # Code will search for "claude" in your PATH
+name = "code-gpt-5.1-codex-max"
+command = "coder"  # Code will search for "coder" in your PATH
 ```
 
 **2. Absolute path (recommended for Windows):**
 ```toml
 [[agents]]
-name = "gemini"
-command = "C:\\Users\\YourUser\\AppData\\Roaming\\npm\\gemini.cmd"
+name = "code-gpt-5.1-codex-max"
+command = "C:\\Users\\YourUser\\AppData\\Roaming\\npm\\coder.cmd"
 ```
 
 **3. Relative path:**
@@ -435,11 +435,6 @@ On Windows, agent command discovery follows these rules:
 name = "coder"
 command = "C:\\Users\\YourUser\\AppData\\Roaming\\npm\\coder.cmd"
 enabled = true
-
-[[agents]]
-name = "claude"
-command = "C:\\Users\\YourUser\\AppData\\Roaming\\npm\\claude.cmd"
-enabled = true
 ```
 
 ### Per-agent arguments
@@ -451,8 +446,8 @@ You can specify different arguments for read-only vs. write modes:
 name = "custom-agent"
 command = "custom-agent"
 args = ["--base-arg"]           # Always included
-args_read_only = ["--read-only"]  # Added in read-only mode
-args_write = ["--allow-writes"]   # Added in write mode
+args-read-only = ["--read-only"]  # Added in read-only mode
+args-write = ["--allow-writes"]   # Added in write mode
 ```
 
 ### Environment variables
@@ -461,25 +456,17 @@ Agents inherit your current environment and can have custom variables:
 
 ```toml
 [[agents]]
-name = "gemini"
-command = "gemini"
-env = { GEMINI_API_KEY = "your-key-here" }
+name = "code-gpt-5.1-codex-mini"
+command = "coder"
+env = { OPENAI_API_KEY = "your-key-here" }
 ```
-
-Code automatically mirrors common API key environment variables for convenience:
-- `GOOGLE_API_KEY` ↔ `GEMINI_API_KEY`
-- `CLAUDE_API_KEY` ↔ `ANTHROPIC_API_KEY`
-- `QWEN_API_KEY` ↔ `DASHSCOPE_API_KEY`
 
 ### Built-in agents
 
 Code includes built-in support for these agents:
 
-- **code/codex** - Built-in Code CLI agents (use current executable)
-- **claude** - Claude AI assistant (requires `claude` CLI)
-- **gemini** - Google Gemini (requires `gemini` CLI)
-- **qwen** - Qwen AI assistant (requires `qwen` CLI)
-- **cloud** - Cloud-based agents (optional, gated by `CODE_ENABLE_CLOUD_AGENT_MODEL`)
+- **code/codex** - Built-in Codex agents (use current executable / `coder`)
+- **cloud** - Cloud-based agent (optional, gated by `CODE_ENABLE_CLOUD_AGENT_MODEL`)
 
 ### Custom agent example
 
@@ -501,8 +488,8 @@ env = { MODEL_PATH = "/models/custom.bin", TEMP = "0.7" }
 If you see errors like `Agent 'xyz' could not be found`, try these steps:
 
 1. **Verify installation:** Check if the command exists
-   - Unix/Linux/macOS: `which claude`
-   - Windows: `where claude`
+   - Unix/Linux/macOS: `which coder`
+   - Windows: `where coder`
 
 2. **Check PATH:** Ensure the agent's directory is in your PATH
    - Unix/Linux/macOS: `echo $PATH`
@@ -511,8 +498,8 @@ If you see errors like `Agent 'xyz' could not be found`, try these steps:
 3. **Use absolute paths:** Especially on Windows, specify the full path:
    ```toml
    [[agents]]
-   name = "claude"
-   command = "C:\\Users\\YourUser\\AppData\\Roaming\\npm\\claude.cmd"
+   name = "code-gpt-5.1-codex-max"
+   command = "C:\\Users\\YourUser\\AppData\\Roaming\\npm\\coder.cmd"
    ```
 
 4. **Windows file extensions:** Ensure your command includes the proper extension (`.cmd`, `.exe`, `.bat`)

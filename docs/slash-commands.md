@@ -72,4 +72,4 @@ Code CLI 支持在输入框开头输入的斜杠命令，用于快捷操作、�
 
 - 权威命令列表定义在 `code-rs/tui/src/slash_command.rs`（`SlashCommand` 枚举）。添加新命令时请更新本文档以保持 UI 与文档一致。
 - `/plan`、`/solve`、`/code` 的提示格式在 `code-rs/core/src/slash_commands.rs`。
-  当未配置 `[[agents]]` 时，编排器会向 LLM 宣告以下模型 slug 用于多智能体运行：`code-gpt-5.1`、`claude-sonnet-4.5`、`claude-opus-4.1`、`gemini-3-pro`、`gemini-2.5-pro`、`gemini-2.5-flash`、`qwen-3-coder`、`code-gpt-5.1-codex`、`code-gpt-5.1-codex-mini`（`cloud-gpt-5.1-codex` 由 `CODE_ENABLE_CLOUD_AGENT_MODEL` 控制）。可通过 `[[agents]]` 或按命令的 `[[subagents.commands]].agents` 替换或固定该列表。
+  当未配置 `[[agents]]` 时，编排器会向 LLM 宣告以下模型 slug 用于多智能体运行：`code-gpt-5.1-codex-max`、`code-gpt-5.1-codex-mini`（`cloud-gpt-5.1-codex-max` 由 `CODE_ENABLE_CLOUD_AGENT_MODEL` 控制）。可通过 `[[agents]]` 或按命令的 `[[subagents.commands]].agents` 替换或固定该列表。

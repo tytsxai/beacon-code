@@ -57,90 +57,14 @@ parallel_instances = 1                  # 并行实例数（1-5）：>1 时同�
 #############################################
 
 # Agent Configuration
-# Configure which external AI models are available and their settings
-[[agents]]
-name = "claude"
-command = "claude"
-enabled = false
-read-only = false
-description = "Claude AI assistant with full capabilities"
-args = ["--dangerously-skip-permissions"]
-
-[[agents]]
-name = "claude-safe"
-command = "claude"
-enabled = false
-read-only = true
-description = "Claude AI assistant in read-only mode"
-args = []
-
-[[agents]]
-name = "gemini"
-command = "gemini"
-enabled = false
-read-only = false
-description = "Google Gemini AI assistant"
-args = ["-y"]
-
-[[agents]]
-name = "gemini-safe"
-command = "gemini"
-enabled = false
-read-only = true
-description = "Google Gemini AI assistant in read-only mode"
-args = []
-
-[[agents]]
-name = "qwen"
-command = "qwen"
-enabled = false
-read-only = false
-description = "Qwen Coder assistant (tracks latest default model)"
-# No default -m: let the CLI choose its current default model
-# To pin a model explicitly, export QWEN_MODEL or add here, e.g.:
-# args = ["-m", "qwen-3-coder", "-y"]
-args = ["-y"]
-# Optional environment variables (either name works; mirrored automatically):
-# env = { QWEN_API_KEY = "your-key", DASHSCOPE_API_KEY = "your-key" }
-
-[[agents]]
-name = "qwen-safe"
-command = "qwen"
-enabled = false
-read-only = true
-description = "Qwen Coder assistant in read-only mode"
-# No -y in read-only; omit -m to track latest default. To pin:
-# args = ["-m", "qwen-3-coder"]
-args = []
-
-[[agents]]
-name = "codex"
-command = "codex"
-enabled = false
-read-only = false
-description = "Codex AI assistant (self-referential)"
-args = ["-s", "workspace-write", "-a", "never"]
-
-[[agents]]
-name = "context-collector"
-command = "gemini"
-enabled = false
-read-only = true
-description = "Gemini 2.5 long-context helper for repository sweeps"
-# Supply the long-context model and default yes flag
-args = ["-y", "--model", "gemini-2.5-pro-exp"]
-# Optional: pass API key overrides or helper tool environment
-# env = { GEMINI_API_KEY = "your-key", STATIC_ANALYZER = "scripts/blast-radius" }
-
-[[agents]]
-name = "gpt-4"
-command = "gpt"
-enabled = false
-read-only = false
-description = "OpenAI GPT-4 assistant"
-args = ["--model", "gpt-4"]
-# Optional environment variables for the agent
-# env = { OPENAI_API_KEY = "your-key-here" }
+# By default, Code uses built-in Codex agents; you usually don't need `[[agents]]`.
+# This fork intentionally disables external agent CLIs like `claude`, `gemini`, and `qwen`.
+#
+# To customize agents (advanced), add `[[agents]]` entries here. Built-in Codex
+# slugs include:
+# - code-gpt-5.1-codex-max
+# - code-gpt-5.1-codex-mini
+# Cloud slugs (optional) require CODE_ENABLE_CLOUD_AGENT_MODEL=1.
 
 # Custom agent example
 [[agents]]
@@ -170,26 +94,11 @@ description = "Submit tasks to a remote cloud worker"
 # Typical npm global install location: C:\Users\YourUser\AppData\Roaming\npm\
 
 # [[agents]]
-# name = "claude"
-# command = "C:\\Users\\YourUser\\AppData\\Roaming\\npm\\claude.cmd"
-# enabled = true
-# description = "Claude AI assistant (Windows absolute path)"
-# args = ["--dangerously-skip-permissions"]
-
-# [[agents]]
-# name = "gemini"
-# command = "C:\\Users\\YourUser\\AppData\\Roaming\\npm\\gemini.cmd"
-# enabled = true
-# description = "Gemini assistant (Windows absolute path)"
-# args = ["-y"]
-# env = { GEMINI_API_KEY = "your-key-here" }
-
-# [[agents]]
-# name = "coder"
+# name = "code-gpt-5.1-codex-max"
 # command = "C:\\Users\\YourUser\\AppData\\Roaming\\npm\\coder.cmd"
 # enabled = true
-# description = "Code assistant (Windows absolute path)"
-# args = ["-y"]
+# read-only = false
+# description = "Codex agent (Windows absolute path)"
 
 # Note: Replace "YourUser" with your actual Windows username.
 # To find your npm global install location, run: npm config get prefix
@@ -266,28 +175,28 @@ file_opener = "vscode"  # Options: vscode, vscode-insiders, windsurf, cursor, no
 [[subagents.commands]]
 name = "plan"
 read-only = true
-agents = ["claude", "gemini", "qwen"]
+agents = []
 orchestrator-instructions = "Focus on discovering project layout and risks. Prefer small, verifiable steps."
 agent-instructions = "Summarize assumptions explicitly. Cite files you read."
 
 [[subagents.commands]]
 name = "solve"
 read-only = true
-agents = ["claude", "gemini", "qwen"]
+agents = []
 orchestrator-instructions = "Run multiple approaches in parallel and compare. Defer cancellation until a tested fix exists."
 agent-instructions = "Propose a concrete fix with steps to validate."
 
 [[subagents.commands]]
 name = "code"
 read-only = false
-agents = ["claude", "gemini", "qwen"]
+agents = []
 orchestrator-instructions = "Coordinate implementations across agents; surface worktree locations and branches."
 agent-instructions = "Write minimal, focused changes with clear rationale. Include test or validation steps."
 
 [[subagents.commands]]
 name = "context"
 read-only = true
-agents = ["context-collector", "codex"]
+agents = ["code-gpt-5.1-codex-mini"]
 orchestrator-instructions = "Launch a context sweep before coding. Aggregate file summaries and tooling hints for the main agent."
 agent-instructions = "Summarize high-signal files, why they matter, and recommended analysis commands. Keep replies concise."
 
@@ -295,6 +204,6 @@ agent-instructions = "Summarize high-signal files, why they matter, and recommen
 [[subagents.commands]]
 name = "review"
 read-only = true
-agents = ["claude", "gemini", "qwen"]
+agents = []
 orchestrator-instructions = "Perform a multi-agent code review; reconcile disagreements into actionable feedback."
 agent-instructions = "Provide inline comments, cite files/lines, and suggest precise diffs."

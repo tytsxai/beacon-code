@@ -20,7 +20,7 @@
 
 ## [Unreleased]
 
-- (none)
+- Agents: this fork is Codex-only; disable external agent CLIs (Claude/Gemini/Qwen) and update defaults/docs accordingly.
 
 ## [0.5.15] - 2025-11-28
 

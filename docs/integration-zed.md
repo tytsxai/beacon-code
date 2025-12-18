@@ -17,7 +17,7 @@
 
 ## Zed 前置条件
 
-- Zed Stable `0.201.5`（2025 年 8 月 27 日发布）或更新版本在 Agent Panel 中加入 ACP 支持。接入 Every Code 前请通过 `Zed → Check for Updates` 升级。Zed 文档说明 ACP 是驱动 Gemini CLI 及其他外部智能体的机制。
+- Zed Stable `0.201.5`（2025 年 8 月 27 日发布）或更新版本在 Agent Panel 中加入 ACP 支持。接入 Every Code 前请通过 `Zed → Check for Updates` 升级。Zed 文档说明 ACP 是驱动外部智能体 CLI 的机制。
 - 外部智能体位于 Agent Panel（`cmd-?`）内。点击 `+` 新建线程，从外部智能体列表选择 `Code`（Every Code）。Zed 以子进程方式通过 JSON‑RPC 运行我们的 CLI，提示与 diff 预览都保留在本地。
 - Zed 会按条目自动安装依赖。如果保持 `command = "npx"`，Zed 会在首次触发集成时下载发布的 `@just-every/code` 包。
 
