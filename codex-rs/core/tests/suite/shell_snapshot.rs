@@ -202,6 +202,10 @@ fn assert_posix_snapshot_sections(snapshot: &str) {
 }
 
 #[cfg_attr(not(target_os = "linux"), ignore)]
+#[cfg_attr(
+    all(target_os = "linux", any(target_arch = "arm", target_arch = "aarch64")),
+    ignore
+)]
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn linux_unified_exec_uses_shell_snapshot() -> Result<()> {
     let command = "echo snapshot-linux";

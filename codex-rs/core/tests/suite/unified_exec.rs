@@ -2001,8 +2001,8 @@ async fn unified_exec_timeout_and_followup_poll() -> Result<()> {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-// Skipped on arm because the ctor logic to handle arg0 doesn't work on ARM
-#[cfg(not(target_arch = "arm"))]
+// Skipped on arm because the ctor logic to handle arg0 doesn't work on ARM.
+#[cfg(not(any(target_arch = "arm", target_arch = "aarch64")))]
 #[serial(codex_integration)]
 async fn unified_exec_formats_large_output_summary() -> Result<()> {
     skip_if_no_network!(Ok(()));
