@@ -824,11 +824,17 @@ export async function runPostinstall(options = {}) {
         throw new Error(`invalid binary (${valid.reason})`);
       }
 
-      const checksumPath = isWin ? cachePath : mirrorToLocal ? localPath : cachePath;
+      const checksumPath = isWin
+        ? cachePath
+        : mirrorToLocal
+          ? localPath
+          : cachePath;
       const checksum = verifyBinaryChecksum(checksumPath, binaryName);
       if (!checksum.ok) {
         try {
-          isWin || !mirrorToLocal ? unlinkSync(cachePath) : unlinkSync(localPath);
+          isWin || !mirrorToLocal
+            ? unlinkSync(cachePath)
+            : unlinkSync(localPath);
         } catch {}
         throw new Error(checksum.reason);
       }

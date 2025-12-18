@@ -176,7 +176,18 @@ pub fn run(
     let index_counter = AtomicUsize::new(0);
     walker.run(|| {
         let index = index_counter.fetch_add(1, Ordering::Relaxed);
+        debug_assert!(
+            index < best_matchers_per_worker.len(),
+            "walk worker index out of bounds: {index} >= {}",
+            best_matchers_per_worker.len()
+        );
         let best_list_ptr = best_matchers_per_worker[index].get();
+        // SAFETY: Each `WalkParallel::run()` worker calls this initializer exactly once and we
+        // assign it a unique `index` via `fetch_add`. This ensures each worker gets a distinct
+        // `UnsafeCell<BestMatchesList>` and thus no two threads alias the same `&mut`.
+        //
+        // After `walker.run(...)` returns, workers have finished, and we only create shared
+        // references (`&`) to read and merge results.
         let best_list = unsafe { &mut *best_list_ptr };
 
         // Each worker keeps a local counter so we only read the atomic flag
@@ -230,6 +241,8 @@ pub fn run(
     let mut global_heap: BinaryHeap<Reverse<(u32, String)>> = BinaryHeap::new();
     let mut total_match_count = 0;
     for best_list_cell in best_matchers_per_worker.iter() {
+        // SAFETY: All worker closures have completed (we are after `walker.run`), so there are no
+        // outstanding mutable references. Each `BestMatchesList` is now read-only for the merge.
         let best_list = unsafe { &*best_list_cell.get() };
         total_match_count += best_list.num_matches;
         for &Reverse((score, ref line)) in best_list.binary_heap.iter() {

@@ -576,7 +576,9 @@ if (!validation.ok) {
 
 const checksum = verifyBinaryChecksum(binaryPath);
 if (!checksum.ok) {
-  console.error(`Checksum verification failed for ${binaryPath}: ${checksum.reason}`);
+  console.error(
+    `Checksum verification failed for ${binaryPath}: ${checksum.reason}`,
+  );
   console.error(
     "This can happen if the binary download was corrupted or tampered with.",
   );
