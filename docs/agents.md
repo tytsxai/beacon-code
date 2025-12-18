@@ -76,7 +76,7 @@ agent-instructions = "附加到每个子智能体提示的前言"
 [[agents]]
 name = "my-coder"
 command = "/usr/local/bin/coder"
-args_write = ["-s", "workspace-write", "--dangerously-bypass-approvals-and-sandbox", "exec", "--skip-git-repo-check"]
+args-write = ["-s", "workspace-write", "--dangerously-bypass-approvals-and-sandbox", "exec", "--skip-git-repo-check"]
 enabled = true
 ```
 - 自定义上下文扫描命令：
