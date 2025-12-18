@@ -136,6 +136,8 @@ code exec "任务描述"          # 非交互模式执行
 | `CODE_HOME` | 自定义配置目录 |
 | `CODEX_API_KEY` | exec 模式覆盖 API Key |
 
+更多（含清理/主题/安全模式等高风险开关）见 `docs/env-vars.md`。
+
 ---
 
 ## 相关文档

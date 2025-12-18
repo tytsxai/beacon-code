@@ -15,7 +15,7 @@
 
 ## 配置与语言
 
-- 默认语言英文；可通过 `CODEX_LANG=zh_CN.UTF-8` 或系统 `LANG` 为中文来切换部分中文界面（欢迎页、信任目录流程等），否则回退英文。
+- 默认语言英文；建议在 `~/.code/config.toml` 设置 `ui_locale = "zh-CN"` 切换中文（缺失条目会回退英文）。
 - 配置文件位置：`~/.code/config.toml`（兼容读取 `~/.codex/config.toml`）。示例见 `config-examples.md`。
 
 ## 运行环境

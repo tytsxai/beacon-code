@@ -56,10 +56,14 @@ args = ["-title", "Codex", "-message", "{message}"]
 
 ## 语言与本地化
 
-当前默认英文；可通过环境变量强制中文：
+当前默认英文；建议通过配置项切换：
 
-```bash
-export CODEX_LANG=zh_CN.UTF-8
+```toml
+# ~/.code/config.toml
+ui_locale = "zh-CN"
 ```
 
-未设置时会自动读取 `LANG`，非中文 locale 将回退英文。
+说明：
+
+- `ui_locale` 使用 BCP 47 标签（例如 `zh-CN`、`en-US`）。
+- 若中文条目缺失，会自动回退英文以避免功能回归。

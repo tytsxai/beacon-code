@@ -1,6 +1,6 @@
 # Config
 
-Codex configuration gives you fine-grained control over the model, execution environment, and integrations available to the CLI. Use this guide alongside the workflows in [`codex exec`](./exec.md), the guardrails in [Sandbox & approvals](./sandbox.md), and project guidance from [AGENTS.md discovery](./agents_md.md).
+Code configuration gives you fine-grained control over the model, execution environment, and integrations available to the CLI. Use this guide alongside the workflows in [`code exec`](./exec.md), the guardrails in [Sandbox & approvals](./sandbox.md), and project guidance from [AGENTS.md discovery](./agents_md.md).
 
 ## Quick navigation
 
@@ -12,7 +12,7 @@ Codex configuration gives you fine-grained control over the model, execution env
 - [Profiles and overrides](#profiles-and-overrides)
 - [Reference table](#config-reference)
 
-Codex supports several mechanisms for setting config values:
+Code supports several mechanisms for setting config values:
 
 - Config-specific command-line flags, such as `--model o3` (highest precedence).
 - A generic `-c`/`--config` flag that takes a `key=value` pair, such as `--config model="o3"`.
@@ -23,13 +23,31 @@ Codex supports several mechanisms for setting config values:
   - If `value` cannot be parsed as a valid TOML value, it is treated as a string value. This means that `-c model='"o3"'` and `-c model=o3` are equivalent.
     - In the first case, the value is the TOML string `"o3"`, while in the second the value is `o3`, which is not valid TOML and therefore treated as the TOML string `"o3"`.
     - Because quotes are interpreted by one's shell, `-c key="true"` will be correctly interpreted in TOML as `key = true` (a boolean) and not `key = "true"` (a string). If for some reason you needed the string `"true"`, you would need to use `-c key='"true"'` (note the two sets of quotes).
-- The `$CODEX_HOME/config.toml` configuration file where the `CODEX_HOME` environment value defaults to `~/.codex`. (Note `CODEX_HOME` will also be where logs and other Codex-related information are stored.)
+- The `$CODE_HOME/config.toml` configuration file (default: `~/.code`).
+  - For backwards compatibility, Code may also read legacy data from `$CODEX_HOME` (default: `~/.codex`).
+
+## Config files and managed layers
+
+Configuration is loaded in layers; higher layers override lower layers.
+
+Layers (top overrides bottom):
+
+1. **Managed preferences** (macOS only; set via device management profiles)
+2. **Managed config file**:
+   - Unix: `/etc/code/managed_config.toml`
+   - Non-Unix: `$CODE_HOME/managed_config.toml`
+3. **User config file**: `$CODE_HOME/config.toml`
+
+Practical implications:
+
+- Managed layers are intended for admins and can enforce org policy (models, endpoints, sandbox defaults, etc).
+- If a value “won’t change” even after editing `config.toml`, check the managed layers first.
 
 Both the `--config` flag and the `config.toml` file support the following options:
 
 ## Feature flags
 
-Optional and experimental capabilities are toggled via the `[features]` table in `$CODEX_HOME/config.toml`. If you see a deprecation notice mentioning a legacy key (for example `experimental_use_exec_command_tool`), move the setting into `[features]` or pass `--enable <feature>`.
+Optional and experimental capabilities are toggled via the `[features]` table in `$CODE_HOME/config.toml`. If you see a deprecation notice mentioning a legacy key (for example `experimental_use_exec_command_tool`), move the setting into `[features]` or pass `--enable <feature>`.
 
 ```toml
 [features]
@@ -632,7 +650,8 @@ Set `otel.exporter` to control where events go:
   ```
 
 Both OTLP exporters accept an optional `tls` block so you can trust a custom CA
-or enable mutual TLS. Relative paths are resolved against `CODEX_HOME/`:
+or enable mutual TLS. Relative paths are resolved against `CODE_HOME/` (falling back
+to legacy `CODEX_HOME/` if needed):
 
 ```toml
 [otel.exporter."otlp-http"]
@@ -825,7 +844,7 @@ Users can specify config values at multiple levels. Order of precedence is as fo
 
 ### history
 
-By default, Codex CLI records messages sent to the model in `$CODEX_HOME/history.jsonl`. Note that on UNIX, the file permissions are set to `o600`, so it should only be readable and writable by the owner.
+By default, Code records messages sent to the model in `$CODE_HOME/history.jsonl`. Note that on UNIX, the file permissions are set to `o600`, so it should only be readable and writable by the owner. (For backwards compatibility, Code may also read legacy history from `$CODEX_HOME/history.jsonl`.)
 
 To disable this behavior, configure `[history]` as follows:
 
@@ -921,13 +940,13 @@ cli_auth_credentials_store = "keyring"
 
 Valid values:
 
-- `file` (default) – Store credentials in `auth.json` under `$CODEX_HOME`.
+- `file` (default) – Store credentials in `auth.json` under `$CODE_HOME` (falling back to `$CODEX_HOME` if needed).
 - `keyring` – Store credentials in the operating system keyring via the [`keyring` crate](https://crates.io/crates/keyring); the CLI reports an error if secure storage is unavailable. Backends by OS:
   - macOS: macOS Keychain
   - Windows: Windows Credential Manager
   - Linux: DBus‑based Secret Service, the kernel keyutils, or a combination
   - FreeBSD/OpenBSD: DBus‑based Secret Service
-- `auto` – Save credentials to the operating system keyring when available; otherwise, fall back to `auth.json` under `$CODEX_HOME`.
+- `auto` – Save credentials to the operating system keyring when available; otherwise, fall back to `auth.json` under `$CODE_HOME` (or legacy `$CODEX_HOME`).
 
 ## Config reference
 

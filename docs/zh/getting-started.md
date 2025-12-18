@@ -55,8 +55,13 @@ codex "explain this codebase to me"
 
 通过 `AGENTS.md` 给 Codex 额外指引。查找顺序：
 
-1. `~/.codex/AGENTS.md`（全局）
-2. 仓库根到当前目录路径上的 `AGENTS.override.md`（若有优先）或 `AGENTS.md`
+1. 全局：`~/.codex/AGENTS.md`（Codex）或 `~/.code/AGENTS.md`（Every Code）。
+2. 项目：从 Git 仓库根目录到当前工作目录（含）路径上的指令文件，按“从根到深层”的顺序拼接。
+
+备注：
+
+- 本仓库同时包含 `codex-rs/` 与 `code-rs/` 两套实现，它们在指令发现规则上有差异；权威说明见 `docs/agents_md.md`。
+- `AGENTS.override.md` 在 `codex-rs/`（上游）中支持；在 `code-rs/`（Every Code）当前不生效。
 
 更多用法见 [AGENTS 文档](https://agents.md/)。
 
