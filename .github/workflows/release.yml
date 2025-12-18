@@ -931,40 +931,62 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # First attempt a simple push
-          if git push origin main; then
-            git push origin --tags || true
-            exit 0
-          fi
-          echo "Push rejected (non-fast-forward). Attempting fetch + fast-forward..."
-          git fetch origin --tags
-          # Try fast-forward only; succeeds when our HEAD is descendant of origin/main
-          if git merge --ff-only origin/main; then
-            echo "Fast-forward merge succeeded; retrying push."
-            git push origin main
-            git push origin --tags || true
-            exit 0
-          fi
-          echo "Non-FF merge required; applying merge-with-policy fallback."
-          # Non-interactive merge that prefers our current changes, but adopts remote for workflow files.
-          git merge --no-ff --no-commit origin/main || true
-          if git rev-parse -q --verify MERGE_HEAD >/dev/null; then
-            # Default to ours for all files
-            git checkout --ours . || true
-            # Adopt remote version for workflow files (release-ignore path)
-            # Only adjust if those files are in conflict/unmerged
-            while IFS= read -r f; do
-              [ -z "$f" ] && continue
-              case "$f" in
-                .github/workflows/*) git checkout --theirs -- "$f" || true ;;
-              esac
-            done < <(git ls-files --unmerged | cut -f2 | sort -u)
-            git add -A
-            git commit -m "Merge origin/main: adopt remote workflow changes; keep release changes [skip ci]"
-          fi
-          echo "Retrying push after policy merge..."
-          git push origin main
-          git push origin --tags || true
+          # This workflow may run concurrently with other workflows that advance `main`
+          # (e.g. Upstream Merge). To keep releases stable, retry a few times and
+          # avoid merge failures caused by untracked packaging artifacts.
+          for attempt in 1 2 3; do
+            echo "Push attempt ${attempt}/3..."
+
+            # First attempt a simple push.
+            if git push origin main; then
+              git push origin --tags || true
+              exit 0
+            fi
+
+            echo "Push rejected (non-fast-forward). Attempting fetch + fast-forward..."
+            git fetch origin --tags
+
+            # Packaging steps can leave untracked files that block merges.
+            # Remove them before attempting to merge remote `main`.
+            rm -rf codex-cli/.pack || true
+
+            # Try fast-forward only; succeeds when our HEAD is descendant of origin/main.
+            if git merge --ff-only origin/main; then
+              echo "Fast-forward merge succeeded; retrying push."
+              if git push origin main; then
+                git push origin --tags || true
+                exit 0
+              fi
+            fi
+
+            echo "Non-FF merge required; applying merge-with-policy fallback."
+            # Non-interactive merge that prefers our current changes, but adopts remote for workflow files.
+            git merge --no-ff --no-commit origin/main || true
+            if git rev-parse -q --verify MERGE_HEAD >/dev/null; then
+              # Default to ours for all files.
+              git checkout --ours . || true
+              # Adopt remote version for workflow files.
+              while IFS= read -r f; do
+                [ -z "$f" ] && continue
+                case "$f" in
+                  .github/workflows/*) git checkout --theirs -- "$f" || true ;;
+                esac
+              done < <(git ls-files --unmerged | cut -f2 | sort -u)
+              git add -A
+              git commit -m "Merge origin/main: adopt remote workflow changes; keep release changes [skip ci]"
+            fi
+
+            echo "Retrying push after policy merge..."
+            if git push origin main; then
+              git push origin --tags || true
+              exit 0
+            fi
+
+            sleep $((attempt * 2))
+          done
+
+          echo "Failed to push `main` after retries." >&2
+          exit 1
 
       - name: Verify release notes header matches version
         shell: bash
