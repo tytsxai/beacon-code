@@ -154,7 +154,7 @@ mod agent_summary_counts_tests {
     fn missing_builtins_default_to_disabled() {
         let agents = vec![
             make_agent("code-gpt-5.1-codex-max", true),
-            make_agent("code-gpt-5.1", true),
+            make_agent("code-gpt-5.1-codex-mini", true),
         ];
 
         let (enabled, total) = agent_summary_counts(&agents);
@@ -14850,9 +14850,7 @@ fi\n\
 
             let lowercase = agent_name.trim().to_ascii_lowercase();
             let script = match lowercase.as_str() {
-                "claude" => linux_agent_install_script(&cmd, "@anthropic-ai/claude-code"),
-                "gemini" => linux_agent_install_script(&cmd, "@google/gemini-cli"),
-                "qwen" => linux_agent_install_script(&cmd, "@qwen-code/qwen-code"),
+                "coder" | "code" => linux_agent_install_script(&cmd, "@just-every/code"),
                 _ => format!(
                     "{cmd} --version || (echo \"Please install {cmd} via your package manager\" && false)",
                     cmd = cmd
@@ -27070,8 +27068,8 @@ mod tests {
             write: false,
             write_requested: Some(false),
             models: Some(vec![
-                "claude-sonnet-4.5".to_string(),
-                "gemini-3-pro".to_string(),
+                "code-gpt-5.1-codex-max".to_string(),
+                "code-gpt-5.1-codex-mini".to_string(),
             ]),
         }];
         chat.auto_state.pending_agent_timing = Some(AutoTurnAgentsTiming::Blocking);
@@ -27085,7 +27083,7 @@ mod tests {
         assert!(message.contains("Run diagnostics"));
         assert!(message.contains("Please run agent.create"));
         assert!(message.contains("write: false"));
-        assert!(message.contains("Models: [claude-sonnet-4.5, gemini-3-pro]"));
+        assert!(message.contains("Models: [code-gpt-5.1-codex-max, code-gpt-5.1-codex-mini]"));
         assert!(message.contains("Draft alternative fix"));
         assert!(message.contains("Focus on parser module"));
         assert!(message.contains("agent.wait"));

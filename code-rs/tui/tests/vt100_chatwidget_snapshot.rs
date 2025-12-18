@@ -1855,7 +1855,7 @@ fn agent_run_grouped_plain_tool_name() {
                 name: "QA Bot".into(),
                 status: "running".into(),
                 batch_id: Some("batch-plain".into()),
-                model: Some("claude".into()),
+                model: Some("code-gpt-5.1-codex-max".into()),
                 last_progress: Some("Executing smoke tests".into()),
                 result: None,
                 error: None,
@@ -1930,11 +1930,11 @@ fn agents_terminal_overlay_full_details() {
         msg: EventMsg::AgentStatusUpdate(AgentStatusUpdateEvent {
             agents: vec![
                 AgentInfo {
-                    id: "docs-sweep-claude".into(),
-                    name: "Docs Sweep (Claude)".into(),
+                    id: "docs-sweep-codex-max".into(),
+                    name: "Docs Sweep (Codex Max)".into(),
                     status: "running".into(),
                     batch_id: Some("batch-docs".into()),
-                    model: Some("claude-3-opus".into()),
+                    model: Some("code-gpt-5.1-codex-max".into()),
                     last_progress: Some("Collecting release notes\nReviewing eng updates".into()),
                     result: None,
                     error: None,
@@ -1942,11 +1942,11 @@ fn agents_terminal_overlay_full_details() {
                     token_count: Some(3_500),
                 },
                 AgentInfo {
-                    id: "docs-sweep-gpt".into(),
-                    name: "Docs Sweep (GPT)".into(),
+                    id: "docs-sweep-codex-mini".into(),
+                    name: "Docs Sweep (Codex Mini)".into(),
                     status: "pending".into(),
                     batch_id: Some("batch-docs".into()),
-                    model: Some("gpt-4o".into()),
+                    model: Some("code-gpt-5.1-codex-mini".into()),
                     last_progress: None,
                     result: None,
                     error: None,
@@ -1973,11 +1973,11 @@ fn agents_terminal_overlay_full_details() {
         EventMsg::AgentStatusUpdate(AgentStatusUpdateEvent {
             agents: vec![
                 AgentInfo {
-                    id: "docs-sweep-claude".into(),
-                    name: "Docs Sweep (Claude)".into(),
+                    id: "docs-sweep-codex-max".into(),
+                    name: "Docs Sweep (Codex Max)".into(),
                     status: "completed".into(),
                     batch_id: Some("batch-docs".into()),
-                    model: Some("claude-3-opus".into()),
+                    model: Some("code-gpt-5.1-codex-max".into()),
                     last_progress: Some("Synthesizing highlights".into()),
                     result: Some(
                         "### Highlights\n- New Auto Drive controls\n- Faster release approvals"
@@ -1988,11 +1988,11 @@ fn agents_terminal_overlay_full_details() {
                     token_count: Some(7_200),
                 },
                 AgentInfo {
-                    id: "docs-sweep-gpt".into(),
-                    name: "Docs Sweep (GPT)".into(),
+                    id: "docs-sweep-codex-mini".into(),
+                    name: "Docs Sweep (Codex Mini)".into(),
                     status: "failed".into(),
                     batch_id: Some("batch-docs".into()),
-                    model: Some("gpt-4o".into()),
+                    model: Some("code-gpt-5.1-codex-mini".into()),
                     last_progress: Some("Drafting rollout summary".into()),
                     result: None,
                     error: Some("Timed out waiting for GitHub diff".into()),
@@ -2239,7 +2239,7 @@ fn agent_status_missing_batch_displays_error() {
 }
 
 #[test]
-fn agents_toggle_claude_opus_persists_via_slash_command() {
+fn agents_toggle_codex_max_persists_via_slash_command() {
     let _lock = ENV_LOCK.lock().unwrap();
     let env = EnvGuard::new(&["HOME", "CODE_HOME", "CODEX_HOME"]);
     let home_dir = TempDir::new().expect("temp home");
@@ -2258,7 +2258,7 @@ fn agents_toggle_claude_opus_persists_via_slash_command() {
         "Agents overlay did not open"
     );
 
-    harness.show_agent_editor("claude-opus-4.5");
+    harness.show_agent_editor("code-gpt-5.1-codex-max");
 
     let editor_frame = normalize_output(render_chat_widget_to_vt100(&mut harness, 100, 28));
     let editor_lower = editor_frame.to_lowercase();
@@ -2277,7 +2277,7 @@ fn agents_toggle_claude_opus_persists_via_slash_command() {
 
     let overview_after_save = normalize_output(render_chat_widget_to_vt100(&mut harness, 100, 28));
     let overview_lower = overview_after_save.to_lowercase();
-    assert!(overview_lower.contains("claude-opus-4.5"));
+    assert!(overview_lower.contains("code-gpt-5.1-codex-max"));
     assert!(overview_lower.contains("disabled"));
 
     harness.send_key(make_key(KeyCode::Esc, KeyModifiers::NONE));
@@ -2287,7 +2287,7 @@ fn agents_toggle_claude_opus_persists_via_slash_command() {
     harness.send_key(make_key(KeyCode::Down, KeyModifiers::NONE));
     let overlay_reopen = normalize_output(render_chat_widget_to_vt100(&mut harness, 100, 28));
     let reopen_lower = overlay_reopen.to_lowercase();
-    assert!(reopen_lower.contains("claude-opus-4.5"));
+    assert!(reopen_lower.contains("code-gpt-5.1-codex-max"));
     assert!(reopen_lower.contains("disabled"));
 }
 

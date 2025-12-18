@@ -9,24 +9,24 @@ expression: "&output"
  |                                                                                            |
  |  Docs Sweep                 + Agent History ---------------------------------------------+ |
  | › ★ Overview                | Docs Sweep  2 agents                                       | |
- |   • claude-3-opus           | Models: claude-3-opus, gpt-4o                              | |
- |   • gpt-4o                  |                                                            | |
+ |   • code-gpt-5.1-codex-max  | Models: code-gpt-5.1-codex-max, code-gpt-5.1-codex-mini    | |
+ |   • code-gpt-5.1-codex-mini |                                                            | |
  |                             | Context                                                    | |
  |                             |   Focus on October 2025 product changes                    | |
  |                             |                                                            | |
  |                             | Action History                                             | |
  |                             |                                                            | |
- |                             | [MM:SS] claude-3-opus status: Status → Running          | |
+ |                             | [MM:SS] code-gpt-5.1-codex-max status: Status → Running | |
  |                             |                                                            | |
- |                             | [MM:SS] claude-3-opus detail: ...                     | |
+ |                             | [MM:SS] code-gpt-5.1-codex-max detail: ...                     | |
  |                                                                                            |
+ |                             |                                             Reviewing eng  | |
+ |                             |updates                                                     | |
  |                             |                                                            | |
- |                             | [MM:SS] gpt-4o status: Status → Pending                 | |
+ |                             | [MM:SS] code-gpt-5.1-codex-mini status: Status → Pending| |
  |                             |                                                            | |
- |                             | [MM:SS] claude-3-opus status: Status → Completed        | |
- |                             |                                                            | |
- |                             | [MM:SS] claude-3-opus detail: ...                     | |
- |                                                                                            |
+ |                             | [MM:SS] code-gpt-5.1-codex-max status: Status →         | |
+ |                             |Completed                                                   | |
  |                             +------------------------------------------------------------+ |
  | ↑/↓ Navigate/Scroll  →/Enter Focus output  ← Back to list  Tab Next agent  PgUp/PgDn Page  |
  |                                                                                            |
