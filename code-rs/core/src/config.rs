@@ -2171,18 +2171,6 @@ fn upgrade_legacy_model_slug(slug: &str) -> Option<String> {
         return None;
     }
 
-    // Upgrade Anthropic Opus 4.1 to 4.5
-    if slug.eq_ignore_ascii_case("claude-opus-4.1") {
-        return Some("claude-opus-4.5".to_string());
-    }
-
-    // Upgrade Gemini 2.5 Pro to Gemini 3 Pro (or preview alias)
-    if slug.eq_ignore_ascii_case("gemini-2.5-pro")
-        || slug.eq_ignore_ascii_case("gemini-3-pro-preview")
-    {
-        return Some("gemini-3-pro".to_string());
-    }
-
     if let Some(rest) = slug.strip_prefix("test-gpt-5-codex") {
         return Some(format!("test-gpt-5.1-codex{rest}"));
     }
@@ -2501,9 +2489,6 @@ impl Config {
         for agent in &agents {
             if agent.name.eq_ignore_ascii_case("code")
                 || agent.name.eq_ignore_ascii_case("codex")
-                || agent.name.eq_ignore_ascii_case("claude")
-                || agent.name.eq_ignore_ascii_case("gemini")
-                || agent.name.eq_ignore_ascii_case("qwen")
                 || agent.name.eq_ignore_ascii_case("cloud")
             {
                 tracing::warn!(
@@ -4044,9 +4029,7 @@ model_verbosity = "high"
             .collect();
 
         assert!(enabled_names.contains("code-gpt-5.1-codex-max"));
-        assert!(enabled_names.contains("claude-sonnet-4.5"));
-        assert!(enabled_names.contains("gemini-3-pro"));
-        assert!(enabled_names.contains("qwen-3-coder"));
+        assert!(enabled_names.contains("code-gpt-5.1-codex-mini"));
         Ok(())
     }
 
@@ -4243,54 +4226,6 @@ mod agent_merge_tests {
                 .count(),
             1,
             "should dedupe alias and canonical"
-        );
-    }
-
-    #[test]
-    fn gemini_alias_and_canonical_dedupe_prefers_last_state() {
-        let agents = vec![
-            agent("gemini-2.5-pro", "gemini", true),
-            agent("gemini-3-pro", "gemini", false),
-        ];
-        let merged = merge_with_default_agents(agents);
-
-        let gemini = merged
-            .iter()
-            .find(|a| a.name.eq_ignore_ascii_case("gemini-3-pro"))
-            .expect("gemini present");
-
-        assert!(!gemini.enabled, "later canonical disable should win");
-        assert_eq!(
-            merged
-                .iter()
-                .filter(|a| a.name.eq_ignore_ascii_case("gemini-3-pro"))
-                .count(),
-            1,
-            "should dedupe gemini alias/canonical"
-        );
-    }
-
-    #[test]
-    fn gemini_alias_disable_overrides_prior_canonical_enable() {
-        let agents = vec![
-            agent("gemini-3-pro", "gemini", true),
-            agent("gemini-2.5-pro", "gemini", false),
-        ];
-        let merged = merge_with_default_agents(agents);
-
-        let gemini = merged
-            .iter()
-            .find(|a| a.name.eq_ignore_ascii_case("gemini-3-pro"))
-            .expect("gemini present");
-
-        assert!(!gemini.enabled, "later alias disable should win");
-        assert_eq!(
-            merged
-                .iter()
-                .filter(|a| a.name.eq_ignore_ascii_case("gemini-3-pro"))
-                .count(),
-            1,
-            "should dedupe gemini alias/canonical"
         );
     }
 }

@@ -321,8 +321,9 @@ mod tests {
         assert!(result.is_some());
         let plan_prompt = result.unwrap();
         assert!(plan_prompt.contains("final, comprehensive plan"));
-        // Default agents list should include non-Codex providers when no [[agents]] configured
-        assert!(plan_prompt.contains("code-gpt-5.1"));
+        // Default agents list should be Codex-only when no [[agents]] configured
+        assert!(plan_prompt.contains("code-gpt-5.1-codex-max"));
+        assert!(plan_prompt.contains("code-gpt-5.1-codex-mini"));
         assert!(!plan_prompt.contains("cloud-gpt-5.1-codex-max"));
 
         // Test /solve command
@@ -355,8 +356,8 @@ mod tests {
         // Create test agent configurations
         let agents = vec![
             AgentConfig {
-                name: "claude-sonnet-4.5".to_string(),
-                command: "claude".to_string(),
+                name: "code-gpt-5.1-codex-max".to_string(),
+                command: "coder".to_string(),
                 args: vec![],
                 read_only: false,
                 enabled: true,
@@ -367,8 +368,8 @@ mod tests {
                 instructions: None,
             },
             AgentConfig {
-                name: "test-gemini".to_string(),
-                command: "gemini".to_string(),
+                name: "code-gpt-5.1-codex-mini".to_string(),
+                command: "coder".to_string(),
                 args: vec![],
                 read_only: false,
                 enabled: false, // disabled
@@ -384,7 +385,7 @@ mod tests {
         let result = handle_slash_command("/plan test task", Some(&agents));
         assert!(result.is_some());
         let prompt = result.unwrap();
-        assert!(prompt.contains("claude-sonnet-4.5"));
-        assert!(!prompt.contains("test-gemini"));
+        assert!(prompt.contains("code-gpt-5.1-codex-max"));
+        assert!(!prompt.contains("code-gpt-5.1-codex-mini"));
     }
 }

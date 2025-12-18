@@ -8,7 +8,6 @@ use crate::config_types::AgentConfig;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-const CLAUDE_ALLOWED_TOOLS: &str = "Bash(ls:*), Bash(cat:*), Bash(grep:*), Bash(git status:*), Bash(git log:*), Bash(find:*), Read, Grep, Glob, LS, WebFetch, TodoRead, TodoWrite, WebSearch";
 const CLOUD_MODEL_ENV_FLAG: &str = "CODE_ENABLE_CLOUD_AGENT_MODEL";
 
 const CODE_GPT5_CODEX_READ_ONLY: &[&str] = &[
@@ -26,33 +25,6 @@ const CODE_GPT5_CODEX_WRITE: &[&str] = &[
     "exec",
     "--skip-git-repo-check",
 ];
-const CODE_GPT5_READ_ONLY: &[&str] = &[
-    "-s",
-    "read-only",
-    "-a",
-    "never",
-    "exec",
-    "--skip-git-repo-check",
-];
-const CODE_GPT5_WRITE: &[&str] = &[
-    "-s",
-    "workspace-write",
-    "--dangerously-bypass-approvals-and-sandbox",
-    "exec",
-    "--skip-git-repo-check",
-];
-const CLAUDE_SONNET_READ_ONLY: &[&str] = &["--allowedTools", CLAUDE_ALLOWED_TOOLS];
-const CLAUDE_SONNET_WRITE: &[&str] = &["--dangerously-skip-permissions"];
-const CLAUDE_OPUS_READ_ONLY: &[&str] = &["--allowedTools", CLAUDE_ALLOWED_TOOLS];
-const CLAUDE_OPUS_WRITE: &[&str] = &["--dangerously-skip-permissions"];
-const CLAUDE_HAIKU_READ_ONLY: &[&str] = &["--allowedTools", CLAUDE_ALLOWED_TOOLS];
-const CLAUDE_HAIKU_WRITE: &[&str] = &["--dangerously-skip-permissions"];
-const GEMINI_PRO_READ_ONLY: &[&str] = &[];
-const GEMINI_PRO_WRITE: &[&str] = &["-y"];
-const GEMINI_FLASH_READ_ONLY: &[&str] = &[];
-const GEMINI_FLASH_WRITE: &[&str] = &["-y"];
-const QWEN_3_CODER_READ_ONLY: &[&str] = &[];
-const QWEN_3_CODER_WRITE: &[&str] = &["-y"];
 const CLOUD_GPT5_CODEX_READ_ONLY: &[&str] = &[];
 const CLOUD_GPT5_CODEX_WRITE: &[&str] = &[];
 
@@ -60,18 +32,11 @@ const CLOUD_GPT5_CODEX_WRITE: &[&str] = &[];
 /// entries are configured. The ordering here controls priority for legacy
 /// CLI-name lookups.
 pub const DEFAULT_AGENT_NAMES: &[&str] = &[
-    // Frontline for moderate/challenging tasks
+    // Frontline for moderate/challenging tasks.
     "code-gpt-5.1-codex-max",
-    "claude-opus-4.5",
-    "gemini-3-pro",
-    // Straightforward / cost-aware
+    // Straightforward / cost-aware.
     "code-gpt-5.1-codex-mini",
-    "claude-sonnet-4.5",
-    "gemini-2.5-flash",
-    // Mixed/general and alternates
-    "code-gpt-5.1",
-    "claude-haiku-4.5",
-    "qwen-3-coder",
+    // Optional cloud agent.
     "cloud-gpt-5.1-codex-max",
 ];
 
@@ -142,103 +107,6 @@ const AGENT_MODEL_SPECS: &[AgentModelSpec] = &[
         description: "Straightforward coding tasks: cheapest and quick; great for implementation, refactors, multi-file edits, and code reviews.",
         enabled_by_default: true,
         aliases: &["code-gpt-5-codex-mini", "codex-mini", "coder-mini"],
-        gating_env: None,
-        is_frontline: false,
-    },
-    AgentModelSpec {
-        slug: "code-gpt-5.1",
-        family: "code",
-        cli: "coder",
-        read_only_args: CODE_GPT5_READ_ONLY,
-        write_args: CODE_GPT5_WRITE,
-        model_args: &["--model", "gpt-5.1"],
-        description: "Mixed tasks that blend code with design/product reasoning; slower speed, but larger breadth.",
-        enabled_by_default: true,
-        aliases: &["code-gpt-5", "coder-gpt-5"],
-        gating_env: None,
-        is_frontline: false,
-    },
-    AgentModelSpec {
-        slug: "claude-opus-4.5",
-        family: "claude",
-        cli: "claude",
-        read_only_args: CLAUDE_OPUS_READ_ONLY,
-        write_args: CLAUDE_OPUS_WRITE,
-        model_args: &["--model", "opus"],
-        description: "Frontline Claude for challenging or high-stakes tasks; excels at all coding tasks and novel problem solving.",
-        enabled_by_default: true,
-        aliases: &["claude-opus", "claude-opus-4.1"],
-        gating_env: None,
-        is_frontline: true,
-    },
-    AgentModelSpec {
-        slug: "claude-sonnet-4.5",
-        family: "claude",
-        cli: "claude",
-        read_only_args: CLAUDE_SONNET_READ_ONLY,
-        write_args: CLAUDE_SONNET_WRITE,
-        model_args: &["--model", "sonnet"],
-        description: "Straightforward coding/support tasks; strong at implementation, tool use, debugging, and testing.",
-        enabled_by_default: true,
-        aliases: &["claude", "claude-sonnet"],
-        gating_env: None,
-        is_frontline: false,
-    },
-    AgentModelSpec {
-        slug: "claude-haiku-4.5",
-        family: "claude",
-        cli: "claude",
-        read_only_args: CLAUDE_HAIKU_READ_ONLY,
-        write_args: CLAUDE_HAIKU_WRITE,
-        model_args: &["--model", "haiku"],
-        description: "Very fast model for simple tasks. Similar to gemini-2.5-flash in capability.",
-        enabled_by_default: true,
-        aliases: &["claude-haiku"],
-        gating_env: None,
-        is_frontline: false,
-    },
-    AgentModelSpec {
-        slug: "gemini-3-pro",
-        family: "gemini",
-        cli: "gemini",
-        read_only_args: GEMINI_PRO_READ_ONLY,
-        write_args: GEMINI_PRO_WRITE,
-        model_args: &["--model", "pro"],
-        description: "Frontline Gemini for challenging work; strong multimodal and high level reasoning.",
-        enabled_by_default: true,
-        aliases: &[
-            "gemini-3-pro-preview",
-            "gemini-3",
-            "gemini3",
-            "gemini",
-            "gemini-2.5-pro",
-        ],
-        gating_env: None,
-        is_frontline: true,
-    },
-    AgentModelSpec {
-        slug: "gemini-2.5-flash",
-        family: "gemini",
-        cli: "gemini",
-        read_only_args: GEMINI_FLASH_READ_ONLY,
-        write_args: GEMINI_FLASH_WRITE,
-        model_args: &["--model", "flash"],
-        description: "Straightforward / budget tasks: very fast for scaffolding, minimal repros/tests, or high-volume edits.",
-        enabled_by_default: true,
-        aliases: &["gemini-flash"],
-        gating_env: None,
-        is_frontline: false,
-    },
-    AgentModelSpec {
-        slug: "qwen-3-coder",
-        family: "qwen",
-        cli: "qwen",
-        read_only_args: QWEN_3_CODER_READ_ONLY,
-        write_args: QWEN_3_CODER_WRITE,
-        model_args: &["-m", "qwen-3-coder"],
-        description: "Fast and reasonably effective. Good for providing an alternative opinion as it has quite different training data to other models.",
-        enabled_by_default: true,
-        aliases: &["qwen", "qwen3"],
         gating_env: None,
         is_frontline: false,
     },
@@ -430,7 +298,7 @@ fn some_args(args: &[&str]) -> Option<Vec<String>> {
 /// identifier and access mode.
 ///
 /// The identifier can be either the canonical slug or a legacy CLI alias
-/// (`code`, `claude`, etc.) used prior to the model slug transition.
+/// (`code`, `codex`, etc.) used prior to the model slug transition.
 pub fn default_params_for(name: &str, read_only: bool) -> Vec<String> {
     if let Some(spec) = agent_model_spec(name) {
         return spec

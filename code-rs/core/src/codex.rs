@@ -8824,9 +8824,6 @@ pub(crate) async fn handle_run_agent(
                 let m = model.to_lowercase();
                 match m.as_str() {
                     "code" | "codex" | "cloud" => ("coder".to_string(), true),
-                    "claude" => ("claude".to_string(), false),
-                    "gemini" => ("gemini".to_string(), false),
-                    "qwen" => ("qwen".to_string(), false),
                     other => (other.to_string(), false),
                 }
             }

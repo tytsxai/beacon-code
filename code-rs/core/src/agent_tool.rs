@@ -906,8 +906,24 @@ async fn execute_model_with_permissions(
     // especially on Windows where global shims may be missing.
     let model_lower = model.to_lowercase();
     let command_lower = command_for_spawn.to_ascii_lowercase();
+    let command_stem_lower = std::path::Path::new(&command_for_spawn)
+        .file_stem()
+        .and_then(|stem| stem.to_str())
+        .unwrap_or(&command_lower)
+        .to_ascii_lowercase();
+    if model_lower.starts_with("claude")
+        || model_lower.starts_with("gemini")
+        || model_lower.starts_with("qwen")
+        || matches!(command_stem_lower.as_str(), "claude" | "gemini" | "qwen")
+    {
+        return Err(
+            "This fork only supports running built-in Codex agents (e.g., code-gpt-5.1-codex-max, code-gpt-5.1-codex-mini). External agent CLIs are disabled."
+                .to_string(),
+        );
+    }
+
     fn is_known_family(s: &str) -> bool {
-        matches!(s, "claude" | "gemini" | "qwen" | "codex" | "code" | "cloud")
+        matches!(s, "codex" | "code" | "cloud")
     }
 
     let slug_for_defaults = spec_opt.map(|spec| spec.slug).unwrap_or(model);
@@ -991,9 +1007,8 @@ async fn execute_model_with_permissions(
         other => other,
     };
 
-    // Configuration overrides for Codex CLI families. External CLIs (claude,
-    // gemini, qwen) do not understand our config flags, so only attach these
-    // when launching Codex binaries.
+    // Configuration overrides for Codex CLI families. Only Codex understands
+    // our config flags, so only attach these when launching Codex binaries.
     let effort_override = format!(
         "model_reasoning_effort={}",
         clamped_effort.to_string().to_ascii_lowercase()
@@ -1003,14 +1018,6 @@ async fn execute_model_with_permissions(
         clamped_effort.to_string().to_ascii_lowercase()
     );
     match family {
-        "claude" | "gemini" | "qwen" => {
-            let mut defaults = default_params_for(slug_for_defaults, read_only);
-            strip_model_flags(&mut defaults);
-            final_args.extend(defaults);
-            final_args.extend(spec_model_args.iter().cloned());
-            final_args.push("-p".into());
-            final_args.push(prompt.to_string());
-        }
         "codex" | "code" => {
             let have_mode_args = config
                 .as_ref()
@@ -1081,7 +1088,6 @@ async fn execute_model_with_permissions(
     let output = if !read_only {
         // Build env from current process then overlay any config-provided vars.
         let mut env: std::collections::HashMap<String, String> = std::env::vars().collect();
-        let orig_home: Option<String> = env.get("HOME").cloned();
         if let Some(ref cfg) = config
             && let Some(ref e) = cfg.env
         {
@@ -1089,60 +1095,6 @@ async fn execute_model_with_permissions(
                 env.insert(k.clone(), v.clone());
             }
         }
-
-        // Convenience: map common key names so external CLIs "just work".
-        if let Some(google_key) = env.get("GOOGLE_API_KEY").cloned() {
-            env.entry("GEMINI_API_KEY".to_string())
-                .or_insert(google_key);
-        }
-        if let Some(claude_key) = env.get("CLAUDE_API_KEY").cloned() {
-            env.entry("ANTHROPIC_API_KEY".to_string())
-                .or_insert(claude_key);
-        }
-        if let Some(anthropic_key) = env.get("ANTHROPIC_API_KEY").cloned() {
-            env.entry("CLAUDE_API_KEY".to_string())
-                .or_insert(anthropic_key);
-        }
-        if let Some(anthropic_base) = env.get("ANTHROPIC_BASE_URL").cloned() {
-            env.entry("CLAUDE_BASE_URL".to_string())
-                .or_insert(anthropic_base);
-        }
-        // Qwen/DashScope convenience: mirror API keys and base URLs both ways so
-        // either variable name works across tools.
-        if let Some(qwen_key) = env.get("QWEN_API_KEY").cloned() {
-            env.entry("DASHSCOPE_API_KEY".to_string())
-                .or_insert(qwen_key);
-        }
-        if let Some(dashscope_key) = env.get("DASHSCOPE_API_KEY").cloned() {
-            env.entry("QWEN_API_KEY".to_string())
-                .or_insert(dashscope_key);
-        }
-        if let Some(qwen_base) = env.get("QWEN_BASE_URL").cloned() {
-            env.entry("DASHSCOPE_BASE_URL".to_string())
-                .or_insert(qwen_base);
-        }
-        if let Some(ds_base) = env.get("DASHSCOPE_BASE_URL").cloned() {
-            env.entry("QWEN_BASE_URL".to_string()).or_insert(ds_base);
-        }
-        if family == "qwen" {
-            env.insert("OPENAI_API_KEY".to_string(), String::new());
-        }
-        // Reduce startup overhead for Claude CLI: disable auto-updater/telemetry.
-        env.entry("DISABLE_AUTOUPDATER".to_string())
-            .or_insert("1".to_string());
-        env.entry("CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC".to_string())
-            .or_insert("1".to_string());
-        env.entry("DISABLE_ERROR_REPORTING".to_string())
-            .or_insert("1".to_string());
-        // Prefer explicit Claude config dir to avoid touching $HOME/.claude.json.
-        // Do not force CLAUDE_CONFIG_DIR here; leave CLI free to use its default
-        // (including Keychain) unless we explicitly redirect HOME below.
-
-        // If GEMINI_API_KEY not provided, try pointing to host config for read‑only
-        // discovery (Gemini CLI supports GEMINI_CONFIG_DIR). We keep HOME as-is so
-        // CLIs that require ~/.gemini and ~/.claude continue to work with your
-        // existing config.
-        maybe_set_gemini_config_dir(&mut env, orig_home.clone());
 
         // No OS sandbox.
 
@@ -1221,23 +1173,6 @@ async fn execute_model_with_permissions(
             format!("{}\n{}", stderr.trim(), stdout.trim())
         };
         Err(format!("Command failed: {combined}"))
-    }
-}
-
-fn maybe_set_gemini_config_dir(env: &mut HashMap<String, String>, orig_home: Option<String>) {
-    if env.get("GEMINI_API_KEY").is_some() {
-        return;
-    }
-
-    let Some(home) = orig_home else {
-        return;
-    };
-    let host_gem_cfg = std::path::PathBuf::from(&home).join(".gemini");
-    if host_gem_cfg.is_dir() {
-        env.insert(
-            "GEMINI_CONFIG_DIR".to_string(),
-            host_gem_cfg.to_string_lossy().to_string(),
-        );
     }
 }
 
@@ -1624,7 +1559,7 @@ pub fn create_agent_tool(allowed_models: &[String]) -> OpenAiTool {
                 },
             }),
                 description: Some(
-                    "Optional array of model names (e.g., ['claude-sonnet-4.5','code-gpt-5.1-codex-max','code-gpt-5.1-codex-mini','gemini-3-pro'])".to_string(),
+                    "Optional array of model names (e.g., ['code-gpt-5.1-codex-max','code-gpt-5.1-codex-mini'])".to_string(),
                 ),
         },
     );
@@ -2014,12 +1949,10 @@ where
 #[cfg(test)]
 mod tests {
     use super::current_code_binary_path;
-    use super::maybe_set_gemini_config_dir;
     use super::normalize_agent_name;
     use super::resolve_program_path;
     use super::should_use_current_exe_for_agent;
     use crate::config_types::AgentConfig;
-    use std::collections::HashMap;
 
     #[test]
     fn drops_empty_names() {
@@ -2091,32 +2024,6 @@ mod tests {
 
         let custom = resolve_program_path(false, "custom-coder").expect("resolved custom");
         assert_eq!(custom, std::path::PathBuf::from("custom-coder"));
-    }
-
-    #[test]
-    fn gemini_config_dir_is_injected_when_missing_api_key() {
-        let tmp = tempfile::tempdir().expect("tempdir");
-        let gem_dir = tmp.path().join(".gemini");
-        std::fs::create_dir_all(&gem_dir).expect("create .gemini");
-
-        let mut env: HashMap<String, String> = HashMap::new();
-        maybe_set_gemini_config_dir(&mut env, Some(tmp.path().to_string_lossy().to_string()));
-
-        assert_eq!(
-            env.get("GEMINI_CONFIG_DIR"),
-            Some(&gem_dir.to_string_lossy().to_string())
-        );
-    }
-
-    #[test]
-    fn gemini_config_dir_not_overwritten_when_api_key_present() {
-        let tmp = tempfile::tempdir().expect("tempdir");
-        let mut env: HashMap<String, String> = HashMap::new();
-        env.insert("GEMINI_API_KEY".to_string(), "abc".to_string());
-
-        maybe_set_gemini_config_dir(&mut env, Some(tmp.path().to_string_lossy().to_string()));
-
-        assert!(!env.contains_key("GEMINI_CONFIG_DIR"));
     }
 }
 
