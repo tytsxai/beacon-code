@@ -15,6 +15,7 @@ status_build="ok"
 status_api="ok"
 status_guards="ok"
 status_branding="ok"
+status_policy="ok"
 
 {
   echo "[verify] START $(date -u +%FT%TZ)"
@@ -104,7 +105,8 @@ echo "guards=${status_guards}" >> "$guards_log"
 DEFAULT_BRANCH_LOCAL=${DEFAULT_BRANCH:-main}
 # Try to fetch origin to ensure refs exist; ignore failure for local runs
 git fetch origin "$DEFAULT_BRANCH_LOCAL" >/dev/null 2>&1 || true
-range_ref="origin/${DEFAULT_BRANCH_LOCAL}..HEAD"
+base_ref="origin/${DEFAULT_BRANCH_LOCAL}"
+range_ref="${base_ref}..HEAD"
 changed_files=$(git diff --name-only $range_ref -- 'codex-rs/tui/**' 'codex-cli/**' | tr '\n' ' ' || true)
 branding_log=.github/auto/VERIFY_branding.log
 : > "$branding_log"
@@ -130,12 +132,24 @@ if [[ "$status_build" != ok || "$status_api" != ok || "$status_guards" != ok ]];
   rc=1
 fi
 
+# STEP 5: Upstream merge policy report (guide-only)
+{
+  echo "[verify] STEP 5: policy report (guide-only)"
+}
+policy_log=".github/auto/VERIFY_policy.md"
+if ./scripts/upstream-merge/policy-check.sh --range "${base_ref}...HEAD" --write "$policy_log" >/dev/null 2>&1; then
+  status_policy="ok"
+else
+  status_policy="notice"
+fi
+
 cat > .github/auto/VERIFY.json <<JSON
 {
   "build_fast": "$status_build",
   "api_check": "$status_api",
   "guards": "$status_guards",
-  "branding": "$status_branding"
+  "branding": "$status_branding",
+  "policy": "$status_policy"
 }
 JSON
 
