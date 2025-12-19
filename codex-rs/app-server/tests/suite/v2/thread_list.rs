@@ -2,6 +2,8 @@ use anyhow::Result;
 use app_test_support::McpProcess;
 use app_test_support::create_fake_rollout;
 use app_test_support::to_response;
+use chrono::SecondsFormat;
+use chrono::Utc;
 use codex_app_server_protocol::GitInfo as ApiGitInfo;
 use codex_app_server_protocol::JSONRPCResponse;
 use codex_app_server_protocol::RequestId;
@@ -68,17 +70,10 @@ where
     Ok(ids)
 }
 
-fn timestamp_at(
-    year: i32,
-    month: u32,
-    day: u32,
-    hour: u32,
-    minute: u32,
-    second: u32,
-) -> (String, String) {
+fn timestamp_strings(dt: chrono::DateTime<chrono::Utc>) -> (String, String) {
     (
-        format!("{year:04}-{month:02}-{day:02}T{hour:02}-{minute:02}-{second:02}"),
-        format!("{year:04}-{month:02}-{day:02}T{hour:02}:{minute:02}:{second:02}Z"),
+        dt.format("%Y-%m-%dT%H-%M-%S").to_string(),
+        dt.to_rfc3339_opts(SecondsFormat::Secs, true),
     )
 }
 
@@ -119,27 +114,32 @@ async fn thread_list_pagination_next_cursor_none_on_last_page() -> Result<()> {
     let codex_home = TempDir::new()?;
     create_minimal_config(codex_home.path())?;
 
+    let base = Utc::now();
+    let (ts_file_a, ts_rfc_a) = timestamp_strings(base);
+    let (ts_file_b, ts_rfc_b) = timestamp_strings(base - chrono::Duration::seconds(60));
+    let (ts_file_c, ts_rfc_c) = timestamp_strings(base - chrono::Duration::seconds(120));
+
     // Create three rollouts so we can paginate with limit=2.
     let _a = create_fake_rollout(
         codex_home.path(),
-        "2025-01-02T12-00-00",
-        "2025-01-02T12:00:00Z",
+        &ts_file_a,
+        &ts_rfc_a,
         "Hello",
         Some("mock_provider"),
         None,
     )?;
     let _b = create_fake_rollout(
         codex_home.path(),
-        "2025-01-01T13-00-00",
-        "2025-01-01T13:00:00Z",
+        &ts_file_b,
+        &ts_rfc_b,
         "Hello",
         Some("mock_provider"),
         None,
     )?;
     let _c = create_fake_rollout(
         codex_home.path(),
-        "2025-01-01T12-00-00",
-        "2025-01-01T12:00:00Z",
+        &ts_file_c,
+        &ts_rfc_c,
         "Hello",
         Some("mock_provider"),
         None,
@@ -201,19 +201,24 @@ async fn thread_list_respects_provider_filter() -> Result<()> {
     let codex_home = TempDir::new()?;
     create_minimal_config(codex_home.path())?;
 
+    let base = Utc::now();
+    let (ts_file_a, ts_rfc_a) = timestamp_strings(base);
+    let other_provider_ts = base - chrono::Duration::seconds(60);
+    let (ts_file_b, ts_rfc_b) = timestamp_strings(other_provider_ts);
+
     // Create rollouts under two providers.
     let _a = create_fake_rollout(
         codex_home.path(),
-        "2025-01-02T10-00-00",
-        "2025-01-02T10:00:00Z",
+        &ts_file_a,
+        &ts_rfc_a,
         "X",
         Some("mock_provider"),
         None,
     )?; // mock_provider
     let _b = create_fake_rollout(
         codex_home.path(),
-        "2025-01-02T11-00-00",
-        "2025-01-02T11:00:00Z",
+        &ts_file_b,
+        &ts_rfc_b,
         "X",
         Some("other_provider"),
         None,
@@ -234,8 +239,7 @@ async fn thread_list_respects_provider_filter() -> Result<()> {
     let thread = &data[0];
     assert_eq!(thread.preview, "X");
     assert_eq!(thread.model_provider, "other_provider");
-    let expected_ts = chrono::DateTime::parse_from_rfc3339("2025-01-02T11:00:00Z")?.timestamp();
-    assert_eq!(thread.created_at, expected_ts);
+    assert_eq!(thread.created_at, other_provider_ts.timestamp());
     assert_eq!(thread.cwd, PathBuf::from("/"));
     assert_eq!(thread.cli_version, "0.0.0");
     assert_eq!(thread.source, SessionSource::Cli);
@@ -248,6 +252,8 @@ async fn thread_list_respects_provider_filter() -> Result<()> {
 async fn thread_list_fetches_until_limit_or_exhausted() -> Result<()> {
     let codex_home = TempDir::new()?;
     create_minimal_config(codex_home.path())?;
+
+    let base = Utc::now();
 
     // Newest 16 conversations belong to a different provider; the older 8 are the
     // only ones that match the filter. We request 8 so the server must keep
@@ -262,7 +268,10 @@ async fn thread_list_fetches_until_limit_or_exhausted() -> Result<()> {
                 "target_provider"
             }
         },
-        |i| timestamp_at(2025, 3, 30 - i as u32, 12, 0, 0),
+        |i| {
+            let offset_seconds = i64::try_from(i).expect("offset seconds fits into i64");
+            timestamp_strings(base - chrono::Duration::seconds(offset_seconds))
+        },
         "Hello",
     )?;
 
@@ -300,14 +309,15 @@ async fn thread_list_enforces_max_limit() -> Result<()> {
     let codex_home = TempDir::new()?;
     create_minimal_config(codex_home.path())?;
 
+    let base = Utc::now();
+
     create_fake_rollouts(
         codex_home.path(),
         105,
         |_| "mock_provider",
         |i| {
-            let month = 5 + (i / 28);
-            let day = (i % 28) + 1;
-            timestamp_at(2025, month as u32, day as u32, 0, 0, 0)
+            let offset_seconds = i64::try_from(i).expect("offset seconds fits into i64");
+            timestamp_strings(base - chrono::Duration::seconds(offset_seconds))
         },
         "Hello",
     )?;
@@ -339,6 +349,8 @@ async fn thread_list_stops_when_not_enough_filtered_results_exist() -> Result<()
     let codex_home = TempDir::new()?;
     create_minimal_config(codex_home.path())?;
 
+    let base = Utc::now();
+
     // Only the last 7 conversations match the provider filter; we ask for 10 to
     // ensure the server exhausts pagination without looping forever.
     create_fake_rollouts(
@@ -351,7 +363,10 @@ async fn thread_list_stops_when_not_enough_filtered_results_exist() -> Result<()
                 "target_provider"
             }
         },
-        |i| timestamp_at(2025, 4, 28 - i as u32, 8, 0, 0),
+        |i| {
+            let offset_seconds = i64::try_from(i).expect("offset seconds fits into i64");
+            timestamp_strings(base - chrono::Duration::seconds(offset_seconds))
+        },
         "Hello",
     )?;
 
@@ -389,6 +404,8 @@ async fn thread_list_includes_git_info() -> Result<()> {
     let codex_home = TempDir::new()?;
     create_minimal_config(codex_home.path())?;
 
+    let (ts_file, ts_rfc) = timestamp_strings(Utc::now());
+
     let git_info = CoreGitInfo {
         commit_hash: Some("abc123".to_string()),
         branch: Some("main".to_string()),
@@ -396,8 +413,8 @@ async fn thread_list_includes_git_info() -> Result<()> {
     };
     let conversation_id = create_fake_rollout(
         codex_home.path(),
-        "2025-02-01T09-00-00",
-        "2025-02-01T09:00:00Z",
+        &ts_file,
+        &ts_rfc,
         "Git info preview",
         Some("mock_provider"),
         Some(git_info),

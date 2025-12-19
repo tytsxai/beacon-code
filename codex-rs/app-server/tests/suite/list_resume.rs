@@ -2,6 +2,8 @@ use anyhow::Result;
 use app_test_support::McpProcess;
 use app_test_support::create_fake_rollout;
 use app_test_support::to_response;
+use chrono::SecondsFormat;
+use chrono::Utc;
 use codex_app_server_protocol::JSONRPCNotification;
 use codex_app_server_protocol::JSONRPCResponse;
 use codex_app_server_protocol::ListConversationsParams;
@@ -21,34 +23,38 @@ use tokio::time::timeout;
 
 const DEFAULT_READ_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
 
+fn timestamp_strings(dt: chrono::DateTime<chrono::Utc>) -> (String, String) {
+    (
+        dt.format("%Y-%m-%dT%H-%M-%S").to_string(),
+        dt.to_rfc3339_opts(SecondsFormat::Secs, true),
+    )
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn test_list_and_resume_conversations() -> Result<()> {
     // Prepare a temporary CODEX_HOME with a few fake rollout files.
     let codex_home = TempDir::new()?;
+    let base = Utc::now();
+    let (a_file, a_rfc) = timestamp_strings(base);
+    let (b_file, b_rfc) = timestamp_strings(base - chrono::Duration::seconds(60));
+    let (c_file, c_rfc) = timestamp_strings(base - chrono::Duration::seconds(120));
     create_fake_rollout(
         codex_home.path(),
-        "2025-01-02T12-00-00",
-        "2025-01-02T12:00:00Z",
+        &a_file,
+        &a_rfc,
         "Hello A",
         Some("openai"),
         None,
     )?;
     create_fake_rollout(
         codex_home.path(),
-        "2025-01-01T13-00-00",
-        "2025-01-01T13:00:00Z",
+        &b_file,
+        &b_rfc,
         "Hello B",
         Some("openai"),
         None,
     )?;
-    create_fake_rollout(
-        codex_home.path(),
-        "2025-01-01T12-00-00",
-        "2025-01-01T12:00:00Z",
-        "Hello C",
-        None,
-        None,
-    )?;
+    create_fake_rollout(codex_home.path(), &c_file, &c_rfc, "Hello C", None, None)?;
 
     let mut mcp = McpProcess::new(codex_home.path()).await?;
     timeout(DEFAULT_READ_TIMEOUT, mcp.initialize()).await??;
@@ -102,10 +108,11 @@ async fn test_list_and_resume_conversations() -> Result<()> {
     assert_eq!(next2, None);
 
     // Add a conversation with an explicit non-OpenAI provider for filter tests.
+    let (tp_file, tp_rfc) = timestamp_strings(base - chrono::Duration::seconds(180));
     create_fake_rollout(
         codex_home.path(),
-        "2025-01-01T11-30-00",
-        "2025-01-01T11:30:00Z",
+        &tp_file,
+        &tp_rfc,
         "Hello TP",
         Some("test-provider"),
         None,
@@ -362,42 +369,24 @@ async fn test_list_and_resume_conversations() -> Result<()> {
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn list_conversations_fetches_through_filtered_pages() -> Result<()> {
     let codex_home = TempDir::new()?;
+    let base = Utc::now();
 
     // Only the last 3 conversations match the provider filter; request 3 and
     // ensure pagination keeps fetching past non-matching pages.
     let cases = [
-        (
-            "2025-03-04T12-00-00",
-            "2025-03-04T12:00:00Z",
-            "skip_provider",
-        ),
-        (
-            "2025-03-03T12-00-00",
-            "2025-03-03T12:00:00Z",
-            "skip_provider",
-        ),
-        (
-            "2025-03-02T12-00-00",
-            "2025-03-02T12:00:00Z",
-            "target_provider",
-        ),
-        (
-            "2025-03-01T12-00-00",
-            "2025-03-01T12:00:00Z",
-            "target_provider",
-        ),
-        (
-            "2025-02-28T12-00-00",
-            "2025-02-28T12:00:00Z",
-            "target_provider",
-        ),
+        (0_i64, "skip_provider"),
+        (60, "skip_provider"),
+        (120, "target_provider"),
+        (180, "target_provider"),
+        (240, "target_provider"),
     ];
 
-    for (ts_file, ts_rfc, provider) in cases {
+    for (offset_seconds, provider) in cases {
+        let (ts_file, ts_rfc) = timestamp_strings(base - chrono::Duration::seconds(offset_seconds));
         create_fake_rollout(
             codex_home.path(),
-            ts_file,
-            ts_rfc,
+            &ts_file,
+            &ts_rfc,
             "Hello",
             Some(provider),
             None,

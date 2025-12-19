@@ -33,8 +33,11 @@ use serde_json::map::Map as JsonMap;
 use sha2::Digest;
 use sha2::Sha256;
 use std::collections::BTreeMap;
+use std::ffi::OsStr;
 use std::fs;
+use std::fs::OpenOptions;
 use std::io::ErrorKind;
+use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
@@ -554,10 +557,24 @@ fn read_fallback_file() -> Result<Option<FallbackFile>> {
 
     match serde_json::from_str::<FallbackFile>(&contents) {
         Ok(store) => Ok(Some(store)),
-        Err(e) => Err(e).context(format!(
-            "failed to parse credentials file at {}",
-            path.display()
-        )),
+        Err(e) => {
+            warn!(
+                "Ignoring corrupt credentials file at {}: {e}",
+                path.display()
+            );
+            match backup_corrupt_fallback_file(&path) {
+                Ok(Some(backup)) => warn!(
+                    "Backed up corrupt credentials file to {}. Re-authentication may be required.",
+                    backup.display()
+                ),
+                Ok(None) => {}
+                Err(backup_err) => warn!(
+                    "Failed to back up corrupt credentials file at {}: {backup_err}",
+                    path.display()
+                ),
+            }
+            Ok(None)
+        }
     }
 }
 
@@ -576,7 +593,10 @@ fn write_fallback_file(store: &FallbackFile) -> Result<()> {
     }
 
     let serialized = serde_json::to_string(store)?;
-    fs::write(&path, serialized)?;
+    atomic_write_sensitive_file(&path, serialized.as_bytes()).context(format!(
+        "failed to persist credentials file at {}",
+        path.display()
+    ))?;
 
     #[cfg(unix)]
     {
@@ -586,6 +606,114 @@ fn write_fallback_file(store: &FallbackFile) -> Result<()> {
     }
 
     Ok(())
+}
+
+fn backup_corrupt_fallback_file(path: &PathBuf) -> std::io::Result<Option<PathBuf>> {
+    if !path.exists() {
+        return Ok(None);
+    }
+
+    let ts = i64::try_from(
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs(),
+    )
+    .unwrap_or(0);
+    let filename = path
+        .file_name()
+        .and_then(OsStr::to_str)
+        .unwrap_or(FALLBACK_FILENAME);
+    let base_name = format!("{filename}.corrupt-{ts}");
+
+    for attempt in 0..10 {
+        let candidate_name = if attempt == 0 {
+            base_name.clone()
+        } else {
+            format!("{base_name}-{attempt}")
+        };
+        let candidate = path.with_file_name(candidate_name);
+
+        match fs::rename(path, &candidate) {
+            Ok(()) => return Ok(Some(candidate)),
+            Err(err) if err.kind() == ErrorKind::AlreadyExists => continue,
+            Err(err) => return Err(err),
+        }
+    }
+
+    Err(std::io::Error::other(
+        "failed to back up corrupt credentials file after multiple attempts",
+    ))
+}
+
+fn atomic_write_sensitive_file(path: &PathBuf, contents: &[u8]) -> std::io::Result<()> {
+    let parent = path
+        .parent()
+        .ok_or_else(|| std::io::Error::other("file path has no parent directory"))?;
+    let filename = path.file_name().and_then(OsStr::to_str).unwrap_or("file");
+
+    let ts = i64::try_from(
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs(),
+    )
+    .unwrap_or(0);
+
+    for attempt in 0..10 {
+        let tmp_path = parent.join(format!("{filename}.tmp-{ts}-{attempt}"));
+
+        let mut options = OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o600);
+        }
+
+        let mut tmp_file = match options.open(&tmp_path) {
+            Ok(file) => file,
+            Err(err) if err.kind() == ErrorKind::AlreadyExists => continue,
+            Err(err) => return Err(err),
+        };
+
+        if let Err(err) = tmp_file.write_all(contents) {
+            let _ = fs::remove_file(&tmp_path);
+            return Err(err);
+        }
+
+        if let Err(err) = tmp_file.sync_all() {
+            let _ = fs::remove_file(&tmp_path);
+            return Err(err);
+        }
+
+        match fs::rename(&tmp_path, path) {
+            Ok(()) => return Ok(()),
+            Err(err) if err.kind() == ErrorKind::AlreadyExists => {
+                if let Err(remove_err) = fs::remove_file(path)
+                    && remove_err.kind() != ErrorKind::NotFound
+                {
+                    let _ = fs::remove_file(&tmp_path);
+                    return Err(remove_err);
+                }
+                match fs::rename(&tmp_path, path) {
+                    Ok(()) => return Ok(()),
+                    Err(err) => {
+                        let _ = fs::remove_file(&tmp_path);
+                        return Err(err);
+                    }
+                }
+            }
+            Err(err) => {
+                let _ = fs::remove_file(&tmp_path);
+                return Err(err);
+            }
+        }
+    }
+
+    Err(std::io::Error::other(
+        "failed to create temporary file after multiple attempts",
+    ))
 }
 
 fn sha_256_prefix(value: &Value) -> Result<String> {
@@ -852,6 +980,26 @@ mod tests {
         super::refresh_expires_in_from_timestamp(&mut tokens);
 
         assert!(tokens.token_response.0.expires_in().is_none());
+    }
+
+    #[test]
+    fn read_fallback_file_ignores_and_backs_up_corrupt_file() -> Result<()> {
+        let _env = TempCodexHome::new();
+
+        let path = super::fallback_file_path()?;
+        std::fs::write(&path, "{not-json")?;
+
+        let read = super::read_fallback_file()?;
+        assert!(read.is_none());
+
+        let backups = std::fs::read_dir(path.parent().expect("fallback parent"))?
+            .filter_map(std::result::Result::ok)
+            .filter_map(|entry| entry.file_name().into_string().ok())
+            .filter(|name| name.starts_with(".credentials.json.corrupt-"))
+            .collect::<Vec<String>>();
+
+        assert_eq!(backups.len(), 1);
+        Ok(())
     }
 
     fn assert_tokens_match_without_expiry(

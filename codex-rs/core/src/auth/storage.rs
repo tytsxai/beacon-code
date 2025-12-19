@@ -4,21 +4,21 @@ use serde::Deserialize;
 use serde::Serialize;
 use sha2::Digest;
 use sha2::Sha256;
+use std::ffi::OsStr;
 use std::fmt::Debug;
 use std::fs::File;
-use std::fs::OpenOptions;
 use std::io::Read;
-use std::io::Write;
-#[cfg(unix)]
-use std::os::unix::fs::OpenOptionsExt;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::SystemTime;
+use std::time::UNIX_EPOCH;
 use tracing::warn;
 
 use crate::token_data::TokenData;
 use codex_keyring_store::DefaultKeyringStore;
 use codex_keyring_store::KeyringStore;
+use tempfile::NamedTempFile;
 
 /// Determine where Codex should store CLI auth credentials.
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -75,13 +75,56 @@ impl FileAuthStorage {
         Self { codex_home }
     }
 
+    fn corrupt_backup_path(auth_file: &Path, now: SystemTime) -> PathBuf {
+        let ts = i64::try_from(now.duration_since(UNIX_EPOCH).unwrap_or_default().as_secs())
+            .unwrap_or(0);
+
+        let filename = auth_file
+            .file_name()
+            .and_then(OsStr::to_str)
+            .unwrap_or("auth.json");
+
+        auth_file.with_file_name(format!("{filename}.corrupt-{ts}"))
+    }
+
+    fn backup_corrupt_auth_file(auth_file: &Path) -> std::io::Result<Option<PathBuf>> {
+        if !auth_file.exists() {
+            return Ok(None);
+        }
+
+        let now = SystemTime::now();
+        for attempt in 0..10 {
+            let mut candidate = Self::corrupt_backup_path(auth_file, now);
+            if attempt != 0
+                && let Some(name) = candidate.file_name().and_then(OsStr::to_str)
+            {
+                candidate = candidate.with_file_name(format!("{name}-{attempt}"));
+            }
+
+            match std::fs::rename(auth_file, &candidate) {
+                Ok(()) => return Ok(Some(candidate)),
+                Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => continue,
+                Err(err) => return Err(err),
+            }
+        }
+
+        Err(std::io::Error::other(
+            "failed to back up corrupt auth.json after multiple attempts",
+        ))
+    }
+
     /// Attempt to read and refresh the `auth.json` file in the given `CODEX_HOME` directory.
     /// Returns the full AuthDotJson structure after refreshing if necessary.
     pub(super) fn try_read_auth_json(&self, auth_file: &Path) -> std::io::Result<AuthDotJson> {
         let mut file = File::open(auth_file)?;
         let mut contents = String::new();
         file.read_to_string(&mut contents)?;
-        let auth_dot_json: AuthDotJson = serde_json::from_str(&contents)?;
+        let auth_dot_json: AuthDotJson = serde_json::from_str(&contents).map_err(|err| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                format!("failed to parse auth.json: {err}"),
+            )
+        })?;
 
         Ok(auth_dot_json)
     }
@@ -93,6 +136,24 @@ impl AuthStorageBackend for FileAuthStorage {
         let auth_dot_json = match self.try_read_auth_json(&auth_file) {
             Ok(auth) => auth,
             Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+            Err(err) if err.kind() == std::io::ErrorKind::InvalidData => {
+                warn!(
+                    "Ignoring corrupt auth file at {}: {err}",
+                    auth_file.display()
+                );
+                match Self::backup_corrupt_auth_file(&auth_file) {
+                    Ok(Some(backup)) => warn!(
+                        "Backed up corrupt auth file to {}. Re-authentication may be required.",
+                        backup.display()
+                    ),
+                    Ok(None) => {}
+                    Err(backup_err) => warn!(
+                        "Failed to back up corrupt auth file at {}: {backup_err}",
+                        auth_file.display()
+                    ),
+                }
+                return Ok(None);
+            }
             Err(err) => return Err(err),
         };
         Ok(Some(auth_dot_json))
@@ -101,20 +162,39 @@ impl AuthStorageBackend for FileAuthStorage {
     fn save(&self, auth_dot_json: &AuthDotJson) -> std::io::Result<()> {
         let auth_file = get_auth_file(&self.codex_home);
 
-        if let Some(parent) = auth_file.parent() {
-            std::fs::create_dir_all(parent)?;
+        let parent = auth_file.parent().ok_or(std::io::Error::other(
+            "auth file path has no parent directory",
+        ))?;
+        std::fs::create_dir_all(parent)?;
+
+        let json_data =
+            serde_json::to_string_pretty(auth_dot_json).map_err(std::io::Error::other)?;
+
+        let tmp = NamedTempFile::new_in(parent)?;
+        std::fs::write(tmp.path(), json_data.as_bytes())?;
+
+        match tmp.persist(&auth_file) {
+            Ok(_) => Ok(()),
+            Err(err) => {
+                if err.error.kind() == std::io::ErrorKind::AlreadyExists {
+                    if let Err(remove_err) = std::fs::remove_file(&auth_file)
+                        && remove_err.kind() != std::io::ErrorKind::NotFound
+                    {
+                        return Err(remove_err);
+                    }
+                    return err.file.persist(&auth_file).map(|_| ()).map_err(|err| {
+                        std::io::Error::other(format!(
+                            "failed to persist auth file at {}: {err}",
+                            auth_file.display()
+                        ))
+                    });
+                }
+                Err(std::io::Error::other(format!(
+                    "failed to persist auth file at {}: {err}",
+                    auth_file.display()
+                )))
+            }
         }
-        let json_data = serde_json::to_string_pretty(auth_dot_json)?;
-        let mut options = OpenOptions::new();
-        options.truncate(true).write(true).create(true);
-        #[cfg(unix)]
-        {
-            options.mode(0o600);
-        }
-        let mut file = options.open(auth_file)?;
-        file.write_all(json_data.as_bytes())?;
-        file.flush()?;
-        Ok(())
     }
 
     fn delete(&self) -> std::io::Result<bool> {
@@ -154,11 +234,21 @@ impl KeyringAuthStorage {
 
     fn load_from_keyring(&self, key: &str) -> std::io::Result<Option<AuthDotJson>> {
         match self.keyring_store.load(KEYRING_SERVICE, key) {
-            Ok(Some(serialized)) => serde_json::from_str(&serialized).map(Some).map_err(|err| {
-                std::io::Error::other(format!(
-                    "failed to deserialize CLI auth from keyring: {err}"
-                ))
-            }),
+            Ok(Some(serialized)) => match serde_json::from_str(&serialized) {
+                Ok(value) => Ok(Some(value)),
+                Err(err) => {
+                    warn!("Ignoring corrupt auth data in keyring: {err}");
+                    match self.keyring_store.delete(KEYRING_SERVICE, key) {
+                        Ok(true) => warn!("Removed corrupt auth data from keyring"),
+                        Ok(false) => {}
+                        Err(delete_err) => warn!(
+                            "Failed to remove corrupt auth data from keyring: {}",
+                            delete_err.message()
+                        ),
+                    }
+                    Ok(None)
+                }
+            },
             Ok(None) => Ok(None),
             Err(error) => Err(std::io::Error::other(format!(
                 "failed to load CLI auth from keyring: {}",
@@ -310,6 +400,27 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn file_storage_load_ignores_and_backs_up_corrupt_file() -> anyhow::Result<()> {
+        let codex_home = tempdir()?;
+        let storage = FileAuthStorage::new(codex_home.path().to_path_buf());
+        let auth_file = get_auth_file(codex_home.path());
+        std::fs::write(&auth_file, "{not-json")?;
+
+        let loaded = storage.load().context("load should succeed")?;
+        assert_eq!(loaded, None);
+
+        let backups = std::fs::read_dir(codex_home.path())?
+            .filter_map(std::result::Result::ok)
+            .map(|entry| entry.file_name())
+            .filter_map(|name| name.to_str().map(ToOwned::to_owned))
+            .filter(|name| name.starts_with("auth.json.corrupt-"))
+            .collect::<Vec<String>>();
+
+        assert_eq!(backups.len(), 1);
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn file_storage_save_persists_auth_dot_json() -> anyhow::Result<()> {
         let codex_home = tempdir()?;
         let storage = FileAuthStorage::new(codex_home.path().to_path_buf());
@@ -456,6 +567,26 @@ mod tests {
 
         let loaded = storage.load()?;
         assert_eq!(Some(expected), loaded);
+        Ok(())
+    }
+
+    #[test]
+    fn keyring_auth_storage_load_ignores_corrupt_entry() -> anyhow::Result<()> {
+        let codex_home = tempdir()?;
+        let mock_keyring = MockKeyringStore::default();
+        let storage = KeyringAuthStorage::new(
+            codex_home.path().to_path_buf(),
+            Arc::new(mock_keyring.clone()),
+        );
+        let key = compute_store_key(codex_home.path())?;
+        mock_keyring.save(KEYRING_SERVICE, &key, "{not-json")?;
+
+        let loaded = storage.load()?;
+        assert_eq!(loaded, None);
+        assert!(
+            !mock_keyring.contains(&key),
+            "corrupt keyring entry should be removed"
+        );
         Ok(())
     }
 

@@ -14,7 +14,6 @@ use codex_core::protocol::SandboxPolicy;
 use codex_protocol::config_types::ReasoningSummary;
 use codex_protocol::user_input::UserInput;
 use core_test_support::assert_regex_match;
-use core_test_support::process::wait_for_pid_file;
 use core_test_support::process::wait_for_process_exit;
 use core_test_support::responses::ev_assistant_message;
 use core_test_support::responses::ev_completed;
@@ -1659,12 +1658,8 @@ async fn unified_exec_closes_long_running_session_at_turn_end() -> Result<()> {
         ..
     } = builder.build(&server).await?;
 
-    let temp_dir = tempfile::tempdir()?;
-    let pid_path = temp_dir.path().join("uexec_pid");
-    let pid_path_str = pid_path.to_string_lossy();
-
     let call_id = "uexec-long-running";
-    let command = format!("printf '%s' $$ > '{pid_path_str}' && exec sleep 3000");
+    let command = "/bin/sleep 3000".to_string();
     let args = json!({
         "cmd": command,
         "yield_time_ms": 250,
@@ -1712,10 +1707,9 @@ async fn unified_exec_closes_long_running_session_at_turn_end() -> Result<()> {
         .clone()
         .expect("expected process_id for long-running unified exec session");
 
-    let pid = wait_for_pid_file(&pid_path).await?;
     assert!(
-        pid.chars().all(|ch| ch.is_ascii_digit()),
-        "expected numeric pid, got {pid:?}"
+        begin_process_id.chars().all(|ch| ch.is_ascii_digit()),
+        "expected numeric pid, got {begin_process_id:?}"
     );
 
     let mut end_event = None;
@@ -1740,7 +1734,7 @@ async fn unified_exec_closes_long_running_session_at_turn_end() -> Result<()> {
         .expect("expected process_id in unified exec end event");
     assert_eq!(end_process_id, begin_process_id);
 
-    wait_for_process_exit(&pid).await?;
+    wait_for_process_exit(&begin_process_id).await?;
 
     Ok(())
 }

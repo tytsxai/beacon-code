@@ -25,7 +25,9 @@ use std::io::SeekFrom;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::LazyLock;
 
+use regex_lite::Regex;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -51,6 +53,26 @@ const HISTORY_SOFT_CAP_RATIO: f64 = 0.8;
 const MAX_RETRIES: usize = 10;
 const RETRY_SLEEP: Duration = Duration::from_millis(100);
 
+static HISTORY_REDACTION_PATTERNS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
+    [
+        // OpenAI API keys and similar (sk-...).
+        ("sk-*", r"sk-[A-Za-z0-9_-]{20,}"),
+        // JWTs (common in OAuth flows; avoid persisting them in history).
+        (
+            "jwt",
+            r"eyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}",
+        ),
+        // Bearer tokens.
+        ("bearer-token", r"(?i)bearer\s+[a-zA-Z0-9._~-]{20,}"),
+    ]
+    .into_iter()
+    .map(|(name, pattern)| match Regex::new(pattern) {
+        Ok(regex) => regex,
+        Err(err) => panic!("invalid history redaction regex {name}: {err}"),
+    })
+    .collect()
+});
+
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct HistoryEntry {
     pub session_id: String,
@@ -62,6 +84,25 @@ fn history_filepath(config: &Config) -> PathBuf {
     let mut path = config.codex_home.clone();
     path.push(HISTORY_FILENAME);
     path
+}
+
+fn sanitize_history_text(text: &str) -> (String, bool) {
+    // Quick block-level redactions first.
+    if text.contains("-----BEGIN") && text.contains("PRIVATE KEY-----") {
+        return ("[REDACTED]".to_string(), true);
+    }
+
+    let mut changed = false;
+    let mut output = text.to_string();
+
+    for re in HISTORY_REDACTION_PATTERNS.iter() {
+        if re.is_match(&output) {
+            changed = true;
+            output = re.replace_all(&output, "[REDACTED]").into_owned();
+        }
+    }
+
+    (output, changed)
 }
 
 /// Append a `text` entry associated with `conversation_id` to the history file. Uses
@@ -82,8 +123,6 @@ pub(crate) async fn append_entry(
         }
     }
 
-    // TODO: check `text` for sensitive patterns
-
     // Resolve `~/.codex/history.jsonl` and ensure the parent directory exists.
     let path = history_filepath(config);
     if let Some(parent) = path.parent() {
@@ -96,11 +135,16 @@ pub(crate) async fn append_entry(
         .map_err(|e| std::io::Error::other(format!("system clock before Unix epoch: {e}")))?
         .as_secs();
 
+    let (sanitized_text, redacted) = sanitize_history_text(text);
+    if redacted {
+        tracing::warn!("Redacted sensitive data from history entry before persisting to disk");
+    }
+
     // Construct the JSON line first so we can write it in a single syscall.
     let entry = HistoryEntry {
         session_id: conversation_id.to_string(),
         ts,
-        text: text.to_string(),
+        text: sanitized_text,
     };
     let mut line = serde_json::to_string(&entry)
         .map_err(|e| std::io::Error::other(format!("failed to serialise history entry: {e}")))?;
@@ -610,5 +654,37 @@ mod tests {
 
         assert_eq!(pruned_len, long_entry_len);
         assert!(pruned_len <= soft_cap_bytes.max(long_entry_len));
+    }
+
+    #[tokio::test]
+    async fn append_entry_redacts_sensitive_patterns() {
+        let codex_home = TempDir::new().expect("create temp dir");
+
+        let config = ConfigBuilder::default()
+            .codex_home(codex_home.path().to_path_buf())
+            .build()
+            .await
+            .expect("load config");
+
+        let conversation_id = ConversationId::new();
+
+        let secret = "sk-abcdefghijklmnopqrstuvwxyz0123456789";
+        let entry = format!("please use this key: {secret}");
+
+        append_entry(&entry, &conversation_id, &config)
+            .await
+            .expect("write entry");
+
+        let history_path = codex_home.path().join("history.jsonl");
+        let contents = std::fs::read_to_string(&history_path).expect("read history");
+
+        let entries = contents
+            .lines()
+            .map(|line| serde_json::from_str::<HistoryEntry>(line).expect("parse entry"))
+            .collect::<Vec<HistoryEntry>>();
+
+        assert_eq!(entries.len(), 1);
+        assert!(!entries[0].text.contains(secret));
+        assert!(entries[0].text.contains("[REDACTED]"));
     }
 }

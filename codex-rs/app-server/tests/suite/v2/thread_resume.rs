@@ -3,6 +3,8 @@ use app_test_support::McpProcess;
 use app_test_support::create_fake_rollout;
 use app_test_support::create_mock_chat_completions_server;
 use app_test_support::to_response;
+use chrono::SecondsFormat;
+use chrono::Utc;
 use codex_app_server_protocol::JSONRPCResponse;
 use codex_app_server_protocol::RequestId;
 use codex_app_server_protocol::SessionSource;
@@ -20,6 +22,13 @@ use tempfile::TempDir;
 use tokio::time::timeout;
 
 const DEFAULT_READ_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
+
+fn timestamp_strings(dt: chrono::DateTime<chrono::Utc>) -> (String, String) {
+    (
+        dt.format("%Y-%m-%dT%H-%M-%S").to_string(),
+        dt.to_rfc3339_opts(SecondsFormat::Secs, true),
+    )
+}
 
 #[tokio::test]
 async fn thread_resume_returns_original_thread() -> Result<()> {
@@ -71,10 +80,11 @@ async fn thread_resume_returns_rollout_history() -> Result<()> {
     create_config_toml(codex_home.path(), &server.uri())?;
 
     let preview = "Saved user message";
+    let (ts_file, ts_rfc) = timestamp_strings(Utc::now());
     let conversation_id = create_fake_rollout(
         codex_home.path(),
-        "2025-01-05T12-00-00",
-        "2025-01-05T12:00:00Z",
+        &ts_file,
+        &ts_rfc,
         preview,
         Some("mock_provider"),
         None,
