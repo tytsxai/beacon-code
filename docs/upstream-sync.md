@@ -14,12 +14,12 @@
 > **推荐的“最佳方案”是：下游主线使用 `merge` 的 Upstream Merge Train 模式**（不要对 `main` 做长期 `rebase`）。
 >
 > - `merge upstream/main` 一次性解决冲突、保留真实合并点，适合本仓库这种“中等以上差异”的 downstream。
-> - 通过小步频繁同步 + 冲突复用（`rerere`）+ 自动化验证（CI/workflow），把同步从“灾难性大工程”降级为“常规维护”。
+> - 通过小步频繁同步 + 冲突复用（`rerere`）+ 自动化验证（脚本），把同步从“灾难性大工程”降级为“常规维护”。
 
 ## 同步原则（降低干扰与错误率）
 
 1. **只通过 PR 合并上游**：不要直接在 `main` 上 merge 后 push（减少误操作与回滚难度）。
-2. **固定分支命名**：同步分支统一用 `sync/upstream-YYYYMMDD`，或由自动化工作流使用 `upstream-merge`。
+2. **固定分支命名**：同步分支统一用 `sync/upstream-YYYYMMDD`，避免在 `main` 上直接操作。
 3. **保持 `codex-rs/` 可对照**：冲突时优先让 `codex-rs/` 更贴近上游；把产品化改动尽量放到 `code-rs/`。
 4. **冲突策略可复用**：启用 `git rerere`，让同类冲突下次自动套用解决方式。
 5. **合并后必做验证**：至少跑一次 `./build-fast.sh` + 关键 crate 的测试；UI 变更要关注快照/渲染差异。
@@ -40,24 +40,11 @@ git fetch upstream --prune
 git config rerere.enabled true
 ```
 
-## 首选路径：使用 GitHub Actions 自动创建/更新 Upstream Merge PR
+## 注意：本仓库已禁用 GitHub Actions
 
-本仓库内置了工作流：`.github/workflows/upstream-merge.yml`。它会：
+上游同步请使用本地手动流程或外部 CI；以下流程默认不依赖 GitHub Actions。
 
-- 检测 upstream 是否有新提交
-- 拉取 upstream 并更新 `upstream-merge` 分支
-- 自动创建/更新一个 PR（把上游合进来）
-- 运行统一验证脚本（见 `scripts/upstream-merge/verify.sh`）
-
-这条路径的优势是：**减少本地环境差异带来的问题**，且 PR 作为唯一入口更安全。
-
-操作要点（人要做的事）：
-
-- 进入对应 PR：阅读 summary，优先关注“冲突文件清单”和“critical changes（提示/协议/执行器）”。
-- 若有冲突：在 PR 分支上解决冲突（GitHub UI 或本地均可），并追加验证。
-- 合并 PR 时，优先选择保留 merge commit（便于定位“同步点”）。
-
-## 备选路径：本地手动同步（当 workflow 不可用/需要本地解决时）
+## 推荐路径：本地手动同步
 
 为了降低误操作，本仓库提供了一个“只做安全准备”的辅助脚本：
 
@@ -106,7 +93,6 @@ git merge --no-ff upstream/main
 把冲突分成三类来处理，能显著降低错误率：
 
 1) **Upstream-owned（跟上游走）**
-- `.github/workflows/*`：通常接受上游（减少 CI 漂移）
 - `codex-rs/**`：优先贴近上游，避免把产品化改动长期放在镜像里
 
 2) **Downstream-owned（我们接管）**
@@ -184,7 +170,6 @@ just upstream-pr-summary
 
 ## 相关资源
 
-- 工作流：`.github/workflows/upstream-merge.yml`
 - 验证脚本：`scripts/upstream-merge/verify.sh`
 - 差异分析：`scripts/upstream-merge/diff-crates.sh`、`scripts/upstream-merge/highlight-critical-changes.sh`
 - PR 模板：`.github/PULL_REQUEST_TEMPLATE/upstream-merge.md`
