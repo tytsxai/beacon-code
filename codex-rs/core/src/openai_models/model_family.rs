@@ -16,6 +16,7 @@ const GPT_5_CODEX_INSTRUCTIONS: &str = include_str!("../../gpt_5_codex_prompt.md
 const GPT_5_1_INSTRUCTIONS: &str = include_str!("../../gpt_5_1_prompt.md");
 const GPT_5_2_INSTRUCTIONS: &str = include_str!("../../gpt_5_2_prompt.md");
 const GPT_5_1_CODEX_MAX_INSTRUCTIONS: &str = include_str!("../../gpt-5.1-codex-max_prompt.md");
+const GPT_5_2_CODEX_INSTRUCTIONS: &str = include_str!("../../gpt-5.2-codex_prompt.md");
 pub(crate) const CONTEXT_WINDOW_272K: i64 = 272_000;
 
 /// A model family is a group of models that share certain characteristics.
@@ -83,7 +84,7 @@ pub struct ModelFamily {
 }
 
 impl ModelFamily {
-    pub fn with_config_overrides(mut self, config: &Config) -> Self {
+    pub(super) fn with_config_overrides(mut self, config: &Config) -> Self {
         if let Some(supports_reasoning_summaries) = config.model_supports_reasoning_summaries {
             self.supports_reasoning_summaries = supports_reasoning_summaries;
         }
@@ -98,7 +99,7 @@ impl ModelFamily {
         }
         self
     }
-    pub fn with_remote_overrides(mut self, remote_models: Vec<ModelInfo>) -> Self {
+    pub(super) fn with_remote_overrides(mut self, remote_models: Vec<ModelInfo>) -> Self {
         for model in remote_models {
             if model.slug == self.slug {
                 self.apply_remote_overrides(model);
@@ -198,7 +199,8 @@ macro_rules! model_family {
 
 /// Internal offline helper for `ModelsManager` that returns a `ModelFamily` for the given
 /// model slug.
-pub(in crate::openai_models) fn find_family_for_model(slug: &str) -> ModelFamily {
+#[allow(clippy::if_same_then_else)]
+pub(super) fn find_family_for_model(slug: &str) -> ModelFamily {
     if slug.starts_with("o3") {
         model_family!(
             slug, "o3",
@@ -264,13 +266,13 @@ pub(in crate::openai_models) fn find_family_for_model(slug: &str) -> ModelFamily
         )
 
     // Experimental models.
-    } else if slug.starts_with("exp-codex") {
+    } else if slug.starts_with("exp-codex") || slug.starts_with("codex-1p") {
         // Same as gpt-5.1-codex-max.
         model_family!(
             slug, slug,
             supports_reasoning_summaries: true,
             reasoning_summary_format: ReasoningSummaryFormat::Experimental,
-            base_instructions: GPT_5_1_CODEX_MAX_INSTRUCTIONS.to_string(),
+            base_instructions: GPT_5_2_CODEX_INSTRUCTIONS.to_string(),
             apply_patch_tool_type: Some(ApplyPatchToolType::Freeform),
             shell_type: ConfigShellToolType::ShellCommand,
             supports_parallel_tool_calls: true,
@@ -294,6 +296,32 @@ pub(in crate::openai_models) fn find_family_for_model(slug: &str) -> ModelFamily
         )
 
     // Production models.
+    } else if slug.starts_with("gpt-5.2-codex") {
+        model_family!(
+            slug, slug,
+            supports_reasoning_summaries: true,
+            reasoning_summary_format: ReasoningSummaryFormat::Experimental,
+            base_instructions: GPT_5_2_CODEX_INSTRUCTIONS.to_string(),
+            apply_patch_tool_type: Some(ApplyPatchToolType::Freeform),
+            shell_type: ConfigShellToolType::ShellCommand,
+            supports_parallel_tool_calls: true,
+            support_verbosity: false,
+            truncation_policy: TruncationPolicy::Tokens(10_000),
+            context_window: Some(CONTEXT_WINDOW_272K),
+        )
+    } else if slug.starts_with("bengalfox") {
+        model_family!(
+            slug, slug,
+            supports_reasoning_summaries: true,
+            reasoning_summary_format: ReasoningSummaryFormat::Experimental,
+            base_instructions: GPT_5_2_CODEX_INSTRUCTIONS.to_string(),
+            apply_patch_tool_type: Some(ApplyPatchToolType::Freeform),
+            shell_type: ConfigShellToolType::ShellCommand,
+            supports_parallel_tool_calls: true,
+            support_verbosity: false,
+            truncation_policy: TruncationPolicy::Tokens(10_000),
+            context_window: Some(CONTEXT_WINDOW_272K),
+        )
     } else if slug.starts_with("gpt-5.1-codex-max") {
         model_family!(
             slug, slug,
@@ -324,6 +352,20 @@ pub(in crate::openai_models) fn find_family_for_model(slug: &str) -> ModelFamily
             context_window: Some(CONTEXT_WINDOW_272K),
         )
     } else if slug.starts_with("gpt-5.2") {
+        model_family!(
+            slug, slug,
+            supports_reasoning_summaries: true,
+            apply_patch_tool_type: Some(ApplyPatchToolType::Freeform),
+            support_verbosity: true,
+            default_verbosity: Some(Verbosity::Low),
+            base_instructions: GPT_5_2_INSTRUCTIONS.to_string(),
+            default_reasoning_effort: Some(ReasoningEffort::Medium),
+            truncation_policy: TruncationPolicy::Bytes(10_000),
+            shell_type: ConfigShellToolType::ShellCommand,
+            supports_parallel_tool_calls: true,
+            context_window: Some(CONTEXT_WINDOW_272K),
+        )
+    } else if slug.starts_with("boomslang") {
         model_family!(
             slug, slug,
             supports_reasoning_summaries: true,

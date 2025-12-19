@@ -23,7 +23,6 @@ use codex_core::find_conversation_path_by_id_str;
 use codex_core::get_platform_sandbox;
 use codex_core::protocol::AskForApproval;
 use codex_protocol::config_types::SandboxMode;
-use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
 use std::fs::OpenOptions;
 use std::path::PathBuf;
 use tracing::error;
@@ -69,7 +68,6 @@ mod resume_picker;
 mod selection_list;
 mod session_log;
 mod shimmer;
-mod skill_error_prompt;
 mod slash_command;
 mod status;
 mod status_indicator_widget;
@@ -207,20 +205,15 @@ pub async fn run_main(
 
     let overrides = ConfigOverrides {
         model,
-        review_model: None,
         approval_policy,
         sandbox_mode,
         cwd,
         model_provider: model_provider_override.clone(),
         config_profile: cli.config_profile.clone(),
         codex_linux_sandbox_exe,
-        base_instructions: None,
-        developer_instructions: None,
-        compact_prompt: None,
-        include_apply_patch_tool: None,
         show_raw_agent_reasoning: cli.oss.then_some(true),
-        tools_web_search_request: None,
         additional_writable_roots: additional_dirs,
+        ..Default::default()
     };
 
     let config = load_config_or_exit(cli_kv_overrides.clone(), overrides.clone()).await;
@@ -272,7 +265,7 @@ pub async fn run_main(
         .with_writer(non_blocking)
         .with_target(false)
         .with_ansi(false)
-        .with_span_events(tracing_subscriber::fmt::format::FmtSpan::CLOSE)
+        .with_span_events(tracing_subscriber::fmt::format::FmtSpan::FULL)
         .with_filter(env_filter());
 
     let feedback = codex_feedback::CodexFeedback::new();
@@ -310,22 +303,16 @@ pub async fn run_main(
         }
     };
 
-    if let Some(provider) = otel.as_ref() {
-        let otel_layer = OpenTelemetryTracingBridge::new(&provider.logger).with_filter(
-            tracing_subscriber::filter::filter_fn(codex_core::otel_init::codex_export_filter),
-        );
+    let otel_logger_layer = otel.as_ref().and_then(|o| o.logger_layer());
 
-        let _ = tracing_subscriber::registry()
-            .with(file_layer)
-            .with(feedback_layer)
-            .with(otel_layer)
-            .try_init();
-    } else {
-        let _ = tracing_subscriber::registry()
-            .with(file_layer)
-            .with(feedback_layer)
-            .try_init();
-    };
+    let otel_tracing_layer = otel.as_ref().and_then(|o| o.tracing_layer());
+
+    let _ = tracing_subscriber::registry()
+        .with(file_layer)
+        .with(feedback_layer)
+        .with(otel_logger_layer)
+        .with(otel_tracing_layer)
+        .try_init();
 
     run_ratatui_app(
         cli,
@@ -560,7 +547,7 @@ async fn load_config_or_exit(
     overrides: ConfigOverrides,
 ) -> Config {
     #[allow(clippy::print_stderr)]
-    match Config::load_with_cli_overrides(cli_kv_overrides, overrides).await {
+    match Config::load_with_cli_overrides_and_harness_overrides(cli_kv_overrides, overrides).await {
         Ok(config) => config,
         Err(err) => {
             eprintln!("Error loading configuration: {err}");
@@ -610,21 +597,23 @@ fn should_show_login_screen(login_status: LoginStatus, config: &Config) -> bool 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use codex_core::config::ConfigOverrides;
-    use codex_core::config::ConfigToml;
+    use codex_core::config::ConfigBuilder;
     use codex_core::config::ProjectConfig;
     use serial_test::serial;
     use tempfile::TempDir;
 
-    #[test]
+    async fn build_config(temp_dir: &TempDir) -> std::io::Result<Config> {
+        ConfigBuilder::default()
+            .codex_home(temp_dir.path().to_path_buf())
+            .build()
+            .await
+    }
+
+    #[tokio::test]
     #[serial]
-    fn windows_skips_trust_prompt_without_sandbox() -> std::io::Result<()> {
+    async fn windows_skips_trust_prompt_without_sandbox() -> std::io::Result<()> {
         let temp_dir = TempDir::new()?;
-        let mut config = Config::load_from_base_config_with_overrides(
-            ConfigToml::default(),
-            ConfigOverrides::default(),
-            temp_dir.path().to_path_buf(),
-        )?;
+        let mut config = build_config(&temp_dir).await?;
         config.did_user_set_custom_approval_policy_or_sandbox_mode = false;
         config.active_project = ProjectConfig { trust_level: None };
         config.set_windows_sandbox_globally(false);
@@ -643,15 +632,11 @@ mod tests {
         }
         Ok(())
     }
-    #[test]
+    #[tokio::test]
     #[serial]
-    fn windows_shows_trust_prompt_with_sandbox() -> std::io::Result<()> {
+    async fn windows_shows_trust_prompt_with_sandbox() -> std::io::Result<()> {
         let temp_dir = TempDir::new()?;
-        let mut config = Config::load_from_base_config_with_overrides(
-            ConfigToml::default(),
-            ConfigOverrides::default(),
-            temp_dir.path().to_path_buf(),
-        )?;
+        let mut config = build_config(&temp_dir).await?;
         config.did_user_set_custom_approval_policy_or_sandbox_mode = false;
         config.active_project = ProjectConfig { trust_level: None };
         config.set_windows_sandbox_globally(true);
@@ -670,15 +655,11 @@ mod tests {
         }
         Ok(())
     }
-    #[test]
-    fn untrusted_project_skips_trust_prompt() -> std::io::Result<()> {
+    #[tokio::test]
+    async fn untrusted_project_skips_trust_prompt() -> std::io::Result<()> {
         use codex_protocol::config_types::TrustLevel;
         let temp_dir = TempDir::new()?;
-        let mut config = Config::load_from_base_config_with_overrides(
-            ConfigToml::default(),
-            ConfigOverrides::default(),
-            temp_dir.path().to_path_buf(),
-        )?;
+        let mut config = build_config(&temp_dir).await?;
         config.did_user_set_custom_approval_policy_or_sandbox_mode = false;
         config.active_project = ProjectConfig {
             trust_level: Some(TrustLevel::Untrusted),
