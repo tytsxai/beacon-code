@@ -1360,6 +1360,7 @@ dependencies = [
  "pretty_assertions",
  "serde",
  "serde_json",
+ "serial_test",
  "shlex",
  "supports-color 3.0.2",
  "tempfile",
@@ -1397,6 +1398,7 @@ dependencies = [
  "tokio-util",
  "tracing",
  "tracing-subscriber",
+ "which",
 ]
 
 [[package]]
@@ -1553,6 +1555,7 @@ dependencies = [
  "schemars 0.8.22",
  "serde",
  "serde_json",
+ "serial_test",
  "shlex",
  "tempfile",
  "tokio",
@@ -2780,6 +2783,7 @@ dependencies = [
  "rmcp",
  "serde_json",
  "tokio",
+ "which",
 ]
 
 [[package]]
