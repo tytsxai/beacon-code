@@ -51,3 +51,35 @@ test:
 # Run the MCP server
 mcp-server-run *args:
     cargo run -p codex-mcp-server -- "$@"
+
+# Upstream sync helper (downstream merge-train).
+# Canonical SOP: docs/upstream-sync.md
+upstream-sync *args:
+    ../scripts/upstream-sync.sh "$@"
+
+# Unified verification used by upstream-merge workflow and local sync PRs.
+upstream-verify:
+    ../scripts/upstream-merge/verify.sh
+
+# Upstream merge log helper (writes to docs/maintenance/upstream-merge-logs/).
+upstream-log *args:
+    ../scripts/upstream-merge/log-merge.sh "$@"
+
+# Upstream diff helpers (codex-rs vs code-rs).
+upstream-diff *args:
+    ../scripts/upstream-merge/diff-crates.sh "$@"
+
+upstream-critical *args:
+    ../scripts/upstream-merge/highlight-critical-changes.sh "$@"
+
+# Policy report for upstream merge PR review (categorizes changed files).
+upstream-policy *args:
+    ../scripts/upstream-merge/policy-check.sh "$@"
+
+# Strict policy mode (fails if any warn/fail matches exist).
+upstream-policy-strict *args:
+    ../scripts/upstream-merge/policy-check.sh --fail-on warn "$@"
+
+# Generate a ready-to-paste PR summary for upstream merges.
+upstream-pr-summary *args:
+    ../scripts/upstream-merge/pr-summary.sh "$@"
