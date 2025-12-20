@@ -280,6 +280,7 @@ fn check_patch_paths_within_writable_roots(
     let Some(writable_roots) = writable_roots_for_patch(sandbox_policy, cwd) else {
         return Ok(());
     };
+    let writable_roots = canonicalize_writable_roots(writable_roots);
 
     for (path, change) in action.changes() {
         ensure_path_writable(path, cwd, &writable_roots)?;
@@ -293,6 +294,28 @@ fn check_patch_paths_within_writable_roots(
     }
 
     Ok(())
+}
+
+fn canonicalize_writable_roots(writable_roots: Vec<WritableRoot>) -> Vec<WritableRoot> {
+    writable_roots
+        .into_iter()
+        .map(
+            |WritableRoot {
+                 root,
+                 read_only_subpaths,
+             }| {
+                let canonical_root = dunce::canonicalize(&root).unwrap_or(root);
+                let read_only_subpaths = read_only_subpaths
+                    .into_iter()
+                    .map(|subpath| dunce::canonicalize(&subpath).unwrap_or(subpath))
+                    .collect();
+                WritableRoot {
+                    root: canonical_root,
+                    read_only_subpaths,
+                }
+            },
+        )
+        .collect()
 }
 
 fn writable_roots_for_patch(
