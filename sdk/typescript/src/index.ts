@@ -26,8 +26,10 @@ export type {
 export { Thread } from "./thread";
 export type { RunResult, RunStreamedResult, Input } from "./thread";
 
+export { BeaconCode } from "./beacon";
 export { Codex } from "./codex";
 
+export type { BeaconOptions } from "./beaconOptions";
 export type { CodexOptions } from "./codexOptions";
 
 export type {

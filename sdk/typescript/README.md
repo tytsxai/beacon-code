@@ -1,6 +1,6 @@
 # Beacon Code SDK
 
-在工作流和应用里嵌入 Beacon Code 智能体。TypeScript SDK 对随包提供的 `codex` 可执行文件做薄封装，通过 stdin/stdout 交换 JSONL 事件。
+在工作流和应用里嵌入 Beacon Code 智能体。TypeScript SDK 对随包提供的 `code` 可执行文件做薄封装，通过 stdin/stdout 交换 JSONL 事件。
 
 ## 安装
 
@@ -13,7 +13,7 @@ npm install @tytsxai/beacon-code-sdk
 ## 快速上手
 
 ```typescript
-import { Codex as BeaconCode } from "@tytsxai/beacon-code-sdk";
+import { BeaconCode } from "@tytsxai/beacon-code-sdk";
 
 const beacon = new BeaconCode();
 const thread = beacon.startThread();
@@ -23,7 +23,7 @@ console.log(turn.finalResponse);
 console.log(turn.items);
 ```
 
-> 说明：SDK 仍沿用 `Codex` 类名与 `~/.codex` 默认目录以保持与底层二进制兼容；需要时可通过配置项覆盖路径。
+> 说明：SDK 提供 `BeaconCode` 类名，并保留 `Codex` 作为兼容别名；线程默认目录为 `~/.code`（可用 `CODE_HOME` 覆盖，`CODEX_HOME` 为兼容变量）。
 
 在同一 `Thread` 上重复调用 `run()` 可继续对话：
 
@@ -52,10 +52,10 @@ for await (const event of events) {
 
 ### 恢复已有线程
 
-线程会持久化在 `~/.codex/sessions`（可通过 `CODEX_HOME` 自定义）。如果丢失了内存中的 `Thread` 对象，可用 `resumeThread()` 继续：
+线程会持久化在 `~/.code/sessions`（可通过 `CODE_HOME` 自定义；`CODEX_HOME` 兼容读取）。如果丢失了内存中的 `Thread` 对象，可用 `resumeThread()` 继续：
 
 ```typescript
-const savedThreadId = process.env.CODEX_THREAD_ID!;
+const savedThreadId = process.env.BEACON_THREAD_ID!;
 const thread = beacon.resumeThread(savedThreadId);
 await thread.run("Implement the fix");
 ```

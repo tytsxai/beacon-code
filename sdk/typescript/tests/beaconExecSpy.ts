@@ -9,7 +9,7 @@ const actualChildProcess =
   jest.requireActual<typeof import("node:child_process")>("node:child_process");
 const spawnMock = child_process.spawn as jest.MockedFunction<typeof actualChildProcess.spawn>;
 
-export function codexExecSpy(): { args: string[][]; restore: () => void } {
+export function beaconExecSpy(): { args: string[][]; restore: () => void } {
   const previousImplementation = spawnMock.getMockImplementation() ?? actualChildProcess.spawn;
   const args: string[][] = [];
 

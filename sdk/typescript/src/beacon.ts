@@ -1,0 +1,40 @@
+import { BeaconOptions } from "./beaconOptions";
+import { BeaconExec } from "./exec";
+import { Thread } from "./thread";
+import { ThreadOptions } from "./threadOptions";
+
+/**
+ * BeaconCode is the main class for interacting with the Beacon Code agent.
+ *
+ * Use the `startThread()` method to start a new thread or `resumeThread()` to resume a previously started thread.
+ */
+export class BeaconCode {
+  private exec: BeaconExec;
+  private options: BeaconOptions;
+
+  constructor(options: BeaconOptions = {}) {
+    const executableOverride =
+      options.beaconPathOverride ?? options.codexPathOverride ?? null;
+    this.exec = new BeaconExec(executableOverride);
+    this.options = options;
+  }
+
+  /**
+   * Starts a new conversation with an agent.
+   * @returns A new thread instance.
+   */
+  startThread(options: ThreadOptions = {}): Thread {
+    return new Thread(this.exec, this.options, options);
+  }
+
+  /**
+   * Resumes a conversation with an agent based on the thread id.
+   * Threads are persisted in ~/.code/sessions by default.
+   *
+   * @param id The id of the thread to resume.
+   * @returns A new thread instance.
+   */
+  resumeThread(id: string, options: ThreadOptions = {}): Thread {
+    return new Thread(this.exec, this.options, options, id);
+  }
+}

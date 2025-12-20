@@ -2,7 +2,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "@jest/globals";
 
-import { Codex } from "../src/codex";
+import { BeaconCode } from "../src/beacon";
 import { ThreadEvent } from "../src/index";
 
 import {
@@ -13,7 +13,7 @@ import {
   startResponsesTestProxy,
 } from "./responsesProxy";
 
-const codexExecPath = path.join(process.cwd(), "..", "..", "code-rs", "target", "debug", "code");
+const codeExecPath = path.join(process.cwd(), "..", "..", "code-rs", "target", "debug", "code");
 
 describe("Beacon Code", () => {
   it("returns thread events", async () => {
@@ -23,7 +23,7 @@ describe("Beacon Code", () => {
     });
 
     try {
-      const client = new Codex({ codexPathOverride: codexExecPath, baseUrl: url, apiKey: "test" });
+      const client = new BeaconCode({ beaconPathOverride: codeExecPath, baseUrl: url, apiKey: "test" });
 
       const thread = client.startThread();
       const result = await thread.runStreamed("Hello, world!");
@@ -75,7 +75,7 @@ describe("Beacon Code", () => {
     });
 
     try {
-      const client = new Codex({ codexPathOverride: codexExecPath, baseUrl: url, apiKey: "test" });
+      const client = new BeaconCode({ beaconPathOverride: codeExecPath, baseUrl: url, apiKey: "test" });
 
       const thread = client.startThread();
       const firstRun = await thread.runStreamed("first input");
@@ -121,7 +121,7 @@ describe("Beacon Code", () => {
     });
 
     try {
-      const client = new Codex({ codexPathOverride: codexExecPath, baseUrl: url, apiKey: "test" });
+      const client = new BeaconCode({ beaconPathOverride: codeExecPath, baseUrl: url, apiKey: "test" });
 
       const originalThread = client.startThread();
       const firstRun = await originalThread.runStreamed("first input");

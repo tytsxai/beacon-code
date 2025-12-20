@@ -1,6 +1,6 @@
-import { CodexOptions } from "./codexOptions";
+import { BeaconOptions } from "./beaconOptions";
 import { ThreadEvent, ThreadError, Usage } from "./events";
-import { CodexExec } from "./exec";
+import { BeaconExec } from "./exec";
 import { ThreadItem } from "./items";
 import { ThreadOptions } from "./threadOptions";
 
@@ -27,8 +27,8 @@ export type Input = string;
 
 /** Respesent a thread of conversation with the agent. One thread can have multiple consecutive turns. */
 export class Thread {
-  private _exec: CodexExec;
-  private _options: CodexOptions;
+  private _exec: BeaconExec;
+  private _options: BeaconOptions;
   private _id: string | null;
   private _threadOptions: ThreadOptions;
 
@@ -39,8 +39,8 @@ export class Thread {
 
   /* @internal */
   constructor(
-    exec: CodexExec,
-    options: CodexOptions,
+    exec: BeaconExec,
+    options: BeaconOptions,
     threadOptions: ThreadOptions,
     id: string | null = null,
   ) {

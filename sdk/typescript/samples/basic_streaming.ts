@@ -3,15 +3,16 @@
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 
-import { Codex as Beacon } from "@tytsxai/beacon-code-sdk";
+import { BeaconCode } from "@tytsxai/beacon-code-sdk";
 import type { ThreadEvent, ThreadItem } from "@tytsxai/beacon-code-sdk";
 import path from "node:path";
 
-const codexPathOverride =
+const beaconPathOverride =
+  process.env.BEACON_EXECUTABLE ??
   process.env.CODEX_EXECUTABLE ??
   path.join(process.cwd(), "..", "..", "code-rs", "target", "debug", "code");
 
-const beacon = new Beacon({ codexPathOverride });
+const beacon = new BeaconCode({ beaconPathOverride });
 const thread = beacon.startThread();
 const rl = createInterface({ input, output });
 

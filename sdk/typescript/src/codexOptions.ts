@@ -1,5 +1,4 @@
-export type CodexOptions = {
-  codexPathOverride?: string;
-  baseUrl?: string;
-  apiKey?: string;
-};
+import type { BeaconOptions } from "./beaconOptions";
+
+export type CodexOptions = BeaconOptions;
+export type { BeaconOptions };

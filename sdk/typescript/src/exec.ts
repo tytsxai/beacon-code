@@ -6,7 +6,7 @@ import { SandboxMode } from "./threadOptions";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-export type CodexExecArgs = {
+export type BeaconExecArgs = {
   input: string;
 
   baseUrl?: string;
@@ -22,13 +22,15 @@ export type CodexExecArgs = {
   skipGitRepoCheck?: boolean;
 };
 
-export class CodexExec {
+export type CodexExecArgs = BeaconExecArgs;
+
+export class BeaconExec {
   private executablePath: string;
   constructor(executablePath: string | null = null) {
-    this.executablePath = executablePath || findCodexPath();
+    this.executablePath = executablePath || findCodePath();
   }
 
-  async *run(args: CodexExecArgs): AsyncGenerator<string> {
+  async *run(args: BeaconExecArgs): AsyncGenerator<string> {
     const commandArgs: string[] = ["exec", "--json"];
 
     if (args.model) {
@@ -58,6 +60,7 @@ export class CodexExec {
       env.OPENAI_BASE_URL = args.baseUrl;
     }
     if (args.apiKey) {
+      env.BEACON_API_KEY = args.apiKey;
       env.CODEX_API_KEY = args.apiKey;
     }
 
@@ -129,10 +132,12 @@ export class CodexExec {
   }
 }
 
+export class CodexExec extends BeaconExec {}
+
 const scriptFileName = fileURLToPath(import.meta.url);
 const scriptDirName = path.dirname(scriptFileName);
 
-function findCodexPath() {
+function findCodePath() {
   const { platform, arch } = process;
 
   let targetTriple = null;
@@ -184,8 +189,8 @@ function findCodexPath() {
 
   const vendorRoot = path.join(scriptDirName, "..", "vendor");
   const archRoot = path.join(vendorRoot, targetTriple);
-  const codexBinaryName = process.platform === "win32" ? "codex.exe" : "codex";
-  const binaryPath = path.join(archRoot, "codex", codexBinaryName);
+  const codeBinaryName = process.platform === "win32" ? "code.exe" : "code";
+  const binaryPath = path.join(archRoot, "code", codeBinaryName);
 
   return binaryPath;
 }

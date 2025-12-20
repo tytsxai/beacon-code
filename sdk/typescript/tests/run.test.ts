@@ -2,10 +2,10 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { codexExecSpy } from "./codexExecSpy";
+import { beaconExecSpy } from "./beaconExecSpy";
 import { describe, expect, it } from "@jest/globals";
 
-import { Codex } from "../src/codex";
+import { BeaconCode } from "../src/beacon";
 
 import {
   assistantMessage,
@@ -17,7 +17,7 @@ import {
 } from "./responsesProxy";
 import type { ResponsesApiRequest } from "./responsesProxy";
 
-const codexExecPath = path.join(process.cwd(), "..", "..", "code-rs", "target", "debug", "code");
+const codeExecPath = path.join(process.cwd(), "..", "..", "code-rs", "target", "debug", "code");
 
 describe("Beacon Code", () => {
   it("returns thread events", async () => {
@@ -27,7 +27,7 @@ describe("Beacon Code", () => {
     });
 
     try {
-      const client = new Codex({ codexPathOverride: codexExecPath, baseUrl: url, apiKey: "test" });
+      const client = new BeaconCode({ beaconPathOverride: codeExecPath, baseUrl: url, apiKey: "test" });
 
       const thread = client.startThread();
       const result = await thread.run("Hello, world!");
@@ -64,7 +64,7 @@ describe("Beacon Code", () => {
     });
 
     try {
-      const client = new Codex({ codexPathOverride: codexExecPath, baseUrl: url, apiKey: "test" });
+      const client = new BeaconCode({ beaconPathOverride: codeExecPath, baseUrl: url, apiKey: "test" });
 
       const thread = client.startThread();
       const firstResult = await thread.run("first input");
@@ -97,7 +97,7 @@ describe("Beacon Code", () => {
     });
 
     try {
-      const client = new Codex({ codexPathOverride: codexExecPath, baseUrl: url, apiKey: "test" });
+      const client = new BeaconCode({ beaconPathOverride: codeExecPath, baseUrl: url, apiKey: "test" });
 
       const thread = client.startThread();
       const firstResult = await thread.run("first input");
@@ -137,7 +137,7 @@ describe("Beacon Code", () => {
     });
 
     try {
-      const client = new Codex({ codexPathOverride: codexExecPath, baseUrl: url, apiKey: "test" });
+      const client = new BeaconCode({ beaconPathOverride: codeExecPath, baseUrl: url, apiKey: "test" });
 
       const originalThread = client.startThread();
       const firstResult = await originalThread.run("first input");
@@ -167,10 +167,10 @@ describe("Beacon Code", () => {
       ],
     });
 
-    const { args: spawnArgs, restore } = codexExecSpy();
+    const { args: spawnArgs, restore } = beaconExecSpy();
 
     try {
-      const client = new Codex({ codexPathOverride: codexExecPath, baseUrl: url, apiKey: "test" });
+      const client = new BeaconCode({ beaconPathOverride: codeExecPath, baseUrl: url, apiKey: "test" });
 
       const thread = client.startThread({
         model: "gpt-test-1",
@@ -207,12 +207,12 @@ describe("Beacon Code", () => {
       ],
     });
 
-    const { args: spawnArgs, restore } = codexExecSpy();
+    const { args: spawnArgs, restore } = beaconExecSpy();
 
     try {
-      const workingDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "codex-working-dir-"));
-      const client = new Codex({
-        codexPathOverride: codexExecPath,
+      const workingDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "beacon-working-dir-"));
+      const client = new BeaconCode({
+        beaconPathOverride: codeExecPath,
         baseUrl: url,
         apiKey: "test",
       });
@@ -244,9 +244,9 @@ describe("Beacon Code", () => {
     });
 
     try {
-      const workingDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "codex-working-dir-"));
-      const client = new Codex({
-        codexPathOverride: codexExecPath,
+      const workingDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "beacon-working-dir-"));
+      const client = new BeaconCode({
+        beaconPathOverride: codeExecPath,
         baseUrl: url,
         apiKey: "test",
       });
@@ -271,7 +271,7 @@ describe("Beacon Code", () => {
     });
 
     try {
-      const client = new Codex({ codexPathOverride: codexExecPath, baseUrl: url, apiKey: "test" });
+      const client = new BeaconCode({ beaconPathOverride: codeExecPath, baseUrl: url, apiKey: "test" });
       const thread = client.startThread();
       await expect(thread.run("fail")).rejects.toThrow("stream disconnected before completion:");
     } finally {
