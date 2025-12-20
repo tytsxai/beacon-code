@@ -144,7 +144,7 @@ Beacon Code 默认只使用内置模型与能力，不需要额外安装其他 A
 code [options] [prompt]
 
 Options:
-  --model <name>        覆盖模型（例如 gpt-5.1-codex）
+  --model <name>        覆盖模型（例如 gpt-5.1-code）
   --read-only          阻止文件修改
   --no-approval        跳过审批提示（谨慎使用）
   --config <key=val>   覆盖配置项

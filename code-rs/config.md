@@ -387,7 +387,7 @@ Each agent is configured using an `[[agents]]` section in your `config.toml`. He
 
 ```toml
 [[agents]]
-name = "code-gpt-5.1-codex-max"  # Agent identifier (required)
+name = "code-gpt-5.1-code-max"  # Agent identifier (required)
 command = "coder"                # Command to execute (required)
 enabled = true            # Enable/disable this agent (default: true)
 read-only = false         # Restrict to read-only operations (default: false)
@@ -403,14 +403,14 @@ The `command` field specifies how to invoke the agent. Code supports three appro
 **1. Command name (PATH lookup):**
 ```toml
 [[agents]]
-name = "code-gpt-5.1-codex-max"
+name = "code-gpt-5.1-code-max"
 command = "coder"  # Code will search for "coder" in your PATH
 ```
 
 **2. Absolute path (recommended for Windows):**
 ```toml
 [[agents]]
-name = "code-gpt-5.1-codex-max"
+name = "code-gpt-5.1-code-max"
 command = "C:\\Users\\YourUser\\AppData\\Roaming\\npm\\coder.cmd"
 ```
 
@@ -456,7 +456,7 @@ Agents inherit your current environment and can have custom variables:
 
 ```toml
 [[agents]]
-name = "code-gpt-5.1-codex-mini"
+name = "code-gpt-5.1-code-mini"
 command = "coder"
 env = { OPENAI_API_KEY = "your-key-here" }
 ```
@@ -498,7 +498,7 @@ If you see errors like `Agent 'xyz' could not be found`, try these steps:
 3. **Use absolute paths:** Especially on Windows, specify the full path:
    ```toml
    [[agents]]
-   name = "code-gpt-5.1-codex-max"
+   name = "code-gpt-5.1-code-max"
    command = "C:\\Users\\YourUser\\AppData\\Roaming\\npm\\coder.cmd"
    ```
 

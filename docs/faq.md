@@ -8,7 +8,7 @@ No. Beacon Code is a standalone CLI that can connect to multiple model providers
 
 ### Which models are supported?
 
-We recommend using Beacon with GPT-5.1 Beacon Max, our best coding model. The default reasoning level is medium, and you can upgrade to high or xhigh (where supported, e.g. `gpt-5.1-codex-max` and `gpt-5.2`) for complex tasks with the `/model` command.
+We recommend using Beacon with GPT-5.1 Beacon Max, our best coding model. The default reasoning level is medium, and you can upgrade to high or xhigh (where supported, e.g. `gpt-5.1-code-max` and `gpt-5.2`) for complex tasks with the `/model` command.
 
 You can also use older models by using API-based auth and launching `code` with the `--model` flag.
 

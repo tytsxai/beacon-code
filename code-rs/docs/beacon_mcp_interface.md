@@ -57,7 +57,7 @@ Start a new session with optional overrides:
 
 Request `newConversation` params (subset):
 
-- `model`: string model id (e.g. "o3", "gpt-5.1", "gpt-5.1-codex")
+- `model`: string model id (e.g. "o3", "gpt-5.1", "gpt-5.1-code")
 - `profile`: optional named profile
 - `cwd`: optional working directory
 - `approvalPolicy`: `untrusted` | `on-request` | `on-failure` | `never`

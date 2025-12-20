@@ -15,7 +15,7 @@
 - 0.5.5（2025-11-25）：Auto Drive 回退/诊断与倒计时改进，TUI 提示管理升级，流式重连与模型日志更清晰，默认智能体 roster 调整。
 - 0.5.4（2025-11-24）：传递推理力度覆盖并自动裁剪溢出的历史。
 - 0.5.3（2025-11-24）：Auto Drive CLI 别名与全自动模式，TUI 粘贴/回退修复，网络重试更稳，配置兼容 Responses/Chat。
-- 0.5.2（2025-11-22）：Auto Drive 默认 gpt-5.1-codex-max，新增 gemini-3-pro 选项，并限制推理力度避免无效请求。
+- 0.5.2（2025-11-22）：Auto Drive 默认 gpt-5.1-code-max，新增 gemini-3-pro 选项，并限制推理力度避免无效请求。
 - 0.5.0（2025-11-21）：更名 Beacon Code，Auto Drive 增强（压缩、诊断、自恢复），默认模型升级到 gpt-5.1 系列，统一设置与通知 UI。
 
 ## [Unreleased]
@@ -82,7 +82,7 @@
 
 ## [0.5.2] - 2025-11-22
 
-- Agents: default automation flows to gpt-5.1-codex-max and add gemini-3-pro as an option for higher-capacity runs. (f0f99f2e)
+- Agents: default automation flows to gpt-5.1-code-max and add gemini-3-pro as an option for higher-capacity runs. (f0f99f2e)
 - Models: clamp reasoning effort to supported bands so prompts no longer fail with invalid request errors. (6a7cac9d)
 
 ## [0.5.0] - 2025-11-21
@@ -98,7 +98,7 @@
 ## [0.4.21] - 2025-11-20
 
 - Auto Drive: let runs choose a model and clamp verbosity so diagnostics stay predictable. (61209e0)
-- Models: add gpt-5.1-codex-max default with one-time migration prompt so upgrades stay smooth. (8a97572, 6d67b8b, 64ae9aa)
+- Models: add gpt-5.1-code-max default with one-time migration prompt so upgrades stay smooth. (8a97572, 6d67b8b, 64ae9aa)
 - Core: wire execpolicy2 through core/exec-server and add shell fallbacks so commands keep running under the new policy. (65c13f1, 056c8f8, b00a7cf)
 - TUI: add branch-aware filtering to `codex resume` so large workspaces find the right session faster. (526eb3f)
 - Platform: enable remote compaction by default and schedule auto jobs to keep transcripts lean. (cac0a6a, 75f38f1)
@@ -147,7 +147,7 @@
 
 ## [0.4.11] - 2025-11-07
 
-- Model: add gpt-5-codex-mini presets for quick access to lighter variants. (febfa7e)
+- Model: add gpt-5-code-mini presets for quick access to lighter variants. (febfa7e)
 - Compaction: add per-message summaries, checkpoint warnings, and prompt overrides to keep long transcripts clear. (b21190f, 8dd3c30, 58cf74d)
 - Client: normalize retry-after handling, show resume times, and stop retrying fatal quota errors so recoveries are predictable. (0c82670, 0e0e85c, d996507)
 - CLI: enable CTRL-n and CTRL-p to navigate slash commands, files, and history without leaving the keyboard. (e30f651)

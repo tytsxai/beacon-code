@@ -61,6 +61,7 @@ export class BeaconExec {
     }
     if (args.apiKey) {
       env.BEACON_API_KEY = args.apiKey;
+      env.CODE_API_KEY = args.apiKey;
       env.CODEX_API_KEY = args.apiKey;
     }
 

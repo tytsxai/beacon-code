@@ -97,7 +97,7 @@ If you don’t have the tool:
       responses::ev_completed("resp-1"),
   ])).await;
 
-  codex.submit(Op::UserTurn { ... }).await?;
+  code.submit(Op::UserTurn { ... }).await?;
 
   // Assert request body if needed.
   let request = mock.single_request();

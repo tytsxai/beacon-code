@@ -37,7 +37,7 @@ model_provider = "openai"
 # Reasoning & Verbosity (Responses API capable models)
 ################################################################################
 
-# Reasoning effort: minimal | low | medium | high | xhigh (default: medium; xhigh on gpt-5.1-codex-max and gpt-5.2)
+# Reasoning effort: minimal | low | medium | high | xhigh (default: medium; xhigh on gpt-5.1-code-max and gpt-5.2)
 model_reasoning_effort = "medium"
 
 # Reasoning summary: auto | concise | detailed | none (default: auto)
@@ -303,7 +303,7 @@ experimental_use_freeform_apply_patch = false
 [profiles]
 
 # [profiles.default]
-# model = "gpt-5.1-codex-max"
+# model = "gpt-5.1-code-max"
 # model_provider = "openai"
 # approval_policy = "on-request"
 # sandbox_mode = "read-only"

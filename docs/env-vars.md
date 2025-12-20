@@ -26,15 +26,16 @@ If you only need the basics (auth + config), see `docs/command-reference.md`.
   - Risk: misconfiguration can send traffic to an unintended endpoint.
   - Docs: `docs/config.md` (model providers)
 
-- `BEACON_API_KEY`
+- `CODE_API_KEY`
   - Purpose: override the API key for `code exec` (non-interactive mode).
-  - Notes: `CODEX_API_KEY` is a legacy alias kept for compatibility.
+  - Notes: `BEACON_API_KEY` and `CODEX_API_KEY` are legacy aliases kept for compatibility.
 
 ## Config / state directories
 
 - `CODE_HOME`
   - Purpose: override the base directory for config, auth, history, logs, etc.
   - Default: `~/.code`
+  - Notes: `CODEX_HOME` is a legacy alias kept for compatibility.
 
 ## Build / binary selection
 
@@ -48,6 +49,14 @@ If you only need the basics (auth + config), see `docs/command-reference.md`.
   - Purpose: override which native binary the wrapper uses (or communicates to child processes).
   - Risk: pointing this at an unexpected binary can run untrusted code.
   - Code: `code-rs/core/src/agent_tool.rs`
+
+## Security / hardening
+
+- `CODE_SECURE_MODE`
+  - Purpose: enable additional hardening for the CLI process early in startup.
+  - Values: `"1"` to enable.
+  - Notes: `CODEX_SECURE_MODE` is a legacy alias kept for compatibility.
+  - Code: `code-rs/cli/src/main.rs`
 
 ## Cleanup / retention (high risk)
 

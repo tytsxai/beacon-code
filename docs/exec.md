@@ -97,16 +97,16 @@ code exec resume --last "Fix use-after-free issues"
 仅对话上下文会被保留；你仍需提供参数以自定义 Code 的行为。
 
 ```shell
-code exec --model gpt-5.1-codex --json "Review the change, look for use-after-free issues"
+code exec --model gpt-5.1-code --json "Review the change, look for use-after-free issues"
 code exec --model gpt-5.1 --json resume --last "Fix use-after-free issues"
 ```
 
 ## 认证
 
-默认情况下，`code exec` 使用与 TUI 与 VSCode 扩展相同的认证方式。可通过环境变量 `BEACON_API_KEY` 覆盖 API Key（兼容 `CODEX_API_KEY`）。
+默认情况下，`code exec` 使用与 TUI 与 VSCode 扩展相同的认证方式。可通过环境变量 `CODE_API_KEY` 覆盖 API Key（兼容 `BEACON_API_KEY` / `CODEX_API_KEY`）。
 
 ```shell
-BEACON_API_KEY=your-api-key-here code exec "Fix merge conflict"
+CODE_API_KEY=your-api-key-here code exec "Fix merge conflict"
 ```
 
-注意：`BEACON_API_KEY` / `CODEX_API_KEY` 仅在 `code exec` 中受支持。
+注意：`CODE_API_KEY` / `BEACON_API_KEY` / `CODEX_API_KEY` 仅在 `code exec` 中受支持。

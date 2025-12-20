@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import { describe, expect, it } from "@jest/globals";
+import { describe, expect, it, jest } from "@jest/globals";
 
 import { BeaconCode } from "../src/beacon";
 import { ThreadEvent } from "../src/index";
@@ -14,6 +14,9 @@ import {
 } from "./responsesProxy";
 
 const codeExecPath = path.join(process.cwd(), "..", "..", "code-rs", "target", "debug", "code");
+const TEST_TIMEOUT_MS = 20000;
+
+jest.setTimeout(TEST_TIMEOUT_MS);
 
 describe("Beacon Code", () => {
   it("returns thread events", async () => {

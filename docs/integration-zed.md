@@ -42,4 +42,4 @@ write_text_file = { mcp_server = "zed", tool_name = "writeTextFile" }
 - 需要查看握手？在命令面板运行 Zed 的 `dev: open acp logs`，日志会展示 JSON‑RPC 请求与 Code 响应。
 - 如果提示卡住，确认没有其他进程占用同一 MCP 端口，且你的 `CODE_HOME` 指向期望的配置目录。ACP 服务器继承 Beacon Code 的沙箱设置，因此限制性策略（如 `approval_policy = "never"`）仍然生效。
 - 目前 Zed 对第三方智能体跳过历史恢复与检查点 UI。如果依赖这些功能，请使用 TUI；ACP 支持仍在持续完善中。
-- 会话开始后，Zed 的模型选择器会列出 Beacon Code 的内置预设（如 `gpt-5.1-codex`、`gpt-5.1` 高/中/低）。选择新预设会立即更新运行中的 Code 会话，无需重启智能体即可切换模型。
+- 会话开始后，Zed 的模型选择器会列出 Beacon Code 的内置预设（如 `gpt-5.1-code`、`gpt-5.1` 高/中/低）。选择新预设会立即更新运行中的 Code 会话，无需重启智能体即可切换模型。

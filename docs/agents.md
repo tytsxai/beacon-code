@@ -5,7 +5,7 @@ Beacon Code 可以启动子智能体，并在 `/plan`、`/solve`、`/code` 等�
 ## 智能体配置（`config.toml` 中的 `[[agents]]`）
 ```toml
 [[agents]]
-name = "code-gpt-5.1-codex-max"   # 在选择器中显示的 slug/别名
+name = "code-gpt-5.1-code-max"   # 在选择器中显示的 slug/别名
 command = "coder"                # 可执行文件；默认等于 name
 args = ["--foo", "bar"]          # 基础 argv
 args-read-only = ["-s", "read-only", "-a", "never", "exec", "--skip-git-repo-check"]
@@ -19,7 +19,7 @@ instructions = "添加到该智能体提示的前言"
 字段摘要：`name`（slug/别名）、`command`（可用绝对路径）、`args*`（RO/RW 列表会覆盖基础参数）、`env`、`read-only`、`enabled`，可选 `description` 与 `instructions`。
 
 ### 内置默认值
-若未配置任何 `[[agents]]`，Code 会内置一组 Beacon 子智能体（云端变体受环境变量 `CODE_ENABLE_CLOUD_AGENT_MODEL` 控制）：`code-gpt-5.1-codex-max`、`code-gpt-5.1-codex-mini`，以及（可选）`cloud-gpt-5.1-codex-max`。内置配置会移除用户提供的 `--model/-m` 以避免冲突，并插入自身参数。
+若未配置任何 `[[agents]]`，Code 会内置一组 Beacon 子智能体（云端变体受环境变量 `CODE_ENABLE_CLOUD_AGENT_MODEL` 控制）：`code-gpt-5.1-code-max`、`code-gpt-5.1-code-mini`，以及（可选）`cloud-gpt-5.1-code-max`。内置配置会移除用户提供的 `--model/-m` 以避免冲突，并插入自身参数。
 
 > 注意：本仓库 fork 默认禁用 Claude/Gemini/Qwen 等外部 agent CLI；如在配置中引用这些 name/command，会在运行时直接报错。
 
@@ -28,7 +28,7 @@ instructions = "添加到该智能体提示的前言"
 [[subagents.commands]]
 name = "plan"                     # 斜杠命令（/plan、/solve、/code 或自定义）
 read-only = true                  # plan/solve 默认 true，code 默认 false
-agents = ["code-gpt-5.1-codex-max", "code-gpt-5.1-codex-mini"]  # 为空则回退到已启用智能体或内置列表
+agents = ["code-gpt-5.1-code-max", "code-gpt-5.1-code-mini"]  # 为空则回退到已启用智能体或内置列表
 orchestrator-instructions = "编排器在启动智能体前的指导"
 agent-instructions = "附加到每个子智能体提示的前言"
 ```
@@ -84,7 +84,7 @@ enabled = true
 [[subagents.commands]]
 name = "context"
 read-only = true
-agents = ["code-gpt-5.1-codex-max", "code-gpt-5.1-codex-mini"]
+agents = ["code-gpt-5.1-code-max", "code-gpt-5.1-code-mini"]
 orchestrator-instructions = "让每个智能体总结最相关的文件和测试。"
 agent-instructions = "返回路径并给出 1–2 句理由；不要修改文件。"
 ```

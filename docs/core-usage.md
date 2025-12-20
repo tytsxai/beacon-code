@@ -35,7 +35,7 @@
 - 指定/替换智能体：编辑 `~/.code/config.toml`，添加 `[[agents]]`：
   ```toml
   [[agents]]
-  name = "code-gpt-5.1-codex-max"
+  name = "code-gpt-5.1-code-max"
   command = "coder"
   read-only = false
   enabled = true

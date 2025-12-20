@@ -36,8 +36,8 @@ identify the modules that will be split up in later phases.
    - Creates `Codex` (Beacon engine) via `Codex::spawn`, yielding an async event
      stream.
    - Produces `SessionConfiguredEvent` and registers the conversation in a
-     shared `RwLock<HashMap<ConversationId, Arc<CodexConversation>>>`.
-2. **Event loop** (`code-core::Codex` & `CodexConversation`)
+     shared `RwLock<HashMap<ConversationId, Arc<BeaconConversation>>>`.
+2. **Event loop** (`code-core::Codex` & `BeaconConversation`)
    - `Codex::next_event` polls the MCP transport and channel fan-out to yield
      `EventMsg` values.
    - `code-core/src/codex.rs` manages confirm guards, tool dispatch, browser
