@@ -508,7 +508,7 @@ mod tests {
         };
 
         let result = check_patch_paths_within_writable_roots(&action, &policy, &cwd);
-        assert_eq!(result.is_ok(), true);
+        assert_eq!(result, Ok(()));
     }
 
     #[test]
