@@ -414,7 +414,7 @@ pub struct McpToolId {
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub struct AgentConfig {
-    /// Name of the agent (e.g., "code-gpt-5.1-codex-max", "cloud-gpt-5.1-codex-max")
+    /// Name of the agent (e.g., "code-gpt-5.1-code-max", "cloud-gpt-5.1-code-max")
     pub name: String,
 
     /// Command to execute the agent (e.g., "coder", "cloud").
@@ -729,8 +729,11 @@ impl Default for Tui {
 pub struct Notice {
     pub hide_full_access_warning: Option<bool>,
     pub hide_gpt5_1_migration_prompt: Option<bool>,
-    #[serde(rename = "hide_gpt-5.1-codex-max_migration_prompt")]
-    pub hide_gpt_5_1_codex_max_migration_prompt: Option<bool>,
+    #[serde(
+        rename = "hide_gpt-5.1-code-max_migration_prompt",
+        alias = "hide_gpt-5.1-codex-max_migration_prompt"
+    )]
+    pub hide_gpt_5_1_code_max_migration_prompt: Option<bool>,
 }
 
 #[derive(Serialize, Debug, Clone, Copy, PartialEq, Eq)]

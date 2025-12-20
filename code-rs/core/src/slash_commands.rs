@@ -322,9 +322,9 @@ mod tests {
         let plan_prompt = result.unwrap();
         assert!(plan_prompt.contains("final, comprehensive plan"));
         // Default agents list should be Beacon Code-only when no [[agents]] configured
-        assert!(plan_prompt.contains("code-gpt-5.1-codex-max"));
-        assert!(plan_prompt.contains("code-gpt-5.1-codex-mini"));
-        assert!(!plan_prompt.contains("cloud-gpt-5.1-codex-max"));
+        assert!(plan_prompt.contains("code-gpt-5.1-code-max"));
+        assert!(plan_prompt.contains("code-gpt-5.1-code-mini"));
+        assert!(!plan_prompt.contains("cloud-gpt-5.1-code-max"));
 
         // Test /solve command
         let result = handle_slash_command("/solve fix the bug in authentication", None);
@@ -356,7 +356,7 @@ mod tests {
         // Create test agent configurations
         let agents = vec![
             AgentConfig {
-                name: "code-gpt-5.1-codex-max".to_string(),
+                name: "code-gpt-5.1-code-max".to_string(),
                 command: "coder".to_string(),
                 args: vec![],
                 read_only: false,
@@ -368,7 +368,7 @@ mod tests {
                 instructions: None,
             },
             AgentConfig {
-                name: "code-gpt-5.1-codex-mini".to_string(),
+                name: "code-gpt-5.1-code-mini".to_string(),
                 command: "coder".to_string(),
                 args: vec![],
                 read_only: false,
@@ -385,7 +385,7 @@ mod tests {
         let result = handle_slash_command("/plan test task", Some(&agents));
         assert!(result.is_some());
         let prompt = result.unwrap();
-        assert!(prompt.contains("code-gpt-5.1-codex-max"));
-        assert!(!prompt.contains("code-gpt-5.1-codex-mini"));
+        assert!(prompt.contains("code-gpt-5.1-code-max"));
+        assert!(!prompt.contains("code-gpt-5.1-code-mini"));
     }
 }

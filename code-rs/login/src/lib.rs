@@ -12,8 +12,11 @@ pub use server::run_login_server;
 // Re-export commonly used auth types and helpers from code-core for compatibility
 pub use code_app_server_protocol::AuthMode;
 pub use code_core::AuthManager;
+pub use code_core::CodeAuth;
+#[deprecated(note = "use CodeAuth")]
 pub use code_core::CodexAuth;
 pub use code_core::auth::AuthDotJson;
+pub use code_core::auth::CODE_API_KEY_ENV_VAR;
 pub use code_core::auth::BEACON_API_KEY_ENV_VAR;
 pub use code_core::auth::CLIENT_ID;
 pub use code_core::auth::CODEX_API_KEY_ENV_VAR;

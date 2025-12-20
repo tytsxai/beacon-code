@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use code_core::CodexConversation;
+use code_core::BeaconConversation;
 use code_core::config::Config;
 use tokio::sync::Mutex;
 use uuid::Uuid;
@@ -9,12 +9,12 @@ use uuid::Uuid;
 /// In-memory session entry tracking an active Beacon Code conversation and its config.
 #[derive(Clone)]
 pub struct SessionEntry {
-    pub conversation: Arc<CodexConversation>,
+    pub conversation: Arc<BeaconConversation>,
     pub config: Arc<Mutex<Config>>,
 }
 
 impl SessionEntry {
-    pub fn new(conversation: Arc<CodexConversation>, config: Config) -> Self {
+    pub fn new(conversation: Arc<BeaconConversation>, config: Config) -> Self {
         Self {
             conversation,
             config: Arc::new(Mutex::new(config)),

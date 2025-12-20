@@ -11,7 +11,7 @@ use common::mount_sse_once;
 use common::skip_if_no_network;
 use common::wait_for_event;
 
-use code_core::CodexAuth;
+use code_core::CodeAuth;
 use code_core::ConversationManager;
 use code_core::ModelProviderInfo;
 use code_core::built_in_model_providers;
@@ -70,7 +70,7 @@ async fn collect_tool_identifiers_for_model(model: &str) -> Vec<String> {
     config.include_plan_tool = true;
 
     let conversation_manager =
-        ConversationManager::with_auth(CodexAuth::from_api_key("Test API Key"));
+        ConversationManager::with_auth(CodeAuth::from_api_key("Test API Key"));
     let codex = conversation_manager
         .new_conversation(config)
         .await
@@ -129,7 +129,7 @@ async fn model_selects_expected_tools() {
         "o3 should expose the generic shell tool",
     );
 
-    let gpt5_codex_tools = collect_tool_identifiers_for_model("gpt-5-codex").await;
+    let gpt5_codex_tools = collect_tool_identifiers_for_model("gpt-5-code").await;
     assert_eq!(
         gpt5_codex_tools,
         vec![
@@ -140,10 +140,10 @@ async fn model_selects_expected_tools() {
             "update_plan".to_string(),
             "apply_patch".to_string()
         ],
-        "gpt-5-codex should expose the apply_patch tool",
+        "gpt-5-code should expose the apply_patch tool",
     );
 
-    let gpt51_codex_tools = collect_tool_identifiers_for_model("gpt-5.1-codex").await;
+    let gpt51_codex_tools = collect_tool_identifiers_for_model("gpt-5.1-code").await;
     assert_eq!(
         gpt51_codex_tools,
         vec![
@@ -154,7 +154,7 @@ async fn model_selects_expected_tools() {
             "update_plan".to_string(),
             "apply_patch".to_string()
         ],
-        "gpt-5.1-codex should expose the apply_patch tool",
+        "gpt-5.1-code should expose the apply_patch tool",
     );
 
     let gpt51_tools = collect_tool_identifiers_for_model("gpt-5.1").await;

@@ -17,6 +17,8 @@ mod client_common;
 mod code_conversation;
 pub mod codex;
 pub mod token_data;
+pub use code_conversation::BeaconConversation;
+#[deprecated(note = "use BeaconConversation")]
 pub use code_conversation::CodexConversation;
 pub mod acp;
 mod command_safety;
@@ -83,6 +85,8 @@ pub use conversation_manager::ConversationManager;
 pub use conversation_manager::NewConversation;
 // Re-export common auth types for workspace consumers
 pub use auth::AuthManager;
+pub use auth::CodeAuth;
+#[deprecated(note = "use CodeAuth")]
 pub use auth::CodexAuth;
 pub use auth::RefreshTokenError;
 pub use auth::RefreshTokenErrorKind;

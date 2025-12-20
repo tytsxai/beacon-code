@@ -1,6 +1,6 @@
 use crate::AuthManager;
-use crate::CodexAuth;
-use crate::code_conversation::CodexConversation;
+use crate::CodeAuth;
+use crate::code_conversation::BeaconConversation;
 use crate::codex::Codex;
 use crate::codex::CodexSpawnOk;
 use crate::codex::INITIAL_SUBMIT_ID;
@@ -25,14 +25,14 @@ use tokio::sync::RwLock;
 /// (which is [`EventMsg::SessionConfigured`]).
 pub struct NewConversation {
     pub conversation_id: ConversationId,
-    pub conversation: Arc<CodexConversation>,
+    pub conversation: Arc<BeaconConversation>,
     pub session_configured: SessionConfiguredEvent,
 }
 
 /// [`ConversationManager`] is responsible for creating conversations and
 /// maintaining them in memory.
 pub struct ConversationManager {
-    conversations: Arc<RwLock<HashMap<ConversationId, Arc<CodexConversation>>>>,
+    conversations: Arc<RwLock<HashMap<ConversationId, Arc<BeaconConversation>>>>,
     auth_manager: Arc<AuthManager>,
     session_source: SessionSource,
 }
@@ -46,9 +46,9 @@ impl ConversationManager {
         }
     }
 
-    /// Construct with a dummy AuthManager containing the provided CodexAuth.
+    /// Construct with a dummy AuthManager containing the provided CodeAuth.
     /// Used for integration tests: should not be used by ordinary business logic.
-    pub fn with_auth(auth: CodexAuth) -> Self {
+    pub fn with_auth(auth: CodeAuth) -> Self {
         Self::new(
             crate::AuthManager::from_auth_for_testing(auth),
             SessionSource::Exec,
@@ -97,7 +97,7 @@ impl ConversationManager {
             }
         };
 
-        let conversation = Arc::new(CodexConversation::new(codex));
+        let conversation = Arc::new(BeaconConversation::new(codex));
         self.conversations
             .write()
             .await
@@ -113,7 +113,7 @@ impl ConversationManager {
     pub async fn get_conversation(
         &self,
         conversation_id: ConversationId,
-    ) -> CodexResult<Arc<CodexConversation>> {
+    ) -> CodexResult<Arc<BeaconConversation>> {
         let conversations = self.conversations.read().await;
         conversations
             .get(&conversation_id)
@@ -139,13 +139,13 @@ impl ConversationManager {
     }
 
     /// Removes the conversation from the manager's internal map, though the
-    /// conversation is stored as `Arc<CodexConversation>`, it is possible that
+    /// conversation is stored as `Arc<BeaconConversation>`, it is possible that
     /// other references to it exist elsewhere. Returns the conversation if the
     /// conversation was found and removed.
     pub async fn remove_conversation(
         &self,
         conversation_id: &ConversationId,
-    ) -> Option<Arc<CodexConversation>> {
+    ) -> Option<Arc<BeaconConversation>> {
         self.conversations.write().await.remove(conversation_id)
     }
 

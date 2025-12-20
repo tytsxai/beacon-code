@@ -40,15 +40,24 @@ mod mcp_cmd;
 use crate::mcp_cmd::McpCli;
 
 const CLI_COMMAND_NAME: &str = "code";
+pub(crate) const CODE_SECURE_MODE_ENV_VAR: &str = "CODE_SECURE_MODE";
 pub(crate) const CODEX_SECURE_MODE_ENV_VAR: &str = "CODEX_SECURE_MODE";
 
 /// As early as possible in the process lifecycle, apply hardening measures
-/// if the CODEX_SECURE_MODE environment variable is set to "1".
+/// if the CODE_SECURE_MODE environment variable is set to "1".
 #[ctor::ctor]
 fn pre_main_hardening() {
-    let secure_mode = match std::env::var(CODEX_SECURE_MODE_ENV_VAR) {
+    let secure_mode = match std::env::var(CODE_SECURE_MODE_ENV_VAR) {
         Ok(value) => value,
-        Err(_) => return,
+        Err(_) => match std::env::var(CODEX_SECURE_MODE_ENV_VAR) {
+            Ok(value) => {
+                eprintln!(
+                    "Deprecated env var {CODEX_SECURE_MODE_ENV_VAR} is set. Use {CODE_SECURE_MODE_ENV_VAR} instead."
+                );
+                value
+            }
+            Err(_) => return,
+        },
     };
 
     if secure_mode == "1" {
@@ -57,6 +66,7 @@ fn pre_main_hardening() {
 
     // Always clear this env var so child processes don't inherit it.
     unsafe {
+        std::env::remove_var(CODE_SECURE_MODE_ENV_VAR);
         std::env::remove_var(CODEX_SECURE_MODE_ENV_VAR);
     }
 }

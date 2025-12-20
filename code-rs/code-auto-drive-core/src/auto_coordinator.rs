@@ -96,7 +96,7 @@ const ALL_TEXT_VERBOSITY: &[TextVerbosity] = &[
 ];
 
 fn supported_text_verbosity_for_model(model: &str) -> &'static [TextVerbosity] {
-    if model.eq_ignore_ascii_case("gpt-5.1-codex-max") {
+    if model.eq_ignore_ascii_case("gpt-5.1-code-max") {
         &[TextVerbosity::Medium]
     } else {
         ALL_TEXT_VERBOSITY

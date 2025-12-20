@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-use code_core::CodexConversation;
+use code_core::BeaconConversation;
 use code_core::protocol::Op;
 use code_core::protocol::ReviewDecision;
 use mcp_types::ElicitRequest;
@@ -55,7 +55,7 @@ pub(crate) async fn handle_exec_approval_request(
     command: Vec<String>,
     cwd: PathBuf,
     outgoing: Arc<OutgoingMessageSender>,
-    codex: Arc<CodexConversation>,
+    codex: Arc<BeaconConversation>,
     request_id: RequestId,
     tool_call_id: String,
     event_id: String,
@@ -121,7 +121,7 @@ pub(crate) async fn handle_exec_approval_request(
 async fn on_exec_approval_response(
     approval_id: String,
     receiver: tokio::sync::oneshot::Receiver<mcp_types::Result>,
-    codex: Arc<CodexConversation>,
+    codex: Arc<BeaconConversation>,
 ) {
     let value = match timeout(APPROVAL_TIMEOUT, receiver).await {
         Ok(Ok(value)) => value,

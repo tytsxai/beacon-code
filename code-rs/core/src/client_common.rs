@@ -562,7 +562,7 @@ mod tests {
                 expects_apply_patch_instructions: false,
             },
             InstructionsTestCase {
-                slug: "gpt-5.1-codex",
+                slug: "gpt-5.1-code",
                 expects_apply_patch_instructions: false,
             },
         ];

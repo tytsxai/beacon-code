@@ -1,6 +1,6 @@
 use code_app_server_protocol::AuthMode;
 use code_common::CliConfigOverrides;
-use code_core::CodexAuth;
+use code_core::CodeAuth;
 use code_core::auth::CLIENT_ID;
 use code_core::auth::OPENAI_API_KEY_ENV_VAR;
 use code_core::auth::login_with_api_key;
@@ -117,7 +117,7 @@ pub async fn run_login_with_device_code(
 pub async fn run_login_status(cli_config_overrides: CliConfigOverrides) -> ! {
     let config = load_config_or_exit(cli_config_overrides);
 
-    match CodexAuth::from_code_home(
+    match CodeAuth::from_code_home(
         &config.code_home,
         AuthMode::ApiKey,
         &config.responses_originator_header,

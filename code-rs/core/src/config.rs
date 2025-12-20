@@ -75,9 +75,11 @@ use toml_edit::Item as TomlItem;
 use toml_edit::Table as TomlTable;
 use which::which;
 
-const OPENAI_DEFAULT_MODEL: &str = "gpt-5.1-codex";
-const OPENAI_DEFAULT_REVIEW_MODEL: &str = "gpt-5.1-codex-mini";
-pub const GPT_5_CODEX_MEDIUM_MODEL: &str = "gpt-5.1-codex-max";
+const OPENAI_DEFAULT_MODEL: &str = "gpt-5.1-code";
+const OPENAI_DEFAULT_REVIEW_MODEL: &str = "gpt-5.1-code-mini";
+pub const GPT_5_CODE_MEDIUM_MODEL: &str = "gpt-5.1-code-max";
+#[deprecated(note = "use GPT_5_CODE_MEDIUM_MODEL")]
+pub const GPT_5_CODEX_MEDIUM_MODEL: &str = GPT_5_CODE_MEDIUM_MODEL;
 
 /// Maximum number of bytes of the documentation that will be embedded. Larger
 /// files are *silently truncated* to this size so we do not take up too much of
@@ -176,7 +178,7 @@ pub struct Config {
     /// Whether planning should inherit the chat model instead of using a dedicated override.
     pub planning_use_chat_model: bool,
 
-    /// Model used specifically for review sessions. Defaults to "gpt-5.1-codex-mini".
+    /// Model used specifically for review sessions. Defaults to "gpt-5.1-code-mini".
     pub review_model: String,
 
     /// Reasoning effort used when running review sessions.
@@ -2167,12 +2169,24 @@ fn upgrade_legacy_model_slugs(cfg: &mut ConfigToml) {
 }
 
 fn upgrade_legacy_model_slug(slug: &str) -> Option<String> {
+    if let Some(rest) = slug.strip_prefix("test-gpt-5.1-codex") {
+        return Some(format!("test-gpt-5.1-code{rest}"));
+    }
+
+    if let Some(rest) = slug.strip_prefix("gpt-5.1-codex") {
+        return Some(format!("gpt-5.1-code{rest}"));
+    }
+
     if slug.starts_with("gpt-5.1") || slug.starts_with("test-gpt-5.1") {
         return None;
     }
 
     if let Some(rest) = slug.strip_prefix("test-gpt-5-codex") {
-        return Some(format!("test-gpt-5.1-codex{rest}"));
+        return Some(format!("test-gpt-5.1-code{rest}"));
+    }
+
+    if let Some(rest) = slug.strip_prefix("test-gpt-5-code") {
+        return Some(format!("test-gpt-5.1-code{rest}"));
     }
 
     if let Some(rest) = slug.strip_prefix("test-gpt-5") {
@@ -2180,7 +2194,11 @@ fn upgrade_legacy_model_slug(slug: &str) -> Option<String> {
     }
 
     if let Some(rest) = slug.strip_prefix("gpt-5-codex") {
-        return Some(format!("gpt-5.1-codex{rest}"));
+        return Some(format!("gpt-5.1-code{rest}"));
+    }
+
+    if let Some(rest) = slug.strip_prefix("gpt-5-code") {
+        return Some(format!("gpt-5.1-code{rest}"));
     }
 
     if let Some(rest) = slug.strip_prefix("gpt-5") {
@@ -2419,7 +2437,7 @@ impl Config {
         let using_chatgpt_auth = Self::is_using_chatgpt_auth(&code_home);
 
         let default_model_slug = if using_chatgpt_auth {
-            GPT_5_CODEX_MEDIUM_MODEL
+            GPT_5_CODE_MEDIUM_MODEL
         } else {
             OPENAI_DEFAULT_MODEL
         };
@@ -2492,7 +2510,7 @@ impl Config {
                 || agent.name.eq_ignore_ascii_case("cloud")
             {
                 tracing::warn!(
-                    "legacy agent name '{}' detected; update config to use model slugs (e.g., code-gpt-5.1-codex-max)",
+                    "legacy agent name '{}' detected; update config to use model slugs (e.g., code-gpt-5.1-code-max)",
                     agent.name
                 );
             }
@@ -2573,7 +2591,7 @@ impl Config {
             .unwrap_or_else(|| {
                 let mut defaults = AutoDriveSettings::default();
                 if using_chatgpt_auth {
-                    defaults.model = GPT_5_CODEX_MEDIUM_MODEL.to_string();
+                    defaults.model = GPT_5_CODE_MEDIUM_MODEL.to_string();
                     defaults.model_reasoning_effort = ReasoningEffort::XHigh;
                 }
                 defaults
@@ -2712,11 +2730,11 @@ impl Config {
 
     /// Check if we're using ChatGPT authentication
     fn is_using_chatgpt_auth(code_home: &Path) -> bool {
-        use crate::CodexAuth;
+        use crate::CodeAuth;
         use code_app_server_protocol::AuthMode;
 
         // Prefer ChatGPT when both ChatGPT tokens and an API key are present.
-        match CodexAuth::from_code_home(code_home, AuthMode::ChatGPT, "code_cli_rs") {
+        match CodeAuth::from_code_home(code_home, AuthMode::ChatGPT, "code_cli_rs") {
             Ok(Some(auth)) => auth.mode == AuthMode::ChatGPT,
             _ => false,
         }
@@ -2890,8 +2908,8 @@ pub fn resolve_code_path_for_read(code_home: &Path, relative: &Path) -> PathBuf 
 }
 
 /// Returns the path to the Code/Beacon Code configuration directory, which can be
-/// specified by the `CODE_HOME` or `CODEX_HOME` environment variables. If not set,
-/// defaults to `~/.code` for the fork.
+/// specified by the `CODE_HOME` environment variable (legacy `CODEX_HOME` is
+/// still read). If not set, defaults to `~/.code` for the fork.
 ///
 /// - If `CODE_HOME` or `CODEX_HOME` is set, the value will be canonicalized and this
 ///   function will Err if the path does not exist.
@@ -2902,6 +2920,7 @@ pub fn find_code_home() -> std::io::Result<PathBuf> {
     }
 
     if let Some(path) = env_path("CODEX_HOME")? {
+        tracing::warn!("deprecated CODEX_HOME is set; use CODE_HOME instead");
         return Ok(path);
     }
 
@@ -3229,7 +3248,7 @@ args = ["-y", "@upstash/context7-mcp"]
         persist_model_selection(
             code_home.path(),
             None,
-            "gpt-5.1-codex",
+            "gpt-5.1-code",
             Some(ReasoningEffort::High),
         )
         .await?;
@@ -3237,7 +3256,7 @@ args = ["-y", "@upstash/context7-mcp"]
         let serialized = tokio::fs::read_to_string(code_home.path().join(CONFIG_TOML_FILE)).await?;
         let parsed: ConfigToml = toml::from_str(&serialized)?;
 
-        assert_eq!(parsed.model.as_deref(), Some("gpt-5.1-codex"));
+        assert_eq!(parsed.model.as_deref(), Some("gpt-5.1-code"));
         assert_eq!(parsed.model_reasoning_effort, Some(ReasoningEffort::High));
 
         Ok(())
@@ -3251,7 +3270,7 @@ args = ["-y", "@upstash/context7-mcp"]
         tokio::fs::write(
             &config_path,
             r#"
-model = "gpt-5.1-codex"
+model = "gpt-5.1-code"
 model_reasoning_effort = "medium"
 
 [profiles.dev]
@@ -3291,7 +3310,7 @@ model = "gpt-4.1"
         persist_model_selection(
             code_home.path(),
             Some("dev"),
-            "gpt-5.1-codex",
+            "gpt-5.1-code",
             Some(ReasoningEffort::Medium),
         )
         .await?;
@@ -3303,7 +3322,7 @@ model = "gpt-4.1"
             .get("dev")
             .expect("profile should be created");
 
-        assert_eq!(profile.model.as_deref(), Some("gpt-5.1-codex"));
+        assert_eq!(profile.model.as_deref(), Some("gpt-5.1-code"));
         assert_eq!(
             profile.model_reasoning_effort,
             Some(ReasoningEffort::Medium)
@@ -3325,7 +3344,7 @@ model = "gpt-4"
 model_reasoning_effort = "medium"
 
 [profiles.prod]
-model = "gpt-5.1-codex"
+model = "gpt-5.1-code"
 "#,
         )
         .await?;
@@ -3356,7 +3375,7 @@ model = "gpt-5.1-codex"
                 .profiles
                 .get("prod")
                 .and_then(|profile| profile.model.as_deref()),
-            Some("gpt-5.1-codex"),
+            Some("gpt-5.1-code"),
         );
 
         Ok(())
@@ -3917,14 +3936,14 @@ model_verbosity = "high"
     #[test]
     fn upgrade_legacy_model_slugs_updates_top_level() {
         let mut cfg = ConfigToml {
-            model: Some("gpt-5-codex".to_string()),
+            model: Some("gpt-5-code".to_string()),
             review_model: Some("gpt-5".to_string()),
             ..Default::default()
         };
 
         upgrade_legacy_model_slugs(&mut cfg);
 
-        assert_eq!(cfg.model.as_deref(), Some("gpt-5.1-codex"));
+        assert_eq!(cfg.model.as_deref(), Some("gpt-5.1-code"));
         assert_eq!(cfg.review_model.as_deref(), Some("gpt-5.1"));
     }
 
@@ -3934,8 +3953,8 @@ model_verbosity = "high"
         cfg.profiles.insert(
             "legacy".to_string(),
             ConfigProfile {
-                model: Some("test-gpt-5-codex".to_string()),
-                review_model: Some("gpt-5-codex".to_string()),
+                model: Some("test-gpt-5-code".to_string()),
+                review_model: Some("gpt-5-code".to_string()),
                 ..Default::default()
             },
         );
@@ -3943,8 +3962,8 @@ model_verbosity = "high"
         upgrade_legacy_model_slugs(&mut cfg);
 
         let legacy = cfg.profiles.get("legacy").expect("profile exists");
-        assert_eq!(legacy.model.as_deref(), Some("test-gpt-5.1-codex"));
-        assert_eq!(legacy.review_model.as_deref(), Some("gpt-5.1-codex"));
+        assert_eq!(legacy.model.as_deref(), Some("test-gpt-5.1-code"));
+        assert_eq!(legacy.review_model.as_deref(), Some("gpt-5.1-code"));
     }
 
     #[test]
@@ -4001,7 +4020,7 @@ model_verbosity = "high"
 
         let mut cfg = fixture.cfg.clone();
         cfg.agents = vec![AgentConfig {
-            name: "code-gpt-5.1-codex".to_string(),
+            name: "code-gpt-5.1-code".to_string(),
             command: String::new(),
             args: Vec::new(),
             read_only: false,
@@ -4028,8 +4047,8 @@ model_verbosity = "high"
             .map(|agent| agent.name.to_ascii_lowercase())
             .collect();
 
-        assert!(enabled_names.contains("code-gpt-5.1-codex-max"));
-        assert!(enabled_names.contains("code-gpt-5.1-codex-mini"));
+        assert!(enabled_names.contains("code-gpt-5.1-code-max"));
+        assert!(enabled_names.contains("code-gpt-5.1-code-mini"));
         Ok(())
     }
 
@@ -4143,14 +4162,14 @@ mod agent_merge_tests {
 
         let mini = merged
             .iter()
-            .find(|a| a.name.eq_ignore_ascii_case("code-gpt-5.1-codex-mini"))
+            .find(|a| a.name.eq_ignore_ascii_case("code-gpt-5.1-code-mini"))
             .expect("mini present");
 
         assert!(!mini.enabled, "disabled state should persist for alias");
         assert_eq!(
             merged
                 .iter()
-                .filter(|a| a.name.eq_ignore_ascii_case("code-gpt-5.1-codex-mini"))
+                .filter(|a| a.name.eq_ignore_ascii_case("code-gpt-5.1-code-mini"))
                 .count(),
             1,
             "should dedupe alias/canonical"
@@ -4159,12 +4178,12 @@ mod agent_merge_tests {
 
     #[test]
     fn disabled_codex_mini_slug_is_preserved_with_command() {
-        let agents = vec![agent("code-gpt-5.1-codex-mini", "coder", false)];
+        let agents = vec![agent("code-gpt-5.1-code-mini", "coder", false)];
         let merged = merge_with_default_agents(agents);
 
         let mini = merged
             .iter()
-            .find(|a| a.name.eq_ignore_ascii_case("code-gpt-5.1-codex-mini"))
+            .find(|a| a.name.eq_ignore_ascii_case("code-gpt-5.1-code-mini"))
             .expect("mini present");
 
         assert!(
@@ -4174,7 +4193,7 @@ mod agent_merge_tests {
         assert_eq!(
             merged
                 .iter()
-                .filter(|a| a.name.eq_ignore_ascii_case("code-gpt-5.1-codex-mini"))
+                .filter(|a| a.name.eq_ignore_ascii_case("code-gpt-5.1-code-mini"))
                 .count(),
             1,
             "should dedupe canonical entry"
@@ -4185,20 +4204,20 @@ mod agent_merge_tests {
     fn codex_mini_alias_then_canonical_last_wins_disabled() {
         let agents = vec![
             agent("codex-mini", "coder", true),
-            agent("code-gpt-5.1-codex-mini", "coder", false),
+            agent("code-gpt-5.1-code-mini", "coder", false),
         ];
         let merged = merge_with_default_agents(agents);
 
         let mini = merged
             .iter()
-            .find(|a| a.name.eq_ignore_ascii_case("code-gpt-5.1-codex-mini"))
+            .find(|a| a.name.eq_ignore_ascii_case("code-gpt-5.1-code-mini"))
             .expect("mini present");
 
         assert!(!mini.enabled, "later canonical disable should win");
         assert_eq!(
             merged
                 .iter()
-                .filter(|a| a.name.eq_ignore_ascii_case("code-gpt-5.1-codex-mini"))
+                .filter(|a| a.name.eq_ignore_ascii_case("code-gpt-5.1-code-mini"))
                 .count(),
             1,
             "should dedupe alias and canonical"
@@ -4208,21 +4227,21 @@ mod agent_merge_tests {
     #[test]
     fn codex_mini_canonical_then_alias_last_wins_disabled() {
         let agents = vec![
-            agent("code-gpt-5.1-codex-mini", "coder", true),
+            agent("code-gpt-5.1-code-mini", "coder", true),
             agent("codex-mini", "coder", false),
         ];
         let merged = merge_with_default_agents(agents);
 
         let mini = merged
             .iter()
-            .find(|a| a.name.eq_ignore_ascii_case("code-gpt-5.1-codex-mini"))
+            .find(|a| a.name.eq_ignore_ascii_case("code-gpt-5.1-code-mini"))
             .expect("mini present");
 
         assert!(!mini.enabled, "later alias disable should win");
         assert_eq!(
             merged
                 .iter()
-                .filter(|a| a.name.eq_ignore_ascii_case("code-gpt-5.1-codex-mini"))
+                .filter(|a| a.name.eq_ignore_ascii_case("code-gpt-5.1-code-mini"))
                 .count(),
             1,
             "should dedupe alias and canonical"

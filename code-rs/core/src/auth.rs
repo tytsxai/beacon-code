@@ -15,6 +15,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
+use tracing::warn;
 
 use code_app_server_protocol::AuthMode;
 
@@ -26,7 +27,7 @@ use crate::token_data::parse_id_token;
 use crate::util::backoff;
 
 #[derive(Debug, Clone)]
-pub struct CodexAuth {
+pub struct CodeAuth {
     pub mode: AuthMode,
 
     pub(crate) api_key: Option<String>,
@@ -34,6 +35,9 @@ pub struct CodexAuth {
     pub(crate) auth_file: PathBuf,
     pub(crate) client: reqwest::Client,
 }
+
+#[deprecated(note = "use CodeAuth")]
+pub type CodexAuth = CodeAuth;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RefreshTokenErrorKind {
@@ -79,13 +83,13 @@ impl std::fmt::Display for RefreshTokenError {
 
 impl std::error::Error for RefreshTokenError {}
 
-impl PartialEq for CodexAuth {
+impl PartialEq for CodeAuth {
     fn eq(&self, other: &Self) -> bool {
         self.mode == other.mode
     }
 }
 
-impl CodexAuth {
+impl CodeAuth {
     pub async fn refresh_token(&self) -> Result<String, RefreshTokenError> {
         let token_data = self
             .get_current_token_data()
@@ -173,7 +177,7 @@ impl CodexAuth {
         code_home: &Path,
         preferred_auth_method: AuthMode,
         originator: &str,
-    ) -> std::io::Result<Option<CodexAuth>> {
+    ) -> std::io::Result<Option<CodeAuth>> {
         load_auth(code_home, true, preferred_auth_method, originator)
     }
 
@@ -296,6 +300,7 @@ impl CodexAuth {
 }
 
 pub const OPENAI_API_KEY_ENV_VAR: &str = "OPENAI_API_KEY";
+pub const CODE_API_KEY_ENV_VAR: &str = "CODE_API_KEY";
 pub const BEACON_API_KEY_ENV_VAR: &str = "BEACON_API_KEY";
 pub const CODEX_API_KEY_ENV_VAR: &str = "CODEX_API_KEY";
 
@@ -306,15 +311,25 @@ fn read_openai_api_key_from_env() -> Option<String> {
 }
 
 pub fn read_code_api_key_from_env() -> Option<String> {
-    for var in [BEACON_API_KEY_ENV_VAR, CODEX_API_KEY_ENV_VAR] {
-        if let Ok(value) = env::var(var) {
-            let trimmed = value.trim();
-            if !trimmed.is_empty() {
-                return Some(trimmed.to_string());
-            }
-        }
-    }
-    None
+    read_api_key_from_env(CODE_API_KEY_ENV_VAR)
+        .or_else(|| read_deprecated_api_key_from_env(BEACON_API_KEY_ENV_VAR))
+        .or_else(|| read_deprecated_api_key_from_env(CODEX_API_KEY_ENV_VAR))
+}
+
+fn read_api_key_from_env(var: &str) -> Option<String> {
+    env::var(var)
+        .ok()
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+}
+
+fn read_deprecated_api_key_from_env(var: &str) -> Option<String> {
+    let value = read_api_key_from_env(var)?;
+    warn!(
+        deprecated_env_var = var,
+        "deprecated API key env var in use; switch to {CODE_API_KEY_ENV_VAR}"
+    );
+    Some(value)
 }
 
 pub fn get_auth_file(code_home: &Path) -> PathBuf {
@@ -393,7 +408,7 @@ fn load_auth(
     include_env_var: bool,
     preferred_auth_method: AuthMode,
     originator: &str,
-) -> std::io::Result<Option<CodexAuth>> {
+) -> std::io::Result<Option<CodeAuth>> {
     // First, check to see if there is a valid auth.json file. If not, we fall
     // back to AuthMode::ApiKey using the OPENAI_API_KEY environment variable
     // (if it is set).
@@ -406,7 +421,7 @@ fn load_auth(
         // environment variable.
         Err(e) if e.kind() == std::io::ErrorKind::NotFound && include_env_var => {
             return match read_openai_api_key_from_env() {
-                Some(api_key) => Ok(Some(CodexAuth::from_api_key_with_client(&api_key, client))),
+                Some(api_key) => Ok(Some(CodeAuth::from_api_key_with_client(&api_key, client))),
                 None => Ok(None),
             };
         }
@@ -431,7 +446,7 @@ fn load_auth(
             .is_some_and(|plan| matches!(plan, PlanType::Known(KnownPlan::Enterprise)));
 
         if plan_requires_api_key {
-            return Ok(Some(CodexAuth::from_api_key_with_client(api_key, client)));
+            return Ok(Some(CodeAuth::from_api_key_with_client(api_key, client)));
         }
 
         // Should any of these be AuthMode::ChatGPT with the api_key set?
@@ -443,7 +458,7 @@ fn load_auth(
                 // - If the caller prefers API key, use it.
                 // - Otherwise, prefer ChatGPT and ignore the API key.
                 if preferred_auth_method == AuthMode::ApiKey {
-                    return Ok(Some(CodexAuth::from_api_key_with_client(api_key, client)));
+                    return Ok(Some(CodeAuth::from_api_key_with_client(api_key, client)));
                 }
                 // else: fall through to ChatGPT auth
             }
@@ -452,14 +467,14 @@ fn load_auth(
                 // Perhaps the user ran `code login --with-api-key` or updated
                 // auth.json by hand. Either way, let's assume they are trying
                 // to use their API key.
-                return Ok(Some(CodexAuth::from_api_key_with_client(api_key, client)));
+                return Ok(Some(CodeAuth::from_api_key_with_client(api_key, client)));
             }
         }
     }
 
     // For the AuthMode::ChatGPT variant, perhaps neither api_key nor
     // openai_api_key should exist?
-    Ok(Some(CodexAuth {
+    Ok(Some(CodeAuth {
         api_key: None,
         mode: AuthMode::ChatGPT,
         auth_file,
@@ -697,7 +712,7 @@ use std::sync::RwLock;
 #[derive(Clone, Debug)]
 struct CachedAuth {
     preferred_auth_mode: AuthMode,
-    auth: Option<CodexAuth>,
+    auth: Option<CodeAuth>,
 }
 
 #[cfg(test)]
@@ -773,7 +788,7 @@ mod tests {
         )
         .expect("failed to write auth file");
 
-        let CodexAuth {
+        let CodeAuth {
             api_key,
             mode,
             auth_dot_json,
@@ -825,7 +840,7 @@ mod tests {
         )
         .expect("failed to write auth file");
 
-        let CodexAuth {
+        let CodeAuth {
             api_key,
             mode,
             auth_dot_json,
@@ -876,7 +891,7 @@ mod tests {
         )
         .expect("failed to write auth file");
 
-        let CodexAuth {
+        let CodeAuth {
             api_key,
             mode,
             auth_dot_json,
@@ -1035,7 +1050,7 @@ mod tests {
 
         write_auth_json(&auth_file, &rotated_auth).expect("failed to write rotated auth");
 
-        let auth = CodexAuth {
+        let auth = CodeAuth {
             mode: AuthMode::ChatGPT,
             api_key: None,
             auth_dot_json: Arc::new(Mutex::new(Some(cached_auth))),
@@ -1111,7 +1126,7 @@ mod tests {
 
 /// Central manager providing a single source of truth for auth.json derived
 /// authentication data. It loads once (or on preference change) and then
-/// hands out cloned `CodexAuth` values so the rest of the program has a
+/// hands out cloned `CodeAuth` values so the rest of the program has a
 /// consistent snapshot.
 ///
 /// External modifications to `auth.json` will NOT be observed until
@@ -1134,9 +1149,9 @@ impl AuthManager {
         let mut effective_mode = preferred_auth_mode;
         let auth = if let Some(api_key) = read_code_api_key_from_env() {
             effective_mode = AuthMode::ApiKey;
-            Some(CodexAuth::from_api_key(&api_key))
+            Some(CodeAuth::from_api_key(&api_key))
         } else {
-            CodexAuth::from_code_home(&code_home, preferred_auth_mode, &originator)
+            CodeAuth::from_code_home(&code_home, preferred_auth_mode, &originator)
                 .ok()
                 .flatten()
         };
@@ -1151,8 +1166,8 @@ impl AuthManager {
         }
     }
 
-    /// Create an AuthManager with a specific CodexAuth, for testing only.
-    pub fn from_auth_for_testing(auth: CodexAuth) -> Arc<Self> {
+    /// Create an AuthManager with a specific CodeAuth, for testing only.
+    pub fn from_auth_for_testing(auth: CodeAuth) -> Arc<Self> {
         let preferred_auth_mode = auth.mode;
         let cached = CachedAuth {
             preferred_auth_mode,
@@ -1167,7 +1182,7 @@ impl AuthManager {
     }
 
     /// Current cached auth (clone). May be `None` if not logged in or load failed.
-    pub fn auth(&self) -> Option<CodexAuth> {
+    pub fn auth(&self) -> Option<CodeAuth> {
         self.inner.read().ok().and_then(|c| c.auth.clone())
     }
 
@@ -1184,12 +1199,12 @@ impl AuthManager {
     pub fn reload(&self) -> bool {
         let preferred = self.preferred_auth_method();
         let env_auth = if self.enable_code_api_key_env {
-            read_code_api_key_from_env().map(|api_key| CodexAuth::from_api_key(&api_key))
+            read_code_api_key_from_env().map(|api_key| CodeAuth::from_api_key(&api_key))
         } else {
             None
         };
         let new_auth = env_auth.clone().or_else(|| {
-            CodexAuth::from_code_home(&self.code_home, preferred, &self.originator)
+            CodeAuth::from_code_home(&self.code_home, preferred, &self.originator)
                 .ok()
                 .flatten()
         });
@@ -1204,7 +1219,7 @@ impl AuthManager {
         }
     }
 
-    fn auths_equal(a: &Option<CodexAuth>, b: &Option<CodexAuth>) -> bool {
+    fn auths_equal(a: &Option<CodeAuth>, b: &Option<CodeAuth>) -> bool {
         match (a, b) {
             (None, None) => true,
             (Some(a), Some(b)) => a == b,

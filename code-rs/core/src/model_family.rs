@@ -9,8 +9,8 @@ const GPT_5_CODEX_INSTRUCTIONS: &str = include_str!("../gpt_5_codex_prompt.md");
 const GPT_5_CODEX_INSTRUCTIONS_ZH: &str = include_str!("../gpt_5_codex_prompt_zh.md");
 const GPT_5_1_INSTRUCTIONS: &str = include_str!("../gpt_5_1_prompt.md");
 const GPT_5_1_INSTRUCTIONS_ZH: &str = include_str!("../gpt_5_1_prompt_zh.md");
-const GPT_5_1_CODEX_MAX_INSTRUCTIONS: &str = include_str!("../gpt-5.1-codex-max_prompt.md");
-const GPT_5_1_CODEX_MAX_INSTRUCTIONS_ZH: &str = include_str!("../gpt-5.1-codex-max_prompt_zh.md");
+const GPT_5_1_CODEX_MAX_INSTRUCTIONS: &str = include_str!("../gpt-5.1-code-max_prompt.md");
+const GPT_5_1_CODEX_MAX_INSTRUCTIONS_ZH: &str = include_str!("../gpt-5.1-code-max_prompt_zh.md");
 
 /// A model family is a group of models that share certain characteristics.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -127,7 +127,7 @@ pub fn find_family_for_model(slug: &str) -> Option<ModelFamily> {
             needs_special_apply_patch_instructions: true,
             base_instructions_zh: Some(BASE_INSTRUCTIONS_ZH.to_string()),
         )
-    } else if slug.starts_with("gpt-5.1-codex-max") {
+    } else if slug.starts_with("gpt-5.1-code-max") || slug.starts_with("gpt-5.1-codex-max") {
         model_family!(
             slug, slug,
             supports_reasoning_summaries: true,
@@ -137,6 +137,8 @@ pub fn find_family_for_model(slug: &str) -> Option<ModelFamily> {
             apply_patch_tool_type: Some(ApplyPatchToolType::Freeform),
         )
     } else if slug.starts_with("codex-")
+        || slug.starts_with("gpt-5-code")
+        || slug.starts_with("gpt-5.1-code")
         || slug.starts_with("gpt-5-codex")
         || slug.starts_with("gpt-5.1-codex")
     {

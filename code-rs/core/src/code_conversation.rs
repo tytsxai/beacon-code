@@ -4,13 +4,13 @@ use crate::protocol::Event;
 use crate::protocol::Op;
 use crate::protocol::Submission;
 
-pub struct CodexConversation {
+pub struct BeaconConversation {
     codex: Codex,
 }
 
 /// Conduit for the bidirectional stream of messages that compose a conversation
 /// in Beacon Code.
-impl CodexConversation {
+impl BeaconConversation {
     pub(crate) fn new(codex: Codex) -> Self {
         Self { codex }
     }
@@ -28,3 +28,6 @@ impl CodexConversation {
         self.codex.next_event().await
     }
 }
+
+#[deprecated(note = "use BeaconConversation")]
+pub type CodexConversation = BeaconConversation;

@@ -5,7 +5,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use code_core::CodexConversation;
+use code_core::BeaconConversation;
 use code_core::ConversationManager;
 use code_core::NewConversation;
 use code_core::config::Config as CodexConfig;
@@ -160,7 +160,7 @@ pub async fn run_code_tool_session(
 }
 
 pub async fn run_code_tool_session_reply(
-    conversation: Arc<CodexConversation>,
+    conversation: Arc<BeaconConversation>,
     outgoing: Arc<OutgoingMessageSender>,
     request_id: RequestId,
     prompt: String,
@@ -215,7 +215,7 @@ pub async fn run_code_tool_session_reply(
 }
 
 async fn run_code_tool_session_inner(
-    codex: Arc<CodexConversation>,
+    codex: Arc<BeaconConversation>,
     outgoing: Arc<OutgoingMessageSender>,
     request_id: RequestId,
     session_id: Uuid,

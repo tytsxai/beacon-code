@@ -65,15 +65,15 @@ fn reasoning_effort_rank(effort: ReasoningEffort) -> u8 {
 pub fn supported_reasoning_efforts_for_model(model: &str) -> &'static [ReasoningEffort] {
     let lower = model.to_ascii_lowercase();
 
-    if lower.starts_with("gpt-5.1-codex-max") {
+    if lower.starts_with("gpt-5.1-code-max") || lower.starts_with("gpt-5.1-codex-max") {
         return GPT5_1_CODEX_MAX_EFFORTS;
     }
 
-    if lower.starts_with("gpt-5.1-codex-mini") {
+    if lower.starts_with("gpt-5.1-code-mini") || lower.starts_with("gpt-5.1-codex-mini") {
         return GPT5_1_CODEX_MINI_EFFORTS;
     }
 
-    if lower.starts_with("gpt-5.1-codex") {
+    if lower.starts_with("gpt-5.1-code") || lower.starts_with("gpt-5.1-codex") {
         return GPT5_1_CODEX_EFFORTS;
     }
 
@@ -81,11 +81,11 @@ pub fn supported_reasoning_efforts_for_model(model: &str) -> &'static [Reasoning
         return GPT5_1_EFFORTS;
     }
 
-    if lower.starts_with("gpt-5-codex-mini") {
+    if lower.starts_with("gpt-5-code-mini") || lower.starts_with("gpt-5-codex-mini") {
         return GPT5_CODEX_MINI_EFFORTS;
     }
 
-    if lower.starts_with("gpt-5-codex") {
+    if lower.starts_with("gpt-5-code") || lower.starts_with("gpt-5-codex") {
         return GPT5_CODEX_EFFORTS;
     }
 
@@ -132,15 +132,15 @@ mod tests {
     }
 
     #[test]
-    fn clamps_minimal_up_for_codex_mini() {
+    fn clamps_minimal_up_for_code_mini() {
         let clamped =
-            clamp_reasoning_effort_for_model("gpt-5.1-codex-mini", ReasoningEffort::Minimal);
+            clamp_reasoning_effort_for_model("gpt-5.1-code-mini", ReasoningEffort::Minimal);
         assert_eq!(clamped, ReasoningEffort::Medium);
     }
 
     #[test]
     fn keeps_supported_effort() {
-        let clamped = clamp_reasoning_effort_for_model("gpt-5.1-codex-max", ReasoningEffort::High);
+        let clamped = clamp_reasoning_effort_for_model("gpt-5.1-code-max", ReasoningEffort::High);
         assert_eq!(clamped, ReasoningEffort::High);
     }
 }

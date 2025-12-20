@@ -67,7 +67,10 @@ pub fn get_model_info(model_family: &ModelFamily) -> Option<ModelInfo> {
         // https://platform.openai.com/docs/models/gpt-3.5-turbo
         "gpt-3.5-turbo" => Some(ModelInfo::new(16_385, 4_096)),
 
-        _ if slug.starts_with("gpt-5-codex")
+        _ if slug.starts_with("gpt-5-code")
+            || slug.starts_with("gpt-5.1-code")
+            || slug.starts_with("gpt-5.1-code-max")
+            || slug.starts_with("gpt-5-codex")
             || slug.starts_with("gpt-5.1-codex")
             || slug.starts_with("gpt-5.1-codex-max") =>
         {

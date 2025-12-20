@@ -6,7 +6,7 @@ use agent_client_protocol as acp;
 use agent_client_protocol::ToolCallUpdateFields;
 use anyhow::Context as _;
 use anyhow::Result;
-use code_core::CodexConversation;
+use code_core::BeaconConversation;
 use code_core::ConversationManager;
 use code_core::NewConversation;
 use code_core::config::Config as CodexConfig;
@@ -64,7 +64,7 @@ pub async fn new_session(
 
 pub async fn prompt(
     acp_session_id: acp::SessionId,
-    codex: Arc<CodexConversation>,
+    codex: Arc<BeaconConversation>,
     prompt: Vec<acp::ContentBlock>,
     outgoing: Arc<OutgoingMessageSender>,
 ) -> Result<acp::StopReason> {

@@ -1155,7 +1155,7 @@ fn clamp_text_verbosity_for_model(
 }
 
 fn supported_text_verbosity_for_model(model: &str) -> &'static [TextVerbosityConfig] {
-    if model.eq_ignore_ascii_case("gpt-5.1-codex-max") {
+    if model.eq_ignore_ascii_case("gpt-5.1-code-max") {
         return &[TextVerbosityConfig::Medium];
     }
 

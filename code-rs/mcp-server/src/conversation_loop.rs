@@ -5,7 +5,7 @@ use crate::outgoing_message::OutgoingMessageSender;
 use crate::outgoing_message::OutgoingMessageSenderExt;
 use crate::outgoing_message::OutgoingNotificationMeta;
 use crate::patch_approval::handle_patch_approval_request;
-use code_core::CodexConversation;
+use code_core::BeaconConversation;
 use code_core::protocol::AgentMessageEvent;
 use code_core::protocol::ApplyPatchApprovalRequestEvent;
 use code_core::protocol::EventMsg;
@@ -14,7 +14,7 @@ use mcp_types::RequestId;
 use tracing::error;
 
 pub async fn run_conversation_loop(
-    codex: Arc<CodexConversation>,
+    codex: Arc<BeaconConversation>,
     outgoing: Arc<OutgoingMessageSender>,
     request_id: RequestId,
 ) {

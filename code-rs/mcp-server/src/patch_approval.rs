@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-use code_core::CodexConversation;
+use code_core::BeaconConversation;
 use code_core::protocol::FileChange;
 use code_core::protocol::Op;
 use code_core::protocol::ReviewDecision;
@@ -54,7 +54,7 @@ pub(crate) async fn handle_patch_approval_request(
     grant_root: Option<PathBuf>,
     changes: HashMap<PathBuf, FileChange>,
     outgoing: Arc<OutgoingMessageSender>,
-    codex: Arc<CodexConversation>,
+    codex: Arc<BeaconConversation>,
     request_id: RequestId,
     tool_call_id: String,
     event_id: String,
@@ -121,7 +121,7 @@ pub(crate) async fn handle_patch_approval_request(
 pub(crate) async fn on_patch_approval_response(
     approval_id: String,
     receiver: tokio::sync::oneshot::Receiver<mcp_types::Result>,
-    codex: Arc<CodexConversation>,
+    codex: Arc<BeaconConversation>,
 ) {
     let value = match timeout(APPROVAL_TIMEOUT, receiver).await {
         Ok(Ok(value)) => value,

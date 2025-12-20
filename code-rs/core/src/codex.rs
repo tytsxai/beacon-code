@@ -48,7 +48,7 @@ use code_protocol::protocol::SandboxPolicy as ProtoSandboxPolicy;
 // unused: AuthManager
 // unused: ConversationHistoryResponseEvent
 use crate::AuthManager;
-use crate::CodexAuth;
+use crate::CodeAuth;
 use crate::EnvironmentContextEmission;
 use crate::account_usage;
 use crate::agent_defaults::agent_model_spec;
@@ -973,7 +973,7 @@ pub struct CodexSpawnOk {
 
 impl Codex {
     /// Spawn a new [`Codex`] and initialize the session.
-    pub async fn spawn(config: Config, auth: Option<CodexAuth>) -> CodexResult<CodexSpawnOk> {
+    pub async fn spawn(config: Config, auth: Option<CodeAuth>) -> CodexResult<CodexSpawnOk> {
         let auth_manager = auth.map(crate::AuthManager::from_auth_for_testing);
         Self::spawn_with_auth_manager(config, auth_manager).await
     }
@@ -4517,7 +4517,7 @@ async fn submission_loop(
                         config.model_family.slug.as_str(),
                         auth_snapshot
                             .as_ref()
-                            .and_then(super::auth::CodexAuth::get_account_id),
+                            .and_then(super::auth::CodeAuth::get_account_id),
                         auth_snapshot.as_ref().map(|auth| auth.mode),
                         config.otel.log_user_prompt,
                         crate::terminal::user_agent(),

@@ -10,7 +10,7 @@ use std::collections::HashSet;
 
 const CLOUD_MODEL_ENV_FLAG: &str = "CODE_ENABLE_CLOUD_AGENT_MODEL";
 
-const CODE_GPT5_CODEX_READ_ONLY: &[&str] = &[
+const CODE_GPT5_CODE_READ_ONLY: &[&str] = &[
     "-s",
     "read-only",
     "-a",
@@ -18,26 +18,26 @@ const CODE_GPT5_CODEX_READ_ONLY: &[&str] = &[
     "exec",
     "--skip-git-repo-check",
 ];
-const CODE_GPT5_CODEX_WRITE: &[&str] = &[
+const CODE_GPT5_CODE_WRITE: &[&str] = &[
     "-s",
     "workspace-write",
     "--dangerously-bypass-approvals-and-sandbox",
     "exec",
     "--skip-git-repo-check",
 ];
-const CLOUD_GPT5_CODEX_READ_ONLY: &[&str] = &[];
-const CLOUD_GPT5_CODEX_WRITE: &[&str] = &[];
+const CLOUD_GPT5_CODE_READ_ONLY: &[&str] = &[];
+const CLOUD_GPT5_CODE_WRITE: &[&str] = &[];
 
 /// Canonical list of built-in agent model slugs used when no `[[agents]]`
 /// entries are configured. The ordering here controls priority for legacy
 /// CLI-name lookups.
 pub const DEFAULT_AGENT_NAMES: &[&str] = &[
     // Frontline for moderate/challenging tasks.
-    "code-gpt-5.1-codex-max",
+    "code-gpt-5.1-code-max",
     // Straightforward / cost-aware.
-    "code-gpt-5.1-codex-mini",
+    "code-gpt-5.1-code-mini",
     // Optional cloud agent.
-    "cloud-gpt-5.1-codex-max",
+    "cloud-gpt-5.1-code-max",
 ];
 
 #[derive(Debug, Clone)]
@@ -79,16 +79,19 @@ impl AgentModelSpec {
 
 const AGENT_MODEL_SPECS: &[AgentModelSpec] = &[
     AgentModelSpec {
-        slug: "code-gpt-5.1-codex-max",
+        slug: "code-gpt-5.1-code-max",
         family: "code",
         cli: "coder",
-        read_only_args: CODE_GPT5_CODEX_READ_ONLY,
-        write_args: CODE_GPT5_CODEX_WRITE,
-        model_args: &["--model", "gpt-5.1-codex-max"],
+        read_only_args: CODE_GPT5_CODE_READ_ONLY,
+        write_args: CODE_GPT5_CODE_WRITE,
+        model_args: &["--model", "gpt-5.1-code-max"],
         description: "Frontline coding agent for all work; top of the line speed, reasoning and execution.",
         enabled_by_default: true,
         aliases: &[
+            "code-gpt-5.1-codex-max",
+            "code-gpt-5.1-code",
             "code-gpt-5.1-codex",
+            "code-gpt-5-code",
             "code-gpt-5-codex",
             "coder",
             "code",
@@ -98,28 +101,41 @@ const AGENT_MODEL_SPECS: &[AgentModelSpec] = &[
         is_frontline: true,
     },
     AgentModelSpec {
-        slug: "code-gpt-5.1-codex-mini",
+        slug: "code-gpt-5.1-code-mini",
         family: "code",
         cli: "coder",
-        read_only_args: CODE_GPT5_CODEX_READ_ONLY,
-        write_args: CODE_GPT5_CODEX_WRITE,
-        model_args: &["--model", "gpt-5.1-codex-mini"],
+        read_only_args: CODE_GPT5_CODE_READ_ONLY,
+        write_args: CODE_GPT5_CODE_WRITE,
+        model_args: &["--model", "gpt-5.1-code-mini"],
         description: "Straightforward coding tasks: cheapest and quick; great for implementation, refactors, multi-file edits, and code reviews.",
         enabled_by_default: true,
-        aliases: &["code-gpt-5-codex-mini", "codex-mini", "coder-mini"],
+        aliases: &[
+            "code-gpt-5.1-codex-mini",
+            "code-gpt-5-code-mini",
+            "code-gpt-5-codex-mini",
+            "codex-mini",
+            "coder-mini",
+        ],
         gating_env: None,
         is_frontline: false,
     },
     AgentModelSpec {
-        slug: "cloud-gpt-5.1-codex-max",
+        slug: "cloud-gpt-5.1-code-max",
         family: "cloud",
         cli: "cloud",
-        read_only_args: CLOUD_GPT5_CODEX_READ_ONLY,
-        write_args: CLOUD_GPT5_CODEX_WRITE,
-        model_args: &["--model", "gpt-5.1-codex-max"],
-        description: "Cloud-hosted gpt-5.1-codex-max agent. Requires the CODE_ENABLE_CLOUD_AGENT_MODEL flag and carries the latency of a remote run.",
+        read_only_args: CLOUD_GPT5_CODE_READ_ONLY,
+        write_args: CLOUD_GPT5_CODE_WRITE,
+        model_args: &["--model", "gpt-5.1-code-max"],
+        description: "Cloud-hosted gpt-5.1-code-max agent. Requires the CODE_ENABLE_CLOUD_AGENT_MODEL flag and carries the latency of a remote run.",
         enabled_by_default: false,
-        aliases: &["cloud-gpt-5.1-codex", "cloud-gpt-5-codex", "cloud"],
+        aliases: &[
+            "cloud-gpt-5.1-codex-max",
+            "cloud-gpt-5.1-code",
+            "cloud-gpt-5.1-codex",
+            "cloud-gpt-5-code",
+            "cloud-gpt-5-codex",
+            "cloud",
+        ],
         gating_env: Some(CLOUD_MODEL_ENV_FLAG),
         is_frontline: false,
     },
@@ -161,7 +177,7 @@ fn model_guide_intro(active_agents: &[String]) -> String {
         .collect();
 
     if present_frontline.is_empty() {
-        present_frontline.push("code-gpt-5.1-codex-max".to_string());
+        present_frontline.push("code-gpt-5.1-code-max".to_string());
     }
     let frontline_str = present_frontline.join(", ");
 

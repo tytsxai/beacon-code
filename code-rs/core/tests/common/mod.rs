@@ -2,7 +2,7 @@ use std::path::Path;
 use std::sync::Arc;
 use std::sync::Mutex;
 
-use code_core::CodexConversation;
+use code_core::BeaconConversation;
 use code_core::config::Config;
 use code_core::config::ConfigOverrides;
 use code_core::config::ConfigToml;
@@ -75,7 +75,7 @@ pub fn load_sse_fixture_with_id(path: impl AsRef<Path>, id: &str) -> String {
 
 /// Waits for the next event that matches `predicate`, timing out to surface
 /// hung conversations quickly during tests.
-pub async fn wait_for_event<F>(conversation: &CodexConversation, mut predicate: F) -> EventMsg
+pub async fn wait_for_event<F>(conversation: &BeaconConversation, mut predicate: F) -> EventMsg
 where
     F: FnMut(&EventMsg) -> bool,
 {

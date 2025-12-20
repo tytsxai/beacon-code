@@ -6,7 +6,7 @@ use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use code_core::AuthManager;
-use code_core::CodexConversation;
+use code_core::BeaconConversation;
 use code_core::ConversationManager;
 use code_core::NewConversation;
 use code_core::config::Config;
@@ -542,7 +542,7 @@ impl CodexMessageProcessor {
 async fn apply_bespoke_event_handling(
     event: Event,
     conversation_id: ConversationId,
-    conversation: Arc<CodexConversation>,
+    conversation: Arc<BeaconConversation>,
     outgoing: Arc<OutgoingMessageSender>,
     _pending_interrupts: Arc<Mutex<HashMap<Uuid, Vec<RequestId>>>>,
 ) {
@@ -682,7 +682,7 @@ fn derive_config_from_params(
 async fn on_patch_approval_response(
     approval_id: String,
     receiver: tokio::sync::oneshot::Receiver<mcp_types::Result>,
-    codex: Arc<CodexConversation>,
+    codex: Arc<BeaconConversation>,
 ) {
     let value = match timeout(APPROVAL_TIMEOUT, receiver).await {
         Ok(Ok(value)) => value,
@@ -736,7 +736,7 @@ async fn on_patch_approval_response(
 async fn on_exec_approval_response(
     approval_id: String,
     receiver: tokio::sync::oneshot::Receiver<mcp_types::Result>,
-    conversation: Arc<CodexConversation>,
+    conversation: Arc<BeaconConversation>,
 ) {
     let value = match timeout(APPROVAL_TIMEOUT, receiver).await {
         Ok(Ok(value)) => value,

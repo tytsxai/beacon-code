@@ -16,7 +16,7 @@ use code_auto_drive_core::MODEL_SLUG;
 use code_auto_drive_core::start_auto_coordinator;
 use code_core::AuthManager;
 use code_core::BUILT_IN_OSS_MODEL_PROVIDER_ID;
-use code_core::CodexConversation;
+use code_core::BeaconConversation;
 use code_core::ConversationManager;
 use code_core::NewConversation;
 use code_core::config::Config;
@@ -595,7 +595,7 @@ async fn run_auto_drive_session(
     goal: String,
     images: Vec<PathBuf>,
     config: Config,
-    conversation: Arc<CodexConversation>,
+    conversation: Arc<BeaconConversation>,
     mut event_processor: Box<dyn EventProcessor>,
     last_message_path: Option<PathBuf>,
 ) -> anyhow::Result<()> {
@@ -905,7 +905,7 @@ fn make_assistant_message(text: String) -> ResponseItem {
 }
 
 async fn submit_and_wait(
-    conversation: &Arc<CodexConversation>,
+    conversation: &Arc<BeaconConversation>,
     event_processor: &mut dyn EventProcessor,
     prompt_text: String,
 ) -> anyhow::Result<TurnResult> {

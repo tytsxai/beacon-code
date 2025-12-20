@@ -6,7 +6,7 @@
 //!      table (Code also reads legacy `~/.codex/config.toml`).
 //!      key. These override or extend the defaults at runtime.
 
-use crate::CodexAuth;
+use crate::CodeAuth;
 use crate::error::CodexErr;
 use crate::error::EnvVarError;
 use code_app_server_protocol::AuthMode;
@@ -185,7 +185,7 @@ impl ModelProviderInfo {
     pub async fn create_request_builder<'a>(
         &'a self,
         client: &'a reqwest::Client,
-        auth: &Option<CodexAuth>,
+        auth: &Option<CodeAuth>,
     ) -> crate::error::Result<reqwest::RequestBuilder> {
         let effective_auth = self.effective_auth(auth)?;
 
@@ -203,7 +203,7 @@ impl ModelProviderInfo {
     pub async fn create_compact_request_builder<'a>(
         &'a self,
         client: &'a reqwest::Client,
-        auth: &Option<CodexAuth>,
+        auth: &Option<CodeAuth>,
     ) -> crate::error::Result<reqwest::RequestBuilder> {
         if self.wire_api != WireApi::Responses {
             return Err(CodexErr::UnsupportedOperation(
@@ -225,9 +225,9 @@ impl ModelProviderInfo {
         Ok(self.apply_http_headers(builder))
     }
 
-    fn effective_auth(&self, auth: &Option<CodexAuth>) -> crate::error::Result<Option<CodexAuth>> {
+    fn effective_auth(&self, auth: &Option<CodeAuth>) -> crate::error::Result<Option<CodeAuth>> {
         match self.api_key() {
-            Ok(Some(key)) => Ok(Some(CodexAuth::from_api_key(&key))),
+            Ok(Some(key)) => Ok(Some(CodeAuth::from_api_key(&key))),
             Ok(None) => Ok(auth.clone()),
             Err(err) => {
                 if auth.is_some() {
@@ -257,10 +257,10 @@ impl ModelProviderInfo {
             })
     }
 
-    pub(crate) fn get_full_url(&self, auth: &Option<CodexAuth>) -> String {
+    pub(crate) fn get_full_url(&self, auth: &Option<CodeAuth>) -> String {
         let default_base_url = if matches!(
             auth,
-            Some(CodexAuth {
+            Some(CodeAuth {
                 mode: AuthMode::ChatGPT,
                 ..
             })
@@ -281,7 +281,7 @@ impl ModelProviderInfo {
         }
     }
 
-    pub(crate) fn get_compact_url(&self, auth: &Option<CodexAuth>) -> Option<String> {
+    pub(crate) fn get_compact_url(&self, auth: &Option<CodeAuth>) -> Option<String> {
         if self.wire_api != WireApi::Responses {
             return None;
         }

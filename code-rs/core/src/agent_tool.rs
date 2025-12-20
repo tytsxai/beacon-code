@@ -917,7 +917,7 @@ async fn execute_model_with_permissions(
         || matches!(command_stem_lower.as_str(), "claude" | "gemini" | "qwen")
     {
         return Err(
-            "This fork only supports running built-in Beacon Code agents (e.g., code-gpt-5.1-codex-max, code-gpt-5.1-codex-mini). External agent CLIs are disabled."
+            "This fork only supports running built-in Beacon Code agents (e.g., code-gpt-5.1-code-max, code-gpt-5.1-code-mini). External agent CLIs are disabled."
                 .to_string(),
         );
     }
@@ -1559,7 +1559,7 @@ pub fn create_agent_tool(allowed_models: &[String]) -> OpenAiTool {
                 },
             }),
                 description: Some(
-                    "Optional array of model names (e.g., ['code-gpt-5.1-codex-max','code-gpt-5.1-codex-mini'])".to_string(),
+                    "Optional array of model names (e.g., ['code-gpt-5.1-code-max','code-gpt-5.1-code-mini'])".to_string(),
                 ),
         },
     );
@@ -1982,7 +1982,7 @@ mod tests {
 
     fn agent_with_command(command: &str) -> AgentConfig {
         AgentConfig {
-            name: "code-gpt-5.1-codex-max".to_string(),
+            name: "code-gpt-5.1-code-max".to_string(),
             command: command.to_string(),
             args: Vec::new(),
             read_only: false,
