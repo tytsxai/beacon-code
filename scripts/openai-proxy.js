@@ -138,7 +138,7 @@ const server = http.createServer((req, res) => {
       if (up.pathname.startsWith("/v1/responses"))
         incoming["openai-beta"] = RESPONSES_BETA;
       incoming["user-agent"] = "code-proxy/1.0";
-      incoming["originator"] = "codex_cli_rs";
+      incoming["originator"] = "code_cli_rs";
       if (IDEMPOTENCY_KEY === "auto")
         incoming["idempotency-key"] = crypto.randomUUID();
     } else {
@@ -151,7 +151,7 @@ const server = http.createServer((req, res) => {
       if (up.pathname.startsWith("/v1/responses")) {
         if (!incoming["openai-beta"]) incoming["openai-beta"] = RESPONSES_BETA;
       }
-      if (!incoming["originator"]) incoming["originator"] = "codex_cli_rs";
+      if (!incoming["originator"]) incoming["originator"] = "code_cli_rs";
       if (STRIP_SESSION_ID && "session_id" in incoming)
         delete incoming["session_id"];
       if (IDEMPOTENCY_KEY === "auto")

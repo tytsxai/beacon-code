@@ -1,31 +1,26 @@
-set working-directory := "codex-rs"
+set working-directory := "code-rs"
 set positional-arguments
 
 # Display help
 help:
     just -l
 
-# `codex`
-alias c := codex
-codex *args:
-    cargo run --bin codex -- "$@"
+# `code`
+alias c := code
+code *args:
+    cargo run --bin code -- "$@"
 
-# `codex exec`
+# `code exec`
 exec *args:
-    cargo run --bin codex -- exec "$@"
+    cargo run --bin code -- exec "$@"
 
-# `codex tui`
+# `code tui`
 tui *args:
-    cargo run --bin codex -- tui "$@"
+    cargo run --bin code -- tui "$@"
 
 # Run the CLI version of the file-search crate.
 file-search *args:
-    cargo run --bin codex-file-search -- "$@"
-
-# Build the CLI and run the app-server test client
-app-server-test-client *args:
-    cargo build -p codex-cli
-    cargo run -p codex-app-server-test-client -- --codex-bin ./target/debug/codex "$@"
+    cargo run --bin code-file-search -- "$@"
 
 # format code
 fmt:
@@ -50,4 +45,4 @@ test:
 
 # Run the MCP server
 mcp-server-run *args:
-    cargo run -p codex-mcp-server -- "$@"
+    cargo run -p code-mcp-server -- "$@"

@@ -8,6 +8,8 @@
 
 ### CLI 用法
 
+主命令为 `beacon`，`code` 为短别名（若与 VS Code 冲突可用 `coder`）。以下示例沿用 `code`。
+
 | 命令              | 作用                       | 示例                               |
 | ----------------- | ------------------------- | ---------------------------------- |
 | `code`           | 进入交互式 TUI            | `code`                            |
@@ -60,8 +62,8 @@ code "explain this codebase to me"
 
 备注：
 
-- 本仓库同时包含 `codex-rs/` 与 `code-rs/` 两套实现，它们在指令发现规则上有差异；权威说明见 `docs/agents_md.md`。
-- `AGENTS.override.md` 在 `codex-rs/` 中支持；在 `code-rs/` 当前不生效。
+- 本仓库同时包含 `code-rs/` 与 `third_party/upstream/codex-rs/` 两套实现，它们在指令发现规则上有差异；权威说明见 `docs/agents_md.md`。
+- `AGENTS.override.md` 在 `third_party/upstream/codex-rs/` 中支持；在 `code-rs/` 当前不生效。
 
 更多用法见 [AGENTS 文档](https://agents.md/)。
 

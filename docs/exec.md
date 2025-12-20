@@ -46,7 +46,7 @@ code exec "count the total number of lines of code in this project"
 {"type":"turn.started"}
 {"type":"item.completed","item":{"id":"item_0","item_type":"reasoning","text":"**Searching for README files**"}}
 {"type":"item.started","item":{"id":"item_1","item_type":"command_execution","command":"bash -lc ls","aggregated_output":"","status":"in_progress"}}
-{"type":"item.completed","item":{"id":"item_1","item_type":"command_execution","command":"bash -lc ls","aggregated_output":"AGENTS.md\nCHANGELOG.md\nREADME.md\ncode-rs\ncodex-rs\ncodex-cli\ndocs\nscripts\nsdk\n","exit_code":0,"status":"completed"}}
+{"type":"item.completed","item":{"id":"item_1","item_type":"command_execution","command":"bash -lc ls","aggregated_output":"AGENTS.md\nCHANGELOG.md\nREADME.md\ncode-rs\nbeacon-cli\nthird_party\ndocs\nscripts\nsdk\n","exit_code":0,"status":"completed"}}
 {"type":"item.completed","item":{"id":"item_2","item_type":"reasoning","text":"**Checking repository root for README**"}}
 {"type":"item.completed","item":{"id":"item_3","item_type":"assistant_message","text":"Yep — there’s a `README.md` in the repository root."}}
 {"type":"turn.completed","usage":{"input_tokens":24763,"cached_input_tokens":24448,"output_tokens":122}}
@@ -103,10 +103,10 @@ code exec --model gpt-5.1 --json resume --last "Fix use-after-free issues"
 
 ## 认证
 
-默认情况下，`code exec` 使用与 TUI 与 VSCode 扩展相同的认证方式。可通过环境变量 `CODEX_API_KEY` 覆盖 API Key；该变量名沿用上游，为兼容保留。
+默认情况下，`code exec` 使用与 TUI 与 VSCode 扩展相同的认证方式。可通过环境变量 `BEACON_API_KEY` 覆盖 API Key（兼容 `CODEX_API_KEY`）。
 
 ```shell
-CODEX_API_KEY=your-api-key-here code exec "Fix merge conflict"
+BEACON_API_KEY=your-api-key-here code exec "Fix merge conflict"
 ```
 
-注意：`CODEX_API_KEY` 仅在 `code exec` 中受支持。
+注意：`BEACON_API_KEY` / `CODEX_API_KEY` 仅在 `code exec` 中受支持。

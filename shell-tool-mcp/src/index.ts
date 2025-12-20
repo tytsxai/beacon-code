@@ -1,4 +1,4 @@
-// Launches the Beacon Code exec MCP server binary (codex-exec-mcp-server) bundled in this package.
+// Launches the Beacon Code exec MCP server binary bundled in this package.
 
 import { spawn } from "node:child_process";
 import { accessSync, constants } from "node:fs";
@@ -12,8 +12,20 @@ async function main(): Promise<void> {
   const targetTriple = resolveTargetTriple(process.platform, process.arch);
   const vendorRoot = path.resolve(__dirname, "..", "vendor");
   const targetRoot = path.join(vendorRoot, targetTriple);
-  const execveWrapperPath = path.join(targetRoot, "codex-execve-wrapper");
-  const serverPath = path.join(targetRoot, "codex-exec-mcp-server");
+  const execveWrapperPath = pickFirstExisting(
+    [
+      path.join(targetRoot, "code-execve-wrapper"),
+      path.join(targetRoot, "codex-execve-wrapper"),
+    ],
+    "execve wrapper",
+  );
+  const serverPath = pickFirstExisting(
+    [
+      path.join(targetRoot, "code-exec-mcp-server"),
+      path.join(targetRoot, "codex-exec-mcp-server"),
+    ],
+    "exec MCP server",
+  );
 
   const osInfo = process.platform === "linux" ? readOsRelease() : null;
   const { path: bashPath } = resolveBashPath(
@@ -87,6 +99,18 @@ async function main(): Promise<void> {
   } else {
     process.exit(childResult.exitCode);
   }
+}
+
+function pickFirstExisting(paths: string[], label: string): string {
+  for (const candidate of paths) {
+    try {
+      accessSync(candidate, constants.F_OK);
+      return candidate;
+    } catch {
+      // try next
+    }
+  }
+  throw new Error(`Required ${label} binary missing. Tried: ${paths.join(", ")}`);
 }
 
 void main().catch((err) => {

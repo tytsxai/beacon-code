@@ -352,7 +352,7 @@ exporter = "none"
 # endpoint = "https://otel.example.com:4317",
 # headers = { "x-otlp-meta" = "abc123" }
 
-# Example OTLP exporter with mutual TLS (supported by the Rust `codex-rs` CLI;
+# Example OTLP exporter with mutual TLS (supported by the Beacon Code Rust CLI;
 # the legacy `code-rs` CLI currently ignores the `.tls` block)
 # [otel.exporter."otlp-http"]
 # endpoint = "https://otel.example.com/v1/logs"

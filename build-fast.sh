@@ -15,7 +15,7 @@ Environment flags:
   DETERMINISTIC_FORCE_RELEASE=0|1     Keep dev-fast (0) or switch to release-prod (1, default)
   DETERMINISTIC_NO_UUID=1             macOS only: strip LC_UUID on final executables
   BUILD_FAST_BINS="code code-tui"      Override bins to build (space or comma separated)
-  --workspace codex|code|both         Select workspace to build (default: code)
+  --workspace code|upstream|both      Select workspace to build (default: code)
 
 Examples:
   ./build-fast.sh
@@ -194,12 +194,12 @@ fi
 
 REPO_ROOT="${SCRIPT_DIR}"
 
-# Guard against regressions where a code-rs crate references ../codex-rs.
+# Guard against regressions where a code-rs crate references upstream snapshot paths.
 if [ "${BUILD_FAST_SKIP_CODEX_GUARD:-0}" != "1" ]; then
-  echo "Running codex path dependency guard..."
+  echo "Running upstream path dependency guard..."
   (
     cd "$REPO_ROOT"
-    scripts/check-codex-path-deps.sh
+    scripts/check-upstream-path-deps.sh
   )
 fi
 
@@ -208,13 +208,15 @@ if [ "$WORKSPACE_CHOICE" = "both" ]; then
     echo "Error: --workspace both cannot be combined with 'run'." >&2
     exit 1
   fi
-  for ws in codex code; do
+  for ws in upstream code; do
     WORKSPACE="$ws" "$0" "${PASSTHROUGH_ARGS[@]}" --workspace "$ws"
   done
   exit 0
 fi
 
-if [ -n "${CODE_HOME:-}" ] && [ -n "${CODE_HOME}" ]; then
+if [ -n "${BEACON_HOME:-}" ] && [ -n "${BEACON_HOME}" ]; then
+  CACHE_HOME="${BEACON_HOME%/}"
+elif [ -n "${CODE_HOME:-}" ] && [ -n "${CODE_HOME}" ]; then
   CACHE_HOME="${CODE_HOME%/}"
 elif [ -n "${CODEX_HOME:-}" ] && [ -n "${CODEX_HOME}" ]; then
   CACHE_HOME="${CODEX_HOME%/}"
@@ -233,8 +235,8 @@ case "${CACHE_HOME}" in
 esac
 
 case "$WORKSPACE_CHOICE" in
-  codex|codex-rs)
-    WORKSPACE_DIR="codex-rs"
+  upstream|codex|codex-rs)
+    WORKSPACE_DIR="third_party/upstream/codex-rs"
     CRATE_PREFIX="codex"
     ;;
   code|code-rs)
@@ -242,7 +244,7 @@ case "$WORKSPACE_CHOICE" in
     CRATE_PREFIX="code"
     ;;
   *)
-    echo "Error: Unknown workspace '${WORKSPACE_CHOICE}'. Use codex, code, or both." >&2
+    echo "Error: Unknown workspace '${WORKSPACE_CHOICE}'. Use code, upstream, or both." >&2
     exit 1
     ;;
 esac
@@ -730,8 +732,8 @@ if [ $? -eq 0 ]; then
     ln -sf "${release_link_target}" "./target/release/${CRATE_PREFIX}"
 
     # Update the symlinks in CLI wrapper directories
-    if [ -d "../codex-cli/bin" ]; then
-      create_cli_symlinks "../codex-cli/bin" "${CLI_TARGET_CODEX}"
+    if [ -d "../beacon-cli/bin" ]; then
+      create_cli_symlinks "../beacon-cli/bin" "${CLI_TARGET_CODEX}"
     fi
     if [ -d "./code-cli/bin" ]; then
       create_cli_symlinks "./code-cli/bin" "${CLI_TARGET_CODE}"

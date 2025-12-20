@@ -44,9 +44,9 @@ Implemented in `code-rs/core/src/project_doc.rs`.
   - The maximum bytes embedded from project docs is controlled by `project_doc_max_bytes` (default: 32 KiB).
   - When the limit is reached, later files are truncated or skipped.
 
-### `codex-rs/` (reference workspace)
+### `third_party/upstream/codex-rs/` (upstream reference workspace)
 
-Implemented in `codex-rs/core/src/project_doc.rs`.
+Implemented in `third_party/upstream/codex-rs/core/src/project_doc.rs`.
 
 - Supports:
   - `AGENTS.md` (project instructions)

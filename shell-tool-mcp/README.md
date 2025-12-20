@@ -102,4 +102,4 @@ This package wraps the exec MCP server binary and its helpers so that the shell 
 - A patched Bash that honors `BASH_EXEC_WRAPPER`, built for multiple glibc baselines (Ubuntu 24.04/22.04/20.04, Debian 12/11, CentOS-like 9) and macOS (15/14/13).
 - A launcher (`bin/mcp-server.js`) that picks the correct binaries for the current `process.platform` / `process.arch`, specifying `--execve` and `--bash` for the MCP, as appropriate.
 
-See [the README in the Beacon repo](https://github.com/tytsxai/beacon-code/blob/main/codex-rs/exec-server/README.md) for details.
+See the upstream reference README at [third_party/upstream/codex-rs/exec-server/README.md](https://github.com/tytsxai/beacon-code/blob/main/third_party/upstream/codex-rs/exec-server/README.md) for details.

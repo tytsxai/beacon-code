@@ -26,6 +26,10 @@ If you only need the basics (auth + config), see `docs/command-reference.md`.
   - Risk: misconfiguration can send traffic to an unintended endpoint.
   - Docs: `docs/config.md` (model providers)
 
+- `BEACON_API_KEY`
+  - Purpose: override the API key for `code exec` (non-interactive mode).
+  - Notes: `CODEX_API_KEY` is a legacy alias kept for compatibility.
+
 ## Config / state directories
 
 - `CODE_HOME`

@@ -134,6 +134,7 @@ code exec "任务描述"          # 非交互模式执行
 | `OPENAI_API_KEY` | OpenAI API Key |
 | `OPENAI_BASE_URL` | 自定义 API 端点 |
 | `CODE_HOME` | 自定义配置目录 |
+| `BEACON_API_KEY` | exec 模式覆盖 API Key |
 | `CODEX_API_KEY` | exec 模式覆盖 API Key（兼容变量名） |
 
 更多（含清理/主题/安全模式等高风险开关）见 `docs/env-vars.md`。

@@ -1,0 +1,7 @@
+{
+  "code-aarch64-apple-darwin": "89c2e73d0546258003f0357af3ecb9b20716ab514d613cbf0355441a01f9183a",
+  "code-aarch64-unknown-linux-musl": "b1eb712fa8edd1eeaaefb9abe11fc8170a03881a871afdbce28a755899f209a4",
+  "code-x86_64-apple-darwin": "930692d1ae8d2804dcc6406c8ae517f3ca5718e23124d9bef986779dcf3e9c37",
+  "code-x86_64-pc-windows-msvc.exe": "5c2a00fb0b156d83efa333ec1aba2da9c2b71405d62d1a37ac79b66fc88cfcfd",
+  "code-x86_64-unknown-linux-musl": "a79f724eb1ad57753c53c0b10a5ae4fa1befffbbd282bce4e51d321980404988"
+}

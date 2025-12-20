@@ -455,7 +455,7 @@ command = "npx"
 args = ["-y", "mcp-server"]
 # Optional: propagate additional env vars to the MCP server.
 # A default whitelist of env vars will be propagated to the MCP server.
-# See `codex-rs/rmcp-client/src/utils.rs` for the default whitelist.
+# See `code-rs/rmcp-client/src/utils.rs` for the default whitelist.
 env = { "API_KEY" = "value" }
 # or
 [mcp_servers.server_name.env]
@@ -566,9 +566,9 @@ log_user_prompt = false    # defaults to false; redact prompt text unless explic
 ```
 
 Beacon tags every exported event with `service.name = $ORIGINATOR` (the same
-value sent in the `originator` header, `codex_cli_rs` by default), the CLI
+value sent in the `originator` header, `code_cli_rs` by default), the CLI
 version, and an `env` attribute so downstream collectors can distinguish
-dev/staging/prod traffic. Only telemetry produced inside the `codex_otel`
+dev/staging/prod traffic. Only telemetry produced inside the `code_otel`
 crate—the events listed below—is forwarded to the exporter.
 
 ### Event catalog
@@ -666,8 +666,8 @@ client-certificate = "/etc/beacon/certs/client.pem"
 client-private-key = "/etc/beacon/certs/client-key.pem"
 ```
 
-Note: TLS configuration is supported by the Rust `codex-rs` CLI. The legacy
-`code-rs` CLI currently ignores the `tls` block; use an OTLP collector or HTTPS
+Note: TLS configuration is supported by the Beacon Code Rust CLI. Older
+prebuilt binaries may ignore the `tls` block; use an OTLP collector or HTTPS
 proxy to terminate TLS if you need custom CA/client certificates there.
 
 If the exporter is `none` nothing is written anywhere; otherwise you must run or point to your

@@ -1,12 +1,12 @@
 {
   "prefer_ours_globs": [
-    "codex-rs/tui/**",
-    "codex-cli/**",
-    "codex-rs/core/src/openai_tools.rs",
-    "codex-rs/core/src/codex.rs",
-    "codex-rs/core/src/agent_tool.rs",
-    "codex-rs/core/src/default_client.rs",
-    "codex-rs/protocol/src/models.rs",
+    "code-rs/tui/**",
+    "beacon-cli/**",
+    "code-rs/core/src/openai_tools.rs",
+    "code-rs/core/src/codex.rs",
+    "code-rs/core/src/agent_tool.rs",
+    "code-rs/core/src/default_client.rs",
+    "code-rs/protocol/src/models.rs",
     ".github/workflows/**",
     "docs/**",
     "AGENTS.md",
@@ -14,15 +14,15 @@
     "CHANGELOG.md"
   ],
   "prefer_theirs_globs": [
-    "codex-rs/common/**",
-    "codex-rs/exec/**",
-    "codex-rs/file-search/**"
+    "code-rs/common/**",
+    "code-rs/exec/**",
+    "code-rs/file-search/**"
   ],
   "purge_globs": [
-    ".github/codex-cli-*.png",
-    ".github/codex-cli-*.jpg",
-    ".github/codex-cli-*.jpeg",
-    ".github/codex-cli-*.webp"
+    ".github/beacon-cli-*.png",
+    ".github/beacon-cli-*.jpg",
+    ".github/beacon-cli-*.jpeg",
+    ".github/beacon-cli-*.webp"
   ],
   "perma_removed_paths": [
   ]

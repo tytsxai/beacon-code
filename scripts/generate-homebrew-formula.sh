@@ -22,8 +22,8 @@ if [ -z "$version" ] && [ -f "code-rs/Cargo.toml" ]; then
   raw="$(awk -F '"' '/^\[workspace.package\]/{f=1; next} f && $1 ~ /version/ {print $2; exit}' code-rs/Cargo.toml)"
   version="$(sanitize_version "$raw")"
 fi
-if [ -z "$version" ] && [ -f "codex-cli/package.json" ]; then
-  raw="$(jq -r .version codex-cli/package.json)"
+if [ -z "$version" ] && [ -f "beacon-cli/package.json" ]; then
+  raw="$(jq -r .version beacon-cli/package.json)"
   version="$(sanitize_version "$raw")"
 fi
 if [ -z "$version" ] && git rev-parse --git-dir >/dev/null 2>&1; then

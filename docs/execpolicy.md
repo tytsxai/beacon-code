@@ -37,13 +37,13 @@ In this example rule, if Beacon wants to run commands with the prefix `git push`
 
 ## Preview decisions
 
-Use the `code execpolicy check` subcommand to preview decisions before you save a rule (see the [`codex-execpolicy` README](../codex-rs/execpolicy/README.md) for syntax details):
+Use the `code execpolicy check` subcommand to preview decisions before you save a rule (see the upstream reference in [`third_party/upstream/codex-rs/execpolicy/README.md`](../third_party/upstream/codex-rs/execpolicy/README.md) for syntax details):
 
 ```shell
 code execpolicy check --rules ~/.code/rules/default.rules git push origin main
 ```
 
-Pass multiple `--rules` flags to test how several files combine, and use `--pretty` for formatted JSON output. See the [`codex-rs/execpolicy` README](../codex-rs/execpolicy/README.md) for a more detailed walkthrough of the available syntax.
+Pass multiple `--rules` flags to test how several files combine, and use `--pretty` for formatted JSON output. See the upstream reference in [`third_party/upstream/codex-rs/execpolicy/README.md`](../third_party/upstream/codex-rs/execpolicy/README.md) for a more detailed walkthrough of the available syntax.
 
 Example output when a rule matches:
 

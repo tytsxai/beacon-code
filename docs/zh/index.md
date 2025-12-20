@@ -16,8 +16,9 @@
 - [FAQ（英文）](../faq.md)
 
 ## 版本与代码目录
-- 推荐代码目录：`codex-rs/`（Rust 主实现）
-- 保留目录：`code-rs/`、`codex-cli/`（旧版/兼容用途）
+- 推荐代码目录：`code-rs/`（Rust 主实现）
+- 发布包装：`beacon-cli/`（npm/CLI 包装与发布脚本）
+- 上游对照快照：`third_party/upstream/codex-rs/`（只读参考）
 
 ## 贡献
 - 欢迎提交翻译或改进 PR。

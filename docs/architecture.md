@@ -19,7 +19,7 @@ repo root
 │  ├─ cloud-tasks* # 远端任务列取/应用
 │  ├─ otel/        # 遥测事件聚合与导出
 │  └─ 其他支撑 crate（git-apply、apply-patch、file-search、execpolicy 等）
-└─ codex-rs/       # 对照 workspace（用于兼容与基准对比）
+└─ third_party/upstream/codex-rs/  # 上游对照快照（只读参考）
 ```
 
 ## 主数据流（请求 / 响应）
@@ -150,7 +150,7 @@ flowchart LR
 - **Esc/审批优先级**：Esc 语义集中在 `chatwidget`（`auto_should_handle_global_esc` + `handle_key_event`）；审批面板必须冒泡 Esc。
 - **sandbox/git 依赖**：写操作/ApplyPatch 需 git 工作树；非 git 环境自动降级只读，否则操作会失败。
 - **编译警告即失败**：`./build-fast.sh` 必须零 warning；禁止运行 rustfmt。
-- **code-rs 依赖隔离**：不得从 code-rs 以相对路径引用 `../codex-rs`（脚本有守卫）。
+- **code-rs 依赖隔离**：不得从 code-rs 以相对路径引用 `../third_party/upstream/codex-rs`（脚本有守卫）。
 - **Telemetry**：默认 exporter `None`、环境 `dev`、`log_user_prompt=false`。启用 OTLP 后仅导出 `code_otel` 目标，字段统一脱敏/截断（默认 800 字符，关闭 `log_user_prompt` 时统一 `[REDACTED]`）；目前仅支持 endpoint/headers/protocol 配置，不支持内嵌 TLS/mTLS，证书处理需外部代理。事件含模型 slug、会话 ID、审批/沙箱策略、token 用量；禁用时不会记录用户提示文本。
 
 ## 查看或运行

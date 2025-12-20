@@ -8,6 +8,8 @@ Looking for something specific? Jump ahead:
 
 ### CLI usage
 
+Primary command is `beacon`; `code` remains a short alias (and `coder` is the conflict-safe fallback). Examples below use `code` for brevity.
+
 | Command            | Purpose                            | Example                         |
 | ------------------ | ---------------------------------- | ------------------------------- |
 | `code`            | Interactive TUI                    | `code`                         |
@@ -71,7 +73,7 @@ You can give Beacon extra instructions and guidance using `AGENTS.md` files. Bea
 Notes:
 
 - This repo contains two Rust workspaces with slightly different discovery rules. See `docs/agents_md.md` for the authoritative behavior per workspace.
-- `AGENTS.override.md` is supported in `codex-rs/`, but is not currently recognized in `code-rs/`.
+- `AGENTS.override.md` is supported in `third_party/upstream/codex-rs/`, but is not currently recognized in `code-rs/`.
 
 For more information on how to use AGENTS.md, see the [official AGENTS.md documentation](https://agents.md/).
 
