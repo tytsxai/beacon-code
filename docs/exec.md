@@ -103,7 +103,7 @@ code exec --model gpt-5.1 --json resume --last "Fix use-after-free issues"
 
 ## 认证
 
-默认情况下，`code exec` 使用与 TUI 与 VSCode 扩展相同的认证方式。可通过环境变量 `CODEX_API_KEY` 覆盖 API Key。
+默认情况下，`code exec` 使用与 TUI 与 VSCode 扩展相同的认证方式。可通过环境变量 `CODEX_API_KEY` 覆盖 API Key；该变量名沿用上游，为兼容保留。
 
 ```shell
 CODEX_API_KEY=your-api-key-here code exec "Fix merge conflict"

@@ -10,7 +10,7 @@ Most day-to-day tuning lives in `config.toml`: set approval + sandbox presets, p
 
 Because Beacon is written in Rust, it honors the `RUST_LOG` environment variable to configure its logging behavior.
 
-The TUI defaults to `RUST_LOG=codex_core=info,codex_tui=info,codex_rmcp_client=info` and log messages are written to `~/.code/log/codex-tui.log`, so you can leave the following running in a separate terminal to monitor log messages as they are written:
+The TUI defaults to `RUST_LOG=codex_core=info,codex_tui=info,codex_rmcp_client=info` and log messages are written to `~/.code/log/codex-tui.log`, so you can leave the following running in a separate terminal to monitor log messages as they are written. The filename stays as `codex-tui.log` for compatibility with upstream tooling.
 
 ```bash
 tail -F ~/.code/log/codex-tui.log

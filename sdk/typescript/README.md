@@ -23,6 +23,8 @@ console.log(turn.finalResponse);
 console.log(turn.items);
 ```
 
+> 说明：SDK 仍沿用 `Codex` 类名与 `~/.codex` 默认目录以保持与底层二进制兼容；需要时可通过配置项覆盖路径。
+
 在同一 `Thread` 上重复调用 `run()` 可继续对话：
 
 ```typescript
