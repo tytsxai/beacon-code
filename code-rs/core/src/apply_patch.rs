@@ -491,7 +491,6 @@ async fn apply_changes_from_apply_patch(
 mod tests {
     use super::*;
     use crate::protocol::SandboxPolicy;
-    use pretty_assertions::assert_eq;
     use tempfile::TempDir;
 
     #[test]
@@ -508,7 +507,10 @@ mod tests {
         };
 
         let result = check_patch_paths_within_writable_roots(&action, &policy, &cwd);
-        assert_eq!(result, Ok(()));
+        assert!(
+            result.is_ok(),
+            "expected inside path to be allowed: {result:?}"
+        );
     }
 
     #[test]
@@ -526,7 +528,10 @@ mod tests {
         };
 
         let result = check_patch_paths_within_writable_roots(&action, &policy, &cwd);
-        assert_eq!(result.is_err(), true);
+        assert!(
+            result.is_err(),
+            "expected outside path to be rejected: {result:?}"
+        );
     }
 
     #[cfg(unix)]
@@ -551,6 +556,9 @@ mod tests {
         };
 
         let result = check_patch_paths_within_writable_roots(&action, &policy, &cwd);
-        assert_eq!(result.is_err(), true);
+        assert!(
+            result.is_err(),
+            "expected symlink escape to be rejected: {result:?}"
+        );
     }
 }
