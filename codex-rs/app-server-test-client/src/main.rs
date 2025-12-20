@@ -57,9 +57,14 @@ use serde::de::DeserializeOwned;
 use serde_json::Value;
 use uuid::Uuid;
 
-/// Minimal launcher that initializes the Codex app-server and logs the handshake.
+/// Minimal launcher that initializes the Beacon Code app-server and logs the handshake.
 #[derive(Parser)]
-#[command(author = "Codex", version, about = "Bootstrap Codex app-server", long_about = None)]
+#[command(
+    author = "Beacon Code",
+    version,
+    about = "Bootstrap Beacon Code app-server",
+    long_about = None
+)]
 struct Cli {
     /// Path to the `codex` CLI binary.
     #[arg(long, env = "CODEX_BIN", default_value = "codex")]
@@ -71,15 +76,15 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum CliCommand {
-    /// Send a user message through the Codex app-server.
+    /// Send a user message through the Beacon Code app-server.
     SendMessage {
-        /// User message to send to Codex.
+        /// User message to send to Beacon Code.
         #[arg()]
         user_message: String,
     },
     /// Send a user message through the app-server V2 thread/turn APIs.
     SendMessageV2 {
-        /// User message to send to Codex.
+        /// User message to send to Beacon Code.
         #[arg()]
         user_message: String,
     },
@@ -111,7 +116,7 @@ enum CliCommand {
     },
     /// Trigger the ChatGPT login flow and wait for completion.
     TestLogin,
-    /// Fetch the current account rate limits from the Codex app-server.
+    /// Fetch the current account rate limits from the Beacon Code app-server.
     GetAccountRateLimits,
 }
 
@@ -342,7 +347,7 @@ impl CodexClient {
             params: InitializeParams {
                 client_info: ClientInfo {
                     name: "codex-toy-app-server".to_string(),
-                    title: Some("Codex Toy App Server".to_string()),
+                    title: Some("Beacon Code Toy App Server".to_string()),
                     version: env!("CARGO_PKG_VERSION").to_string(),
                 },
             },

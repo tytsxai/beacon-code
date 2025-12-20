@@ -286,7 +286,7 @@ impl CodexAuth {
 /// For third-party activators/proxies, use custom `model_providers` config with `env_key`.
 pub const OPENAI_API_KEY_ENV_VAR: &str = "OPENAI_API_KEY";
 
-/// Alternative environment variable for Codex-specific API key.
+/// Alternative environment variable for Beacon Code-specific API key.
 /// Primarily used for internal testing and programmatic usage.
 /// Third-party activators may use their own env vars (e.g., CRS_OAI_KEY)
 /// configured via `model_providers.<name>.env_key` in config.toml.

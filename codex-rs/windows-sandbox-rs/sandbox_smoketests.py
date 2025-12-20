@@ -1,5 +1,5 @@
 # sandbox_smoketests.py
-# Run a suite of smoke tests against the Windows sandbox via the Codex CLI
+# Run a suite of smoke tests against the Windows sandbox via the Beacon Code CLI
 # Requires: Python 3.8+ on Windows. No pip requirements.
 
 import os
@@ -10,10 +10,10 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 def _resolve_codex_cmd() -> List[str]:
-    """Resolve the Codex CLI to invoke `codex sandbox windows`.
+    """Resolve the Beacon Code CLI to invoke `codex sandbox windows`.
 
     Prefer local builds (debug first), then fall back to PATH.
-    Returns the argv prefix to run Codex.
+    Returns the argv prefix to run Beacon Code.
     """
     root = Path(__file__).parent
     ws_root = root.parent
@@ -38,7 +38,7 @@ def _resolve_codex_cmd() -> List[str]:
         return ["codex"]
 
     raise FileNotFoundError(
-        "Codex CLI not found. Build it first, e.g.\n"
+        "Beacon Code CLI not found. Build it first, e.g.\n"
         "  cargo build -p codex-cli --release\n"
         "or for debug:\n"
         "  cargo build -p codex-cli\n"
@@ -69,7 +69,7 @@ def run_sbx(
     env.update(ENV_BASE)
     if env_extra:
         env.update(env_extra)
-    # Map policy to codex CLI flags
+    # Map policy to Beacon Code CLI flags
     # read-only => default; workspace-write => --full-auto
     if policy not in ("read-only", "workspace-write"):
         raise ValueError(f"unknown policy: {policy}")

@@ -56,7 +56,7 @@ pub struct ModelUpgrade {
     pub upgrade_copy: Option<String>,
 }
 
-/// Metadata describing a Codex-supported model.
+/// Metadata describing a Beacon Code-supported model.
 #[derive(Debug, Clone, Deserialize, Serialize, TS, JsonSchema, PartialEq)]
 pub struct ModelPreset {
     /// Stable identifier for the preset.
@@ -167,7 +167,7 @@ impl TruncationPolicyConfig {
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, TS, JsonSchema)]
 pub struct ClientVersion(pub i32, pub i32, pub i32);
 
-/// Model metadata returned by the Codex backend `/models` endpoint.
+/// Model metadata returned by the Beacon Code backend `/models` endpoint.
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, TS, JsonSchema)]
 pub struct ModelInfo {
     pub slug: String,

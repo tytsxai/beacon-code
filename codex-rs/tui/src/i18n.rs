@@ -20,14 +20,14 @@ impl Strings {
             Language::Chinese => Line::from(vec![
                 "  ".into(),
                 "欢迎使用 ".into(),
-                "Codex".bold(),
+                "Beacon Code".bold(),
                 "，终端里的编程智能体".into(),
             ]),
             Language::English => Line::from(vec![
                 "  ".into(),
                 "Welcome to ".into(),
-                "Codex".bold(),
-                ", OpenAI's command-line coding agent".into(),
+                "Beacon Code".bold(),
+                ", a command-line coding agent".into(),
             ]),
         }
     }
@@ -38,12 +38,12 @@ impl Strings {
         match self.language {
             Language::Chinese => Line::from(vec![
                 "> ".into(),
-                "你正在该目录运行 Codex：".bold(),
+                "你正在该目录运行 Beacon Code：".bold(),
                 path.to_string().into(),
             ]),
             Language::English => Line::from(vec![
                 "> ".into(),
-                "You are running Codex in ".bold(),
+                "You are running Beacon Code in ".bold(),
                 path.to_string().into(),
             ]),
         }
@@ -52,10 +52,12 @@ impl Strings {
     #[must_use]
     pub fn trust_guidance(self, is_git_repo: bool) -> &'static str {
         match (self.language, is_git_repo) {
-            (Language::Chinese, true) => "该目录受版本控制，可允许 Codex 在此执行而无需逐次审批。",
+            (Language::Chinese, true) => {
+                "该目录受版本控制，可允许 Beacon Code 在此执行而无需逐次审批。"
+            }
             (Language::Chinese, false) => "该目录未受版本控制，建议对所有编辑和命令进行审批。",
             (Language::English, true) => {
-                "Since this folder is version controlled, you may wish to allow Codex to work in this folder without asking for approval."
+                "Since this folder is version controlled, you may wish to allow Beacon Code to work in this folder without asking for approval."
             }
             (Language::English, false) => {
                 "Since this folder is not version controlled, we recommend requiring approval of all edits and commands."
@@ -67,19 +69,19 @@ impl Strings {
     pub fn trust_options(self, is_git_repo: bool) -> TrustOptions {
         match (self.language, is_git_repo) {
             (Language::Chinese, true) => TrustOptions {
-                allow_without_approval: "是，允许 Codex 在此目录工作且不再请求审批",
+                allow_without_approval: "是，允许 Beacon Code 在此目录工作且不再请求审批",
                 require_approval: "否，所有编辑/命令都要审批",
             },
             (Language::Chinese, false) => TrustOptions {
-                allow_without_approval: "允许 Codex 在此目录工作且不再请求审批",
+                allow_without_approval: "允许 Beacon Code 在此目录工作且不再请求审批",
                 require_approval: "需要审批所有编辑/命令",
             },
             (Language::English, true) => TrustOptions {
-                allow_without_approval: "Yes, allow Codex to work in this folder without asking for approval",
+                allow_without_approval: "Yes, allow Beacon Code to work in this folder without asking for approval",
                 require_approval: "No, ask me to approve edits and commands",
             },
             (Language::English, false) => TrustOptions {
-                allow_without_approval: "Allow Codex to work in this folder without asking for approval",
+                allow_without_approval: "Allow Beacon Code to work in this folder without asking for approval",
                 require_approval: "Require approval of edits and commands",
             },
         }
@@ -118,10 +120,10 @@ mod tests {
     fn welcome_message_is_bilingual() {
         let zh = Strings::new(Language::Chinese).welcome_message();
         let en = Strings::new(Language::English).welcome_message();
-        assert_eq!(zh.to_string(), "  欢迎使用 Codex，终端里的编程智能体");
+        assert_eq!(zh.to_string(), "  欢迎使用 Beacon Code，终端里的编程智能体");
         assert_eq!(
             en.to_string(),
-            "  Welcome to Codex, OpenAI's command-line coding agent"
+            "  Welcome to Beacon Code, a command-line coding agent"
         );
     }
 
@@ -130,7 +132,7 @@ mod tests {
         let zh_git = Strings::new(Language::Chinese).trust_options(true);
         assert_eq!(
             zh_git.allow_without_approval,
-            "是，允许 Codex 在此目录工作且不再请求审批"
+            "是，允许 Beacon Code 在此目录工作且不再请求审批"
         );
         let en_non_git = Strings::new(Language::English).trust_options(false);
         assert_eq!(

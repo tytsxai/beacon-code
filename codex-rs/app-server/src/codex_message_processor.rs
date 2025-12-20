@@ -208,7 +208,7 @@ impl Drop for ActiveLogin {
     }
 }
 
-/// Handles JSON-RPC messages for Codex conversations.
+/// Handles JSON-RPC messages for Beacon Code conversations.
 pub(crate) struct CodexMessageProcessor {
     auth_manager: Arc<AuthManager>,
     conversation_manager: Arc<ConversationManager>,
@@ -501,7 +501,7 @@ impl CodexMessageProcessor {
             ClientRequest::ConfigRead { .. }
             | ClientRequest::ConfigValueWrite { .. }
             | ClientRequest::ConfigBatchWrite { .. } => {
-                warn!("Config request reached CodexMessageProcessor unexpectedly");
+                warn!("Config request reached Beacon Code message processor unexpectedly");
             }
             ClientRequest::GetAccountRateLimits {
                 request_id,

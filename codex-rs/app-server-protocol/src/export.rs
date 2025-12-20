@@ -258,7 +258,7 @@ fn build_schema_bundle(schemas: Vec<GeneratedSchema>) -> Result<Value> {
     );
     root.insert(
         "title".to_string(),
-        Value::String("CodexAppServerProtocol".into()),
+        Value::String("BeaconCodeAppServerProtocol".into()),
     );
     root.insert("type".to_string(), Value::String("object".into()));
     root.insert("definitions".to_string(), Value::Object(definitions));

@@ -18,7 +18,7 @@ use std::path::PathBuf;
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
 #[serde(rename_all = "kebab-case")]
 pub struct CodexToolCallParam {
-    /// The *initial user prompt* to start the Codex conversation.
+    /// The *initial user prompt* to start the Beacon Code conversation.
     pub prompt: String,
 
     /// Optional override for the model name (e.g. "o3", "o4-mini").
@@ -103,7 +103,7 @@ impl From<CodexToolCallSandboxMode> for SandboxMode {
     }
 }
 
-/// Builds a `Tool` definition (JSON schema etc.) for the Codex tool-call.
+/// Builds a `Tool` definition (JSON schema etc.) for the Beacon Code tool-call.
 pub(crate) fn create_tool_for_codex_tool_call_param() -> Tool {
     let schema = SchemaSettings::draft2019_09()
         .with(|s| {
@@ -115,7 +115,7 @@ pub(crate) fn create_tool_for_codex_tool_call_param() -> Tool {
 
     #[expect(clippy::expect_used)]
     let schema_value =
-        serde_json::to_value(&schema).expect("Codex tool schema should serialise to JSON");
+        serde_json::to_value(&schema).expect("Beacon Code tool schema should serialise to JSON");
 
     let tool_input_schema =
         serde_json::from_value::<ToolInputSchema>(schema_value).unwrap_or_else(|e| {
@@ -124,19 +124,19 @@ pub(crate) fn create_tool_for_codex_tool_call_param() -> Tool {
 
     Tool {
         name: "codex".to_string(),
-        title: Some("Codex".to_string()),
+        title: Some("Beacon Code".to_string()),
         input_schema: tool_input_schema,
         // TODO(mbolin): This should be defined.
         output_schema: None,
         description: Some(
-            "Run a Codex session. Accepts configuration parameters matching the Codex Config struct.".to_string(),
+            "Run a Beacon Code session. Accepts configuration parameters matching the Beacon Code config struct.".to_string(),
         ),
         annotations: None,
     }
 }
 
 impl CodexToolCallParam {
-    /// Returns the initial user prompt to start the Codex conversation and the
+    /// Returns the initial user prompt to start the Beacon Code conversation and the
     /// effective Config object generated from the supplied parameters.
     pub async fn into_config(
         self,
@@ -185,10 +185,10 @@ impl CodexToolCallParam {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct CodexToolCallReplyParam {
-    /// The conversation id for this Codex session.
+    /// The conversation id for this Beacon Code session.
     pub conversation_id: String,
 
-    /// The *next user prompt* to continue the Codex conversation.
+    /// The *next user prompt* to continue the Beacon Code conversation.
     pub prompt: String,
 }
 
@@ -203,8 +203,8 @@ pub(crate) fn create_tool_for_codex_tool_call_reply_param() -> Tool {
         .into_root_schema_for::<CodexToolCallReplyParam>();
 
     #[expect(clippy::expect_used)]
-    let schema_value =
-        serde_json::to_value(&schema).expect("Codex reply tool schema should serialise to JSON");
+    let schema_value = serde_json::to_value(&schema)
+        .expect("Beacon Code reply tool schema should serialise to JSON");
 
     let tool_input_schema =
         serde_json::from_value::<ToolInputSchema>(schema_value).unwrap_or_else(|e| {
@@ -213,11 +213,11 @@ pub(crate) fn create_tool_for_codex_tool_call_reply_param() -> Tool {
 
     Tool {
         name: "codex-reply".to_string(),
-        title: Some("Codex Reply".to_string()),
+        title: Some("Beacon Code Reply".to_string()),
         input_schema: tool_input_schema,
         output_schema: None,
         description: Some(
-            "Continue a Codex conversation by providing the conversation id and prompt."
+            "Continue a Beacon Code conversation by providing the conversation id and prompt."
                 .to_string(),
         ),
         annotations: None,
@@ -246,8 +246,8 @@ mod tests {
         let tool_json = serde_json::to_value(&tool).expect("tool serializes");
         let expected_tool_json = serde_json::json!({
           "name": "codex",
-          "title": "Codex",
-          "description": "Run a Codex session. Accepts configuration parameters matching the Codex Config struct.",
+          "title": "Beacon Code",
+          "description": "Run a Beacon Code session. Accepts configuration parameters matching the Beacon Code config struct.",
           "inputSchema": {
             "type": "object",
             "properties": {
@@ -288,7 +288,7 @@ mod tests {
                 "type": "string"
               },
               "prompt": {
-                "description": "The *initial user prompt* to start the Codex conversation.",
+                "description": "The *initial user prompt* to start the Beacon Code conversation.",
                 "type": "string"
               },
               "base-instructions": {
@@ -317,15 +317,15 @@ mod tests {
         let tool = create_tool_for_codex_tool_call_reply_param();
         let tool_json = serde_json::to_value(&tool).expect("tool serializes");
         let expected_tool_json = serde_json::json!({
-          "description": "Continue a Codex conversation by providing the conversation id and prompt.",
+          "description": "Continue a Beacon Code conversation by providing the conversation id and prompt.",
           "inputSchema": {
             "properties": {
               "conversationId": {
-                "description": "The conversation id for this Codex session.",
+                "description": "The conversation id for this Beacon Code session.",
                 "type": "string"
               },
               "prompt": {
-                "description": "The *next user prompt* to continue the Codex conversation.",
+                "description": "The *next user prompt* to continue the Beacon Code conversation.",
                 "type": "string"
               },
             },
@@ -336,7 +336,7 @@ mod tests {
             "type": "object",
           },
           "name": "codex-reply",
-          "title": "Codex Reply",
+          "title": "Beacon Code Reply",
         });
         assert_eq!(expected_tool_json, tool_json);
     }

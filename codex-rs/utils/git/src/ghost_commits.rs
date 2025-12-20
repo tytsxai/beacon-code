@@ -881,7 +881,7 @@ fn default_commit_identity() -> Vec<(OsString, OsString)> {
     vec![
         (
             OsString::from("GIT_AUTHOR_NAME"),
-            OsString::from("Codex Snapshot"),
+            OsString::from("Beacon Code Snapshot"),
         ),
         (
             OsString::from("GIT_AUTHOR_EMAIL"),
@@ -889,7 +889,7 @@ fn default_commit_identity() -> Vec<(OsString, OsString)> {
         ),
         (
             OsString::from("GIT_COMMITTER_NAME"),
-            OsString::from("Codex Snapshot"),
+            OsString::from("Beacon Code Snapshot"),
         ),
         (
             OsString::from("GIT_COMMITTER_EMAIL"),

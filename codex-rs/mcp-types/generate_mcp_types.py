@@ -39,7 +39,7 @@ SERVER_NOTIFICATION_TYPE_NAMES: list[str] = []
 LARGE_ENUMS = {"ServerResult"}
 
 # some types need setting a default value for `r#type`
-# ref: [#7417](https://github.com/openai/codex/pull/7417)
+# ref: [#7417](https://github.com/tytsxai/beacon-code/pull/7417)
 default_type_values: dict[str, str] = {
     "ToolInputSchema": "object",
     "ToolOutputSchema": "object",
@@ -412,7 +412,7 @@ def define_struct(
         else:
             fields.append(StructField("pub", rs_prop.name, prop_type, rs_prop.serde, rs_prop.ts))
 
-    # Special-case: add Codex-specific user_agent to Implementation
+    # Special-case: add Beacon Code-specific user_agent to Implementation
     if name == "Implementation":
         fields.append(
             StructField(
@@ -421,7 +421,7 @@ def define_struct(
                 "Option<String>",
                 '#[serde(default, skip_serializing_if = "Option::is_none")]',
                 '#[ts(optional)]',
-                "This is an extra field that the Codex MCP server sends as part of InitializeResult.",
+                "This is an extra field that the Beacon Code MCP server sends as part of InitializeResult.",
             )
         )
 

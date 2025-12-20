@@ -274,7 +274,7 @@ impl ModelMigrationScreen {
     fn render_menu(&self, column: &mut ColumnRenderable) {
         column.push(Line::from(""));
         column.push(
-            Paragraph::new("Choose how you'd like Codex to proceed.")
+            Paragraph::new("Choose how you'd like Beacon Code to proceed.")
                 .wrap(Wrap { trim: false })
                 .inset(Insets::tlbr(0, 2, 0, 0)),
         );
@@ -355,7 +355,7 @@ mod tests {
                 "gpt-5.1-codex-mini",
                 "gpt-5.1-codex-max",
                 "gpt-5.1-codex-max".to_string(),
-                Some("Codex-optimized flagship for deep and fast reasoning.".to_string()),
+                Some("Flagship model optimized for deep and fast reasoning.".to_string()),
                 true,
             ),
         );
@@ -405,7 +405,7 @@ mod tests {
                 "gpt-5-codex",
                 "gpt-5.1-codex-max",
                 "gpt-5.1-codex-max".to_string(),
-                Some("Codex-optimized flagship for deep and fast reasoning.".to_string()),
+                Some("Flagship model optimized for deep and fast reasoning.".to_string()),
                 false,
             ),
         );

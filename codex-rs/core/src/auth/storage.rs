@@ -20,7 +20,7 @@ use codex_keyring_store::DefaultKeyringStore;
 use codex_keyring_store::KeyringStore;
 use tempfile::NamedTempFile;
 
-/// Determine where Codex should store CLI auth credentials.
+/// Determine where Beacon Code should store CLI auth credentials.
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum AuthCredentialsStoreMode {
@@ -202,7 +202,8 @@ impl AuthStorageBackend for FileAuthStorage {
     }
 }
 
-const KEYRING_SERVICE: &str = "Codex Auth";
+const KEYRING_SERVICE: &str = "Beacon Code Auth";
+const LEGACY_KEYRING_SERVICE: &str = "Codex Auth";
 
 // turns codex_home path into a stable, short key string
 fn compute_store_key(codex_home: &Path) -> std::io::Result<String> {
@@ -233,12 +234,30 @@ impl KeyringAuthStorage {
     }
 
     fn load_from_keyring(&self, key: &str) -> std::io::Result<Option<AuthDotJson>> {
-        match self.keyring_store.load(KEYRING_SERVICE, key) {
+        if let Some(auth) = self.load_from_keyring_service(KEYRING_SERVICE, key)? {
+            return Ok(Some(auth));
+        }
+
+        if KEYRING_SERVICE != LEGACY_KEYRING_SERVICE
+            && let Some(auth) = self.load_from_keyring_service(LEGACY_KEYRING_SERVICE, key)? {
+                self.migrate_keyring_entry(key, &auth);
+                return Ok(Some(auth));
+            }
+
+        Ok(None)
+    }
+
+    fn load_from_keyring_service(
+        &self,
+        service: &str,
+        key: &str,
+    ) -> std::io::Result<Option<AuthDotJson>> {
+        match self.keyring_store.load(service, key) {
             Ok(Some(serialized)) => match serde_json::from_str(&serialized) {
                 Ok(value) => Ok(Some(value)),
                 Err(err) => {
                     warn!("Ignoring corrupt auth data in keyring: {err}");
-                    match self.keyring_store.delete(KEYRING_SERVICE, key) {
+                    match self.keyring_store.delete(service, key) {
                         Ok(true) => warn!("Removed corrupt auth data from keyring"),
                         Ok(false) => {}
                         Err(delete_err) => warn!(
@@ -254,6 +273,20 @@ impl KeyringAuthStorage {
                 "failed to load CLI auth from keyring: {}",
                 error.message()
             ))),
+        }
+    }
+
+    fn migrate_keyring_entry(&self, key: &str, auth: &AuthDotJson) {
+        let Ok(serialized) = serde_json::to_string(auth) else {
+            warn!("Failed to serialize auth data for keyring migration");
+            return;
+        };
+
+        if let Err(error) = self.keyring_store.save(KEYRING_SERVICE, key, &serialized) {
+            warn!(
+                "Failed to migrate auth data to new keyring service: {}",
+                error.message()
+            );
         }
     }
 

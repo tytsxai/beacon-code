@@ -15,7 +15,7 @@ impl Display for RateLimitError {
     }
 }
 
-/// Parses the bespoke Codex rate-limit headers into a `RateLimitSnapshot`.
+/// Parses the bespoke Beacon Code rate-limit headers (`x-codex-*`) into a `RateLimitSnapshot`.
 pub fn parse_rate_limit(headers: &HeaderMap) -> Option<RateLimitSnapshot> {
     let primary = parse_rate_limit_window(
         headers,

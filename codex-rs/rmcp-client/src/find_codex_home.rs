@@ -5,7 +5,7 @@ use std::path::PathBuf;
 /// TODO: move this to a shared crate lower in the dependency tree.
 ///
 ///
-/// Returns the path to the Codex configuration directory, which can be
+/// Returns the path to the Beacon Code configuration directory, which can be
 /// specified by the `CODEX_HOME` environment variable. If not set, defaults to
 /// `~/.codex`.
 ///

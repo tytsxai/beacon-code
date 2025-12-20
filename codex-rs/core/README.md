@@ -1,6 +1,6 @@
 # codex-core
 
-This crate implements the business logic for Codex. It is designed to be used by the various Codex UIs written in Rust.
+This crate implements the business logic for Beacon. It is designed to be used by the various Beacon UIs written in Rust.
 
 ## Dependencies
 

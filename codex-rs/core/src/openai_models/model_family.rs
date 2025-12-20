@@ -409,7 +409,9 @@ pub(super) fn find_family_for_model(slug: &str) -> ModelFamily {
 }
 
 fn derive_default_model_family(model: &str) -> ModelFamily {
-    tracing::warn!("Unknown model {model} is used. This will degrade the performance of Codex.");
+    tracing::warn!(
+        "Unknown model {model} is used. This will degrade the performance of Beacon Code."
+    );
     ModelFamily {
         slug: model.to_string(),
         family: model.to_string(),

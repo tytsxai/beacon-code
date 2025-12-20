@@ -52,7 +52,8 @@ use tokio::sync::Mutex;
 
 use crate::find_codex_home::find_codex_home;
 
-const KEYRING_SERVICE: &str = "Codex MCP Credentials";
+const KEYRING_SERVICE: &str = "Beacon Code MCP Credentials";
+const LEGACY_KEYRING_SERVICE: &str = "Codex MCP Credentials";
 const REFRESH_SKEW_MILLIS: u64 = 30_000;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -65,16 +66,16 @@ pub struct StoredOAuthTokens {
     pub expires_at: Option<u64>,
 }
 
-/// Determine where Codex should store and read MCP credentials.
+/// Determine where Beacon Code should store and read MCP credentials.
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum OAuthCredentialsStoreMode {
     /// `Keyring` when available; otherwise, `File`.
-    /// Credentials stored in the keyring will only be readable by Codex unless the user explicitly grants access via OS-level keyring access.
+    /// Credentials stored in the keyring will only be readable by Beacon Code unless the user explicitly grants access via OS-level keyring access.
     #[default]
     Auto,
     /// CODEX_HOME/.credentials.json
-    /// This file will be readable to Codex and other applications running as the same user.
+    /// This file will be readable to Beacon Code and other applications running as the same user.
     File,
     /// Keyring when available, otherwise fail.
     Keyring,
@@ -157,7 +158,29 @@ fn load_oauth_tokens_from_keyring<K: KeyringStore>(
     url: &str,
 ) -> Result<Option<StoredOAuthTokens>> {
     let key = compute_store_key(server_name, url)?;
-    match keyring_store.load(KEYRING_SERVICE, &key) {
+    if let Some(tokens) =
+        load_oauth_tokens_from_keyring_service(keyring_store, KEYRING_SERVICE, &key)?
+    {
+        return Ok(Some(tokens));
+    }
+
+    if KEYRING_SERVICE != LEGACY_KEYRING_SERVICE
+        && let Some(tokens) =
+            load_oauth_tokens_from_keyring_service(keyring_store, LEGACY_KEYRING_SERVICE, &key)?
+        {
+            migrate_oauth_tokens_to_new_service(keyring_store, &key, &tokens);
+            return Ok(Some(tokens));
+        }
+
+    Ok(None)
+}
+
+fn load_oauth_tokens_from_keyring_service<K: KeyringStore>(
+    keyring_store: &K,
+    service: &str,
+    key: &str,
+) -> Result<Option<StoredOAuthTokens>> {
+    match keyring_store.load(service, key) {
         Ok(Some(serialized)) => {
             let mut tokens: StoredOAuthTokens = serde_json::from_str(&serialized)
                 .context("failed to deserialize OAuth tokens from keyring")?;
@@ -166,6 +189,24 @@ fn load_oauth_tokens_from_keyring<K: KeyringStore>(
         }
         Ok(None) => Ok(None),
         Err(error) => Err(Error::new(error.into_error())),
+    }
+}
+
+fn migrate_oauth_tokens_to_new_service<K: KeyringStore>(
+    keyring_store: &K,
+    key: &str,
+    tokens: &StoredOAuthTokens,
+) {
+    let Ok(serialized) = serde_json::to_string(tokens) else {
+        warn!("failed to serialize OAuth tokens for keyring migration");
+        return;
+    };
+
+    if let Err(error) = keyring_store.save(KEYRING_SERVICE, key, &serialized) {
+        warn!(
+            "failed to migrate OAuth tokens to new keyring service: {}",
+            error.message()
+        );
     }
 }
 

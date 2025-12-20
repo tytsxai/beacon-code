@@ -4,7 +4,7 @@ This document describes the viewport and history model we are implementing in th
 `codex-rs/tui2` crate. It builds on lessons from the legacy TUI and explains why we moved away
 from directly writing history into terminal scrollback.
 
-The target audience is Codex developers and curious contributors who want to understand or
+The target audience is Beacon developers and curious contributors who want to understand or
 critique how TUI2 owns its viewport, scrollback, and suspend behavior.
 
 Unless stated otherwise, references to “the TUI” in this document mean the TUI2 implementation;
@@ -58,7 +58,7 @@ order, and appears exactly once” across terminals, resizes, suspend/resume, an
 
 The redesign is guided by a few explicit goals:
 
-1. **Codex, not the terminal, owns the viewport.**
+1. **Beacon, not the terminal, owns the viewport.**
 
    - The in‑memory transcript (a list of history entries) is the single source of truth for what’s
      on screen.

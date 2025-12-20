@@ -63,7 +63,7 @@ Create a plan file (body only; frontmatter is written for you). Run from the pla
 ```bash
 python ./scripts/create_plan.py \
   --name codex-rate-limit-overview \
-  --description "Scope and update plan for Codex rate limiting" \
+  --description "Scope and update plan for Beacon rate limiting" \
   --body-file /tmp/plan-body.md
 ```
 

@@ -344,7 +344,7 @@ pub const FEATURES: &[FeatureSpec] = &[
         stage: Stage::Beta {
             name: "Shell snapshot",
             menu_description: "Snapshot your shell environment to avoid re-running login scripts for every command.",
-            announcement: "NEW! Try shell snapshotting to make your Codex faster. Enable in /experimental!",
+            announcement: "NEW! Try shell snapshotting to make your Beacon Code faster. Enable in /experimental!",
         },
         default_enabled: false,
     },

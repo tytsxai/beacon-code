@@ -951,7 +951,7 @@ pub struct ThreadStartParams {
     pub developer_instructions: Option<String>,
     /// If true, opt into emitting raw response items on the event stream.
     ///
-    /// This is for internal use only (e.g. Codex Cloud).
+    /// This is for internal use only (e.g. Beacon Cloud).
     /// (TODO): Figure out a better way to categorize internal / experimental events & protocols.
     #[serde(default)]
     pub experimental_raw_events: bool,

@@ -219,7 +219,7 @@ impl MessageProcessor {
             server_info: mcp_types::Implementation {
                 name: "codex-mcp-server".to_string(),
                 version: env!("CARGO_PKG_VERSION").to_string(),
-                title: Some("Codex".to_string()),
+                title: Some("Beacon Code".to_string()),
                 user_agent: Some(get_codex_user_agent()),
             },
         };
@@ -356,7 +356,7 @@ impl MessageProcessor {
                             content: vec![ContentBlock::TextContent(TextContent {
                                 r#type: "text".to_owned(),
                                 text: format!(
-                                    "Failed to load Codex configuration from overrides: {e}"
+                                    "Failed to load Beacon Code configuration from overrides: {e}"
                                 ),
                                 annotations: None,
                             })],
@@ -372,7 +372,9 @@ impl MessageProcessor {
                     let result = CallToolResult {
                         content: vec![ContentBlock::TextContent(TextContent {
                             r#type: "text".to_owned(),
-                            text: format!("Failed to parse configuration for Codex tool: {e}"),
+                            text: format!(
+                                "Failed to parse configuration for Beacon Code tool: {e}"
+                            ),
                             annotations: None,
                         })],
                         is_error: Some(true),
@@ -406,10 +408,10 @@ impl MessageProcessor {
         let conversation_manager = self.conversation_manager.clone();
         let running_requests_id_to_codex_uuid = self.running_requests_id_to_codex_uuid.clone();
 
-        // Spawn an async task to handle the Codex session so that we do not
+        // Spawn an async task to handle the Beacon Code session so that we do not
         // block the synchronous message-processing loop.
         task::spawn(async move {
-            // Run the Codex session and stream events back to the client.
+            // Run the Beacon Code session and stream events back to the client.
             crate::codex_tool_runner::run_codex_tool_session(
                 id,
                 initial_prompt,
@@ -437,11 +439,13 @@ impl MessageProcessor {
             Some(json_val) => match serde_json::from_value::<CodexToolCallReplyParam>(json_val) {
                 Ok(params) => params,
                 Err(e) => {
-                    tracing::error!("Failed to parse Codex tool call reply parameters: {e}");
+                    tracing::error!("Failed to parse Beacon Code tool call reply parameters: {e}");
                     let result = CallToolResult {
                         content: vec![ContentBlock::TextContent(TextContent {
                             r#type: "text".to_owned(),
-                            text: format!("Failed to parse configuration for Codex tool: {e}"),
+                            text: format!(
+                                "Failed to parse configuration for Beacon Code tool: {e}"
+                            ),
                             annotations: None,
                         })],
                         is_error: Some(true),
@@ -577,7 +581,7 @@ impl MessageProcessor {
         };
         tracing::info!("conversation_id: {conversation_id}");
 
-        // Obtain the Codex conversation from the server.
+        // Obtain the Beacon Code conversation from the server.
         let codex_arc = match self
             .conversation_manager
             .get_conversation(conversation_id)
@@ -590,7 +594,7 @@ impl MessageProcessor {
             }
         };
 
-        // Submit interrupt to Codex.
+        // Submit interrupt to Beacon Code.
         let err = codex_arc
             .submit_with_id(Submission {
                 id: request_id_string,
@@ -598,7 +602,7 @@ impl MessageProcessor {
             })
             .await;
         if let Err(e) = err {
-            tracing::error!("Failed to submit interrupt to Codex: {e}");
+            tracing::error!("Failed to submit interrupt to Beacon Code: {e}");
             return;
         }
         // unregister the id so we don't keep it in the map

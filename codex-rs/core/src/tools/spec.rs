@@ -468,7 +468,8 @@ fn create_test_sync_tool() -> ToolSpec {
 
     ToolSpec::Function(ResponsesApiTool {
         name: "test_sync_tool".to_string(),
-        description: "Internal synchronization helper used by Codex integration tests.".to_string(),
+        description: "Internal synchronization helper used by Beacon Code integration tests."
+            .to_string(),
         strict: false,
         parameters: JsonSchema::Object {
             properties,

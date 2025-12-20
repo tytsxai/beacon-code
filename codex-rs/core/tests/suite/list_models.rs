@@ -93,7 +93,7 @@ fn gpt_5_1_codex_max() -> ModelPreset {
         id: "gpt-5.1-codex-max".to_string(),
         model: "gpt-5.1-codex-max".to_string(),
         display_name: "gpt-5.1-codex-max".to_string(),
-        description: "Codex-optimized flagship for deep and fast reasoning.".to_string(),
+        description: "Flagship model optimized for deep and fast reasoning.".to_string(),
         default_reasoning_effort: ReasoningEffort::Medium,
         supported_reasoning_efforts: vec![
             effort(
@@ -185,7 +185,7 @@ fn gpt52_codex_upgrade() -> codex_protocol::openai_models::ModelUpgrade {
         migration_config_key: "gpt-5.2-codex".to_string(),
         model_link: Some("https://openai.com/index/introducing-gpt-5-2-codex".to_string()),
         upgrade_copy: Some(
-            "Codex is now powered by gpt-5.2-codex, our latest frontier agentic coding model. It is smarter and faster than its predecessors and capable of long-running project-scale work."
+            "Beacon Code is now powered by gpt-5.2-codex, our latest frontier agentic coding model. It is smarter and faster than its predecessors and capable of long-running project-scale work."
                 .to_string(),
         ),
     }

@@ -162,7 +162,7 @@ use codex_protocol::user_input::UserInput;
 use codex_utils_readiness::Readiness;
 use codex_utils_readiness::ReadinessFlag;
 
-/// The high-level interface to the Codex system.
+/// The high-level interface to the Beacon Code system.
 /// It operates as a queue pair where you send submissions and receive events.
 pub struct Codex {
     pub(crate) next_id: AtomicU64,
@@ -271,7 +271,7 @@ impl Codex {
             session_source,
         };
 
-        // Generate a unique ID for the lifetime of this Codex session.
+        // Generate a unique ID for the lifetime of this Beacon Code session.
         let session_source_clone = session_configuration.session_source.clone();
 
         let session = Session::new(
@@ -316,7 +316,7 @@ impl Codex {
         Ok(id)
     }
 
-    /// Use sparingly: prefer `submit()` so Codex is responsible for generating
+    /// Use sparingly: prefer `submit()` so Beacon Code is responsible for generating
     /// unique IDs for each submission.
     pub async fn submit_with_id(&self, sub: Submission) -> CodexResult<()> {
         self.tx_sub
@@ -614,7 +614,7 @@ impl Session {
                 None
             } else {
                 Some(format!(
-                    "Enable it with `--enable {canonical}` or `[features].{canonical}` in config.toml. See https://github.com/openai/codex/blob/main/docs/config.md#feature-flags for details."
+                    "Enable it with `--enable {canonical}` or `[features].{canonical}` in config.toml. See https://github.com/tytsxai/beacon-code/blob/main/docs/config.md#feature-flags for details."
                 ))
             };
             post_session_configured_events.push(Event {
@@ -2029,7 +2029,7 @@ mod handlers {
             .unified_exec_manager
             .terminate_all_sessions()
             .await;
-        info!("Shutting down Codex instance");
+        info!("Shutting down Beacon Code instance");
 
         // Gracefully flush and shutdown rollout recorder on session end so tests
         // that inspect the rollout file do not race with the background writer.

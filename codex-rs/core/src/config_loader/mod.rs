@@ -53,7 +53,7 @@ const DEFAULT_REQUIREMENTS_TOML_FILE_UNIX: &str = "/etc/codex/requirements.toml"
 ///
 /// (*) Only available on macOS via managed device profiles.
 ///
-/// See https://developers.openai.com/codex/security for details.
+/// See https://github.com/tytsxai/beacon-code/blob/main/docs/platform-sandboxing.md for details.
 pub async fn load_config_layers_state(
     codex_home: &Path,
     cli_overrides: &[(String, TomlValue)],

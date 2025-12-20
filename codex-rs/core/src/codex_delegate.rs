@@ -28,7 +28,7 @@ use crate::error::CodexErr;
 use crate::openai_models::models_manager::ModelsManager;
 use codex_protocol::protocol::InitialHistory;
 
-/// Start an interactive sub-Codex conversation and return IO channels.
+/// Start an interactive sub-Beacon Code conversation and return IO channels.
 ///
 /// The returned `events_rx` yields non-approval events emitted by the sub-agent.
 /// Approval requests are handled via `parent_session` and are not surfaced.

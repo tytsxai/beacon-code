@@ -207,12 +207,12 @@ client_request_definitions! {
         params: v1::GetConversationSummaryParams,
         response: v1::GetConversationSummaryResponse,
     },
-    /// List recorded Codex conversations (rollouts) with optional pagination and search.
+    /// List recorded Beacon Code conversations (rollouts) with optional pagination and search.
     ListConversations {
         params: v1::ListConversationsParams,
         response: v1::ListConversationsResponse,
     },
-    /// Resume a recorded Codex conversation from a rollout file.
+    /// Resume a recorded Beacon Code conversation from a rollout file.
     ResumeConversation {
         params: v1::ResumeConversationParams,
         response: v1::ResumeConversationResponse,
@@ -525,7 +525,7 @@ server_notification_definitions! {
     TurnPlanUpdated => "turn/plan/updated" (v2::TurnPlanUpdatedNotification),
     ItemStarted => "item/started" (v2::ItemStartedNotification),
     ItemCompleted => "item/completed" (v2::ItemCompletedNotification),
-    /// This event is internal-only. Used by Codex Cloud.
+    /// This event is internal-only. Used by Beacon Cloud.
     RawResponseItemCompleted => "rawResponseItem/completed" (v2::RawResponseItemCompletedNotification),
     AgentMessageDelta => "item/agentMessage/delta" (v2::AgentMessageDeltaNotification),
     CommandExecutionOutputDelta => "item/commandExecution/outputDelta" (v2::CommandExecutionOutputDeltaNotification),

@@ -101,7 +101,7 @@ impl MessageProcessor {
         };
 
         match codex_request {
-            // Handle Initialize internally so CodexMessageProcessor does not have to concern
+            // Handle Initialize internally so the message processor does not have to concern
             // itself with the `initialized` bool.
             ClientRequest::Initialize { request_id, params } => {
                 if self.initialized {

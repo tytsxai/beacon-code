@@ -20,7 +20,7 @@ use codex_rmcp_client::delete_oauth_tokens;
 use codex_rmcp_client::perform_oauth_login;
 use codex_rmcp_client::supports_oauth_login;
 
-/// [experimental] Launch Codex as an MCP server or manage configured MCP servers.
+/// [experimental] Launch Beacon Code as an MCP server or manage configured MCP servers.
 ///
 /// Subcommands:
 /// - `serve`  — run the MCP server on stdio
@@ -354,7 +354,7 @@ async fn run_login(config_overrides: &CliConfigOverrides, login_args: LoginArgs)
 
     if !config.features.enabled(Feature::RmcpClient) {
         bail!(
-            "OAuth login is only supported when [features].rmcp_client is true in config.toml. See https://github.com/openai/codex/blob/main/docs/config.md#feature-flags for details."
+            "OAuth login is only supported when [features].rmcp_client is true in config.toml. See https://github.com/tytsxai/beacon-code/blob/main/docs/config.md#feature-flags for details."
         );
     }
 

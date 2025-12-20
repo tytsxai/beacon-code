@@ -82,7 +82,7 @@ mod windows_impl {
         }
     }
 
-    /// Creates the sandbox user's Codex home directory if it does not already exist.
+    /// Creates the sandbox user's Beacon Code home directory if it does not already exist.
     fn ensure_codex_home_exists(p: &Path) -> Result<()> {
         std::fs::create_dir_all(p)?;
         Ok(())

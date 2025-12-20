@@ -71,7 +71,7 @@ pub enum CodexErr {
     Stream(String, Option<Duration>),
 
     #[error(
-        "Codex ran out of room in the model's context window. Start a new conversation or clear earlier history before retrying."
+        "Beacon Code ran out of room in the model's context window. Start a new conversation or clear earlier history before retrying."
     )]
     ContextWindowExceeded,
 
@@ -120,7 +120,7 @@ pub enum CodexErr {
     QuotaExceeded,
 
     #[error(
-        "To use Codex with your ChatGPT plan, upgrade to Plus: https://openai.com/chatgpt/pricing."
+        "To use Beacon Code with your ChatGPT plan, upgrade to Plus: https://openai.com/chatgpt/pricing."
     )]
     UsageNotIncluded,
 
@@ -326,7 +326,7 @@ impl std::fmt::Display for UsageLimitReachedError {
                 )
             }
             Some(PlanType::Known(KnownPlan::Free)) => {
-                "You've hit your usage limit. Upgrade to Plus to continue using Codex (https://openai.com/chatgpt/pricing)."
+                "You've hit your usage limit. Upgrade to Plus to continue using Beacon Code (https://openai.com/chatgpt/pricing)."
                     .to_string()
             }
             Some(PlanType::Known(KnownPlan::Pro)) => format!(
@@ -688,7 +688,7 @@ mod tests {
         };
         assert_eq!(
             err.to_string(),
-            "You've hit your usage limit. Upgrade to Plus to continue using Codex (https://openai.com/chatgpt/pricing)."
+            "You've hit your usage limit. Upgrade to Plus to continue using Beacon Code (https://openai.com/chatgpt/pricing)."
         );
     }
 

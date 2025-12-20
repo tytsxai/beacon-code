@@ -685,7 +685,7 @@ X-Doc = "42"
     #[tokio::test]
     async fn write_value_preserves_comments_and_order() -> Result<()> {
         let tmp = tempdir().expect("tempdir");
-        let original = r#"# Codex user configuration
+        let original = r#"# Beacon Code user configuration
 model = "gpt-5"
 approval_policy = "on-request"
 
@@ -712,7 +712,7 @@ unified_exec = true
 
         let updated =
             std::fs::read_to_string(tmp.path().join(CONFIG_TOML_FILE)).expect("read config");
-        let expected = r#"# Codex user configuration
+        let expected = r#"# Beacon Code user configuration
 model = "gpt-5"
 approval_policy = "on-request"
 

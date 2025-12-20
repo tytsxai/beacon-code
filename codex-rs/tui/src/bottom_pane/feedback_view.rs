@@ -28,7 +28,7 @@ use super::textarea::TextArea;
 use super::textarea::TextAreaState;
 
 const BASE_BUG_ISSUE_URL: &str =
-    "https://github.com/openai/codex/issues/new?template=2-bug-report.yml";
+    "https://github.com/tytsxai/beacon-code/issues/new?template=2-bug-report.yml";
 
 /// Minimal input overlay to collect an optional feedback note, then upload
 /// both logs and rollout with classification + metadata.
@@ -446,7 +446,7 @@ pub(crate) fn feedback_upload_consent_params(
             super::SelectionItem {
                 name: "Yes".to_string(),
                 description: Some(
-                    "Share the current Codex session logs with the team for troubleshooting."
+                    "Share the current Beacon Code session logs with the team for troubleshooting."
                         .to_string(),
                 ),
                 actions: vec![yes_action],
