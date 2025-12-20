@@ -122,9 +122,10 @@ pub(crate) async fn append_entry(text: &str, session_id: &Uuid, config: &Config)
                     history_file.flush()?;
                     if let Some(max_bytes) = max_bytes
                         && max_bytes > 0
-                        && let Err(err) = prune_history_if_needed(&mut history_file, max_bytes) {
-                            tracing::warn!(error = %err, "failed to prune history file");
-                        }
+                        && let Err(err) = prune_history_if_needed(&mut history_file, max_bytes)
+                    {
+                        tracing::warn!(error = %err, "failed to prune history file");
+                    }
                     let _ = fs2::FileExt::unlock(&history_file);
                     return Ok(());
                 }
