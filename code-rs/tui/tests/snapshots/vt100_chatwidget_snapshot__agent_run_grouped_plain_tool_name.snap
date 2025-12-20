@@ -22,7 +22,7 @@ expression: output
    |  Run targeted regression suite
    |
    |  Agents
-   |    • code-gpt-5.1-codex-max  running  (Xs)
+   |    • code-gpt-5.1-code-max  running  (Xs)
    |
    |  Actions
    |   MM:SS  Started agent run for qa-bot

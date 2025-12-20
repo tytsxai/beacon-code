@@ -4,7 +4,7 @@
 #![deny(clippy::print_stdout, clippy::print_stderr)]
 #![deny(clippy::disallowed_methods)]
 use app::App;
-use code_common::model_presets::HIDE_GPT_5_1_CODEX_MAX_MIGRATION_PROMPT_CONFIG;
+use code_common::model_presets::HIDE_GPT_5_1_CODE_MAX_MIGRATION_PROMPT_CONFIG;
 use code_common::model_presets::HIDE_GPT5_1_MIGRATION_PROMPT_CONFIG;
 use code_common::model_presets::ModelPreset;
 use code_common::model_presets::all_model_presets;
@@ -28,7 +28,7 @@ use code_core::config_types::ThemeName;
 use code_core::protocol::AskForApproval;
 use code_core::protocol::SandboxPolicy;
 use code_login::AuthMode;
-use code_login::CodexAuth;
+use code_login::CodeAuth;
 use code_ollama::DEFAULT_OSS_MODEL;
 use code_protocol::config_types::SandboxMode;
 use model_migration::ModelMigrationOutcome;
@@ -230,7 +230,7 @@ pub mod test_helpers {
             |events| {
                 events
                     .iter()
-                    .any(|event| matches!(event, AppEvent::CodexEvent(_)))
+                    .any(|event| matches!(event, AppEvent::BeaconEvent(_)))
             },
             Duration::from_millis(200),
         );
@@ -1040,8 +1040,8 @@ fn set_notice_flag(notices: &mut Notice, key: &str) {
         HIDE_GPT5_1_MIGRATION_PROMPT_CONFIG => {
             notices.hide_gpt5_1_migration_prompt = Some(true);
         }
-        HIDE_GPT_5_1_CODEX_MAX_MIGRATION_PROMPT_CONFIG => {
-            notices.hide_gpt_5_1_codex_max_migration_prompt = Some(true);
+        HIDE_GPT_5_1_CODE_MAX_MIGRATION_PROMPT_CONFIG => {
+            notices.hide_gpt_5_1_code_max_migration_prompt = Some(true);
         }
         _ => {}
     }
@@ -1052,15 +1052,15 @@ fn notice_hidden(notices: &Notice, key: &str) -> bool {
         HIDE_GPT5_1_MIGRATION_PROMPT_CONFIG => {
             notices.hide_gpt5_1_migration_prompt.unwrap_or(false)
         }
-        HIDE_GPT_5_1_CODEX_MAX_MIGRATION_PROMPT_CONFIG => notices
-            .hide_gpt_5_1_codex_max_migration_prompt
+        HIDE_GPT_5_1_CODE_MAX_MIGRATION_PROMPT_CONFIG => notices
+            .hide_gpt_5_1_code_max_migration_prompt
             .unwrap_or(false),
         _ => false,
     }
 }
 
 fn auth_allows_target(auth_mode: AuthMode, target: &ModelPreset) -> bool {
-    if matches!(auth_mode, AuthMode::ApiKey) && target.id.eq_ignore_ascii_case("gpt-5.1-codex-max")
+    if matches!(auth_mode, AuthMode::ApiKey) && target.id.eq_ignore_ascii_case("gpt-5.1-code-max")
     {
         return false;
     }
@@ -1122,7 +1122,7 @@ pub enum LoginStatus {
 /// Determine current login status based on auth.json presence.
 pub fn get_login_status(config: &Config) -> LoginStatus {
     let code_home = config.code_home.clone();
-    match CodexAuth::from_code_home(
+    match CodeAuth::from_code_home(
         &code_home,
         AuthMode::ChatGPT,
         &config.responses_originator_header,

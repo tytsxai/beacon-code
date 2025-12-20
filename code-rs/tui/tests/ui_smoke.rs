@@ -1009,7 +1009,7 @@ fn seed_session(harness: &mut ChatWidgetHarness) {
         event_seq: 0,
         msg: EventMsg::SessionConfigured(SessionConfiguredEvent {
             session_id: Uuid::new_v4(),
-            model: "gpt-5.1-codex".into(),
+            model: "gpt-5.1-code".into(),
             history_log_id: 0,
             history_entry_count: 0,
         }),

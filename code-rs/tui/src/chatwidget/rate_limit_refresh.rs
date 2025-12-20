@@ -113,7 +113,7 @@ fn run_refresh(app_event_tx: AppEventSender, config: Config, debug_enabled: bool
             order: None,
         };
 
-        app_event_tx.send(AppEvent::CodexEvent(event));
+        app_event_tx.send(AppEvent::BeaconEvent(event));
         Ok(())
     })
 }

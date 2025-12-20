@@ -18,8 +18,8 @@ use ratatui::widgets::Wrap;
 
 use code_login::AuthMode;
 
-use code_core::CodexAuth;
-use code_core::config::GPT_5_CODEX_MEDIUM_MODEL;
+use code_core::CodeAuth;
+use code_core::config::GPT_5_CODE_MEDIUM_MODEL;
 use code_core::model_family::derive_default_model_family;
 use code_core::model_family::find_family_for_model;
 
@@ -375,7 +375,7 @@ impl AuthModeWidget {
             .map(|args| args.config.responses_originator_header.clone())
             .unwrap_or_else(|| code_core::default_client::DEFAULT_ORIGINATOR.to_string());
 
-        match CodexAuth::from_code_home(&self.code_home, AuthMode::ApiKey, &originator) {
+        match CodeAuth::from_code_home(&self.code_home, AuthMode::ApiKey, &originator) {
             Ok(Some(auth)) if auth.mode == AuthMode::ApiKey => {
                 self.login_status = LoginStatus::AuthMode(AuthMode::ApiKey);
                 self.sign_in_state = SignInState::EnvVarFound;
@@ -400,7 +400,7 @@ impl AuthModeWidget {
         if let Ok(mut args) = self.chat_widget_args.lock() {
             args.config.using_chatgpt_auth = true;
             if args.config.model.eq_ignore_ascii_case("gpt-5.1") {
-                let new_model = GPT_5_CODEX_MEDIUM_MODEL.to_string();
+                let new_model = GPT_5_CODE_MEDIUM_MODEL.to_string();
                 args.config.model = new_model.clone();
 
                 let family = find_family_for_model(&new_model)

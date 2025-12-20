@@ -1,6 +1,5 @@
 ---
 source: tui/tests/vt100_chatwidget_snapshot.rs
-assertion_line: 2138
 expression: section_closed
 ---
  +------------------------------------------------------------------------------------------------+
@@ -10,16 +9,16 @@ expression: section_closed
  |                                                                                                |
  | ›  Model              + Select Model & Reasoning --------------------------------------------+ |
  |    Theme              |                                                                      | |
- |    Updates            |  Current model: GPT-5.1-Codex                                        | |
+ |    Updates            |  Current model: GPT-5.1-Code                                         | |
  |    Agents             |  Reasoning effort: Medium                                            | |
  |    Prompts            |                                                                      | |
- |    Auto Drive         |  GPT-5.1-Codex                                                       | |
+ |    Auto Drive         |  GPT-5.1-Code                                                        | |
  |    Review             |  Optimized for Code.                                                 | |
  |    Planning           |     High - Maximizes reasoning depth for complex or ambiguous proble | |
  |    Validation         |     Medium (current) - Dynamically adjusts reasoning based on the ta | |
  |    Chrome             |     Low - Fastest responses with limited reasoning                   | |
  |    MCP                |                                                                      | |
- |    Notifications      |  GPT-5.1-Codex-Mini                                                  | |
+ |    Notifications      |  GPT-5.1-Code-Mini                                                   | |
  |    Limits             |                                                                      | |
  |                       +----------------------------------------------------------------------+ |
  | ↑ ↓ Move    Enter Open    Esc Close    ? Help                                                  |

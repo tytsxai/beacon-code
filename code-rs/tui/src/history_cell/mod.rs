@@ -5347,12 +5347,12 @@ pub(crate) fn new_status_output(
     lines.push(Line::from(vec!["🔐 ".into(), "Authentication".bold()]));
     {
         use code_login::AuthMode;
-        use code_login::CodexAuth;
+        use code_login::CodeAuth;
         use code_login::OPENAI_API_KEY_ENV_VAR;
         use code_login::try_read_auth_json;
 
         // Determine effective auth mode the core would choose
-        let auth_result = CodexAuth::from_code_home(
+        let auth_result = CodeAuth::from_code_home(
             &config.code_home,
             AuthMode::ChatGPT,
             &config.responses_originator_header,

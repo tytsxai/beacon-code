@@ -153,8 +153,8 @@ mod agent_summary_counts_tests {
     #[test]
     fn missing_builtins_default_to_disabled() {
         let agents = vec![
-            make_agent("code-gpt-5.1-codex-max", true),
-            make_agent("code-gpt-5.1-codex-mini", true),
+            make_agent("code-gpt-5.1-code-max", true),
+            make_agent("code-gpt-5.1-code-mini", true),
         ];
 
         let (enabled, total) = agent_summary_counts(&agents);
@@ -167,7 +167,7 @@ mod agent_summary_counts_tests {
     #[test]
     fn custom_agents_are_counted() {
         let agents = vec![
-            make_agent("code-gpt-5.1-codex-max", true),
+            make_agent("code-gpt-5.1-code-max", true),
             make_agent("my-custom-agent", false),
         ];
 
@@ -2704,7 +2704,7 @@ impl ChatWidget<'_> {
                 msg: EventMsg::SessionConfigured(new_conversation.session_configured),
                 order: None,
             };
-            app_event_tx_clone.send(AppEvent::CodexEvent(event));
+            app_event_tx_clone.send(AppEvent::BeaconEvent(event));
 
             let conversation = new_conversation.conversation;
             let conversation_clone = conversation.clone();
@@ -2724,7 +2724,7 @@ impl ChatWidget<'_> {
             });
 
             while let Ok(event) = conversation.next_event().await {
-                app_event_tx_clone.send(AppEvent::CodexEvent(event));
+                app_event_tx_clone.send(AppEvent::BeaconEvent(event));
             }
             // (debug end notice removed)
         });
@@ -5433,7 +5433,7 @@ impl ChatWidget<'_> {
     /// Construct a ChatWidget from an existing conversation (forked session).
     pub(crate) fn new_from_existing(
         config: Config,
-        conversation: std::sync::Arc<code_core::CodexConversation>,
+        conversation: std::sync::Arc<code_core::BeaconConversation>,
         session_configured: SessionConfiguredEvent,
         app_event_tx: AppEventSender,
         enhanced_keys_supported: bool,
@@ -5458,7 +5458,7 @@ impl ChatWidget<'_> {
                 msg: EventMsg::SessionConfigured(session_configured),
                 order: None,
             };
-            app_event_tx_clone.send(AppEvent::CodexEvent(event));
+            app_event_tx_clone.send(AppEvent::BeaconEvent(event));
 
             let conversation_clone = conversation.clone();
             tokio::spawn(async move {
@@ -5471,7 +5471,7 @@ impl ChatWidget<'_> {
             });
 
             while let Ok(event) = conversation.next_event().await {
-                app_event_tx_clone.send(AppEvent::CodexEvent(event));
+                app_event_tx_clone.send(AppEvent::BeaconEvent(event));
             }
         });
 
@@ -13212,7 +13212,7 @@ impl ChatWidget<'_> {
             ));
             self.history_push_plain_state(history_cell::new_error_event((*error_text).to_string()));
 
-            self.history_push_plain_state(history_cell::new_model_output("gpt-5.1-codex", *effort));
+            self.history_push_plain_state(history_cell::new_model_output("gpt-5.1-code", *effort));
             self.history_push_plain_state(history_cell::new_reasoning_output(effort));
 
             self.history_push_plain_state(history_cell::new_status_output(
@@ -22763,7 +22763,7 @@ Have we met every part of this goal and is there no further work to do?"#
                                                 use code_core::protocol::{
                                                     BrowserScreenshotUpdateEvent, Event, EventMsg,
                                                 };
-                                                app_event_tx_inner.send(AppEvent::CodexEvent(
+                                                app_event_tx_inner.send(AppEvent::BeaconEvent(
                                                     Event {
                                                         id: uuid::Uuid::new_v4().to_string(),
                                                         event_seq: 0,
@@ -22833,7 +22833,7 @@ Have we met every part of this goal and is there no further work to do?"#
                                             use code_core::protocol::BrowserScreenshotUpdateEvent;
                                             use code_core::protocol::Event;
                                             use code_core::protocol::EventMsg;
-                                            app_event_tx_bg.send(AppEvent::CodexEvent(Event {
+                                            app_event_tx_bg.send(AppEvent::BeaconEvent(Event {
                                                 id: uuid::Uuid::new_v4().to_string(),
                                                 event_seq: 0,
                                                 msg: EventMsg::BrowserScreenshotUpdate(
@@ -22961,7 +22961,7 @@ Have we met every part of this goal and is there no further work to do?"#
                                                                 *latest = Some((first_path.clone(), url_inner.clone()));
                                                             }
                                                             use code_core::protocol::{BrowserScreenshotUpdateEvent, Event, EventMsg};
-                                                            app_event_tx_inner.send(AppEvent::CodexEvent(Event {
+                                                            app_event_tx_inner.send(AppEvent::BeaconEvent(Event {
                                                                 id: uuid::Uuid::new_v4().to_string(),
                                                                 event_seq: 0,
                                                                 msg: EventMsg::BrowserScreenshotUpdate(BrowserScreenshotUpdateEvent {
@@ -23026,7 +23026,7 @@ Have we met every part of this goal and is there no further work to do?"#
                                                         use code_core::protocol::Event;
                                                         use code_core::protocol::EventMsg;
                                                         app_event_tx_bg
-                                                            .send(AppEvent::CodexEvent(Event {
+                                                            .send(AppEvent::BeaconEvent(Event {
                                                             id: uuid::Uuid::new_v4().to_string(),
                                                             event_seq: 0,
                                                             msg: EventMsg::BrowserScreenshotUpdate(
@@ -23452,7 +23452,7 @@ Have we met every part of this goal and is there no further work to do?"#
                                                 use code_core::protocol::{
                                                     BrowserScreenshotUpdateEvent, EventMsg,
                                                 };
-                                                app_event_tx_inner.send(AppEvent::CodexEvent(
+                                                app_event_tx_inner.send(AppEvent::BeaconEvent(
                                                     Event {
                                                         id: uuid::Uuid::new_v4().to_string(),
                                                         event_seq: 0,
@@ -23513,7 +23513,7 @@ Have we met every part of this goal and is there no further work to do?"#
 
                                                 // Send update event
                                                 use code_core::protocol::{BrowserScreenshotUpdateEvent, EventMsg};
-                                                app_event_tx_inner.send(AppEvent::CodexEvent(Event { id: uuid::Uuid::new_v4().to_string(), event_seq: 0, msg: EventMsg::BrowserScreenshotUpdate(BrowserScreenshotUpdateEvent {
+                                                app_event_tx_inner.send(AppEvent::BeaconEvent(Event { id: uuid::Uuid::new_v4().to_string(), event_seq: 0, msg: EventMsg::BrowserScreenshotUpdate(BrowserScreenshotUpdateEvent {
                                                         screenshot_path: first_path.clone(),
                                                         url: url_inner,
                                                     }), order: None }));
@@ -23564,7 +23564,7 @@ Have we met every part of this goal and is there no further work to do?"#
                                         // Send update event
                                         use code_core::protocol::BrowserScreenshotUpdateEvent;
                                         use code_core::protocol::EventMsg;
-                                        app_event_tx.send(AppEvent::CodexEvent(Event {
+                                        app_event_tx.send(AppEvent::BeaconEvent(Event {
                                             id: uuid::Uuid::new_v4().to_string(),
                                             event_seq: 0,
                                             msg: EventMsg::BrowserScreenshotUpdate(
@@ -24315,7 +24315,7 @@ Have we met every part of this goal and is there no further work to do?"#
                         }
                         use code_core::protocol::BrowserScreenshotUpdateEvent;
                         use code_core::protocol::EventMsg;
-                        app_event_tx.send(AppEvent::CodexEvent(Event {
+                        app_event_tx.send(AppEvent::BeaconEvent(Event {
                             id: uuid::Uuid::new_v4().to_string(),
                             event_seq: 0,
                             msg: EventMsg::BrowserScreenshotUpdate(BrowserScreenshotUpdateEvent {
@@ -24505,7 +24505,7 @@ Have we met every part of this goal and is there no further work to do?"#
                             }
                             use code_core::protocol::BrowserScreenshotUpdateEvent;
                             use code_core::protocol::EventMsg;
-                            app_event_tx.send(AppEvent::CodexEvent(Event {
+                            app_event_tx.send(AppEvent::BeaconEvent(Event {
                                 id: uuid::Uuid::new_v4().to_string(),
                                 event_seq: 0,
                                 msg: EventMsg::BrowserScreenshotUpdate(
@@ -25333,10 +25333,10 @@ mod tests {
     use crossterm::event::KeyModifiers;
 
     #[test]
-    fn format_model_name_capitalizes_codex_mini() {
+    fn format_model_name_capitalizes_code_mini() {
         let mut harness = ChatWidgetHarness::new();
-        let formatted = harness.chat().format_model_name("gpt-5.1-codex-mini");
-        assert_eq!(formatted, "GPT-5.1-Codex-Mini");
+        let formatted = harness.chat().format_model_name("gpt-5.1-code-mini");
+        assert_eq!(formatted, "GPT-5.1-Code-Mini");
     }
 
     #[test]
@@ -26401,7 +26401,7 @@ mod tests {
 
         chat.auto_on_assistant_final();
 
-        // With cloud-gpt-5.1-codex-max gated off, the review request is still queued but
+        // With cloud-gpt-5.1-code-max gated off, the review request is still queued but
         // may be processed synchronously; ensure the review slot was populated.
         if chat.auto_state.awaiting_review() {
             // Review remains pending; nothing else to assert.
@@ -26915,7 +26915,7 @@ mod tests {
             events
                 .iter()
                 .any(|event| matches!(event, AppEvent::DispatchCommand(_, _))
-                    || matches!(event, AppEvent::CodexOp(_))),
+                    || matches!(event, AppEvent::BeaconOp(_))),
             "slash command should follow existing dispatch path"
         );
     }
@@ -26932,8 +26932,8 @@ mod tests {
             write: false,
             write_requested: Some(false),
             models: Some(vec![
-                "code-gpt-5.1-codex-max".to_string(),
-                "code-gpt-5.1-codex-mini".to_string(),
+                "code-gpt-5.1-code-max".to_string(),
+                "code-gpt-5.1-code-mini".to_string(),
             ]),
         }];
         chat.auto_state.pending_agent_timing = Some(AutoTurnAgentsTiming::Blocking);
@@ -26947,7 +26947,7 @@ mod tests {
         assert!(message.contains("Run diagnostics"));
         assert!(message.contains("Please run agent.create"));
         assert!(message.contains("write: false"));
-        assert!(message.contains("Models: [code-gpt-5.1-codex-max, code-gpt-5.1-codex-mini]"));
+        assert!(message.contains("Models: [code-gpt-5.1-code-max, code-gpt-5.1-code-mini]"));
         assert!(message.contains("Draft alternative fix"));
         assert!(message.contains("Focus on parser module"));
         assert!(message.contains("agent.wait"));

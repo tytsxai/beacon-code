@@ -1614,7 +1614,7 @@ impl App<'_> {
                         widget.register_pasted_image(placeholder, path);
                     }
                 }
-                AppEvent::CodexEvent(event) => {
+                AppEvent::BeaconEvent(event) => {
                     self.dispatch_code_event(event);
                 }
                 AppEvent::ExitRequest => {
@@ -1928,7 +1928,7 @@ impl App<'_> {
                     }
                 }
                 // fallthrough handled by break
-                AppEvent::CodexOp(op) => match &mut self.app_state {
+                AppEvent::BeaconOp(op) => match &mut self.app_state {
                     AppState::Chat { widget } => widget.submit_op(op),
                     AppState::Onboarding { .. } => {}
                 },
@@ -2069,7 +2069,7 @@ impl App<'_> {
                     // For prompt-expanding commands (/plan, /solve, /code) we let the
                     // expanded prompt be recorded by the normal submission path.
                     if !command.is_prompt_expanding() {
-                        self.app_event_tx.send(AppEvent::CodexOp(Op::AddToHistory {
+                        self.app_event_tx.send(AppEvent::BeaconOp(Op::AddToHistory {
                             text: command_text.clone(),
                         }));
                     }
@@ -2159,7 +2159,7 @@ impl App<'_> {
                         SlashCommand::Compact => {
                             if let AppState::Chat { widget } = &mut self.app_state {
                                 widget.clear_token_usage();
-                                self.app_event_tx.send(AppEvent::CodexOp(Op::Compact));
+                                self.app_event_tx.send(AppEvent::BeaconOp(Op::Compact));
                             }
                         }
                         SlashCommand::Quit => {
@@ -2337,7 +2337,7 @@ impl App<'_> {
                             use code_core::protocol::ApplyPatchApprovalRequestEvent;
                             use code_core::protocol::FileChange;
 
-                            self.app_event_tx.send(AppEvent::CodexEvent(Event {
+                            self.app_event_tx.send(AppEvent::BeaconEvent(Event {
                                 id: "1".to_string(),
                                 event_seq: 0,
                                 // msg: EventMsg::ExecApprovalRequest(ExecApprovalRequestEvent {
@@ -3335,7 +3335,7 @@ impl App<'_> {
                             ),
                             order: None,
                         };
-                        self.app_event_tx.send(AppEvent::CodexEvent(ev));
+                        self.app_event_tx.send(AppEvent::BeaconEvent(ev));
                     }
 
                     // Prefill composer with the edited text

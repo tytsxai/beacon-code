@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use code_core::CodexConversation;
+use code_core::BeaconConversation;
 use code_core::ConversationManager;
 use code_core::NewConversation;
 use code_core::config::Config;
@@ -52,7 +52,7 @@ pub(crate) fn spawn_agent(
             id: "".to_string(),
             msg: code_core::protocol::EventMsg::SessionConfigured(session_configured),
         };
-        app_event_tx_clone.send(AppEvent::CodexEvent(ev));
+        app_event_tx_clone.send(AppEvent::BeaconEvent(ev));
 
         let conversation_clone = conversation.clone();
         tokio::spawn(async move {
@@ -65,7 +65,7 @@ pub(crate) fn spawn_agent(
         });
 
         while let Ok(event) = conversation.next_event().await {
-            app_event_tx_clone.send(AppEvent::CodexEvent(event));
+            app_event_tx_clone.send(AppEvent::BeaconEvent(event));
         }
     });
 
@@ -76,7 +76,7 @@ pub(crate) fn spawn_agent(
 /// Sends the provided `SessionConfiguredEvent` immediately, then forwards subsequent
 /// events and accepts Ops for submission.
 pub(crate) fn spawn_agent_from_existing(
-    conversation: std::sync::Arc<CodexConversation>,
+    conversation: std::sync::Arc<BeaconConversation>,
     session_configured: code_core::protocol::SessionConfiguredEvent,
     app_event_tx: AppEventSender,
 ) -> UnboundedSender<Op> {
@@ -89,7 +89,7 @@ pub(crate) fn spawn_agent_from_existing(
             id: "".to_string(),
             msg: code_core::protocol::EventMsg::SessionConfigured(session_configured),
         };
-        app_event_tx_clone.send(AppEvent::CodexEvent(ev));
+        app_event_tx_clone.send(AppEvent::BeaconEvent(ev));
 
         let conversation_clone = conversation.clone();
         tokio::spawn(async move {
@@ -102,7 +102,7 @@ pub(crate) fn spawn_agent_from_existing(
         });
 
         while let Ok(event) = conversation.next_event().await {
-            app_event_tx_clone.send(AppEvent::CodexEvent(event));
+            app_event_tx_clone.send(AppEvent::BeaconEvent(event));
         }
     });
 
