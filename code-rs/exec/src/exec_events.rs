@@ -2,7 +2,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use ts_rs::TS;
 
-/// Top-level JSONL events emitted by codex exec
+/// Top-level JSONL events emitted by code exec
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, TS)]
 #[serde(tag = "type")]
 pub enum ThreadEvent {

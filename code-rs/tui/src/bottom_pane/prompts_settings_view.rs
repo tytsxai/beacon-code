@@ -65,7 +65,8 @@ impl PromptsSettingsView {
         let mut name_field = FormTextField::new_single_line();
         name_field.set_filter(InputFilter::Id);
         let body_field = FormTextField::new_multi_line();
-        let view = Self {
+
+        Self {
             prompts,
             selected: 0,
             focus: Focus::List,
@@ -75,8 +76,7 @@ impl PromptsSettingsView {
             app_event_tx,
             is_complete: false,
             mode: Mode::List,
-        };
-        view
+        }
     }
 
     pub fn handle_key_event_direct(&mut self, key: KeyEvent) -> bool {
@@ -211,7 +211,7 @@ impl PromptsSettingsView {
             };
             let name_span = Span::styled(format!("{arrow} /{}", p.name), name_style);
             let preview_span = Span::styled(
-                format!("  {}", preview),
+                format!("  {preview}"),
                 Style::default().fg(colors::text_dim()),
             );
             let mut spans = vec![name_span];
@@ -524,9 +524,9 @@ impl PromptsSettingsView {
         // Update local list
         let mut updated = self.prompts.clone();
         let new_entry = CustomPrompt {
-            name: name.clone(),
+            name: name,
             path,
-            content: body.clone(),
+            content: body,
             description: None,
             argument_hint: None,
         };

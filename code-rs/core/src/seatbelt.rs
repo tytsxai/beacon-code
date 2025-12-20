@@ -118,7 +118,9 @@ fn create_seatbelt_command_args(
     );
 
     if std::env::var("CODEX_DEBUG_PRINT_SEATBELT").is_ok() {
-        eprintln!("--- Beacon Code Seatbelt Policy ---\n{full_policy}\n------------------------------");
+        eprintln!(
+            "--- Beacon Code Seatbelt Policy ---\n{full_policy}\n------------------------------"
+        );
     }
 
     let mut seatbelt_args: Vec<String> = vec!["-p".to_string(), full_policy];

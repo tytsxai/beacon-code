@@ -46,7 +46,7 @@ impl MessageProcessor {
             auth_manager.clone(),
             SessionSource::Mcp,
         ));
-        let config_for_processor = config.clone();
+        let config_for_processor = config;
         let code_message_processor = CodexMessageProcessor::new(
             auth_manager,
             conversation_manager,
@@ -69,8 +69,8 @@ impl MessageProcessor {
             && let Ok(code_request) = serde_json::from_value::<ClientRequest>(request_json)
         {
             match code_request {
-            // Handle Initialize internally so the message processor does not have to concern
-            // itself with the `initialized` bool.
+                // Handle Initialize internally so the message processor does not have to concern
+                // itself with the `initialized` bool.
                 ClientRequest::Initialize { request_id, params } => {
                     if self.initialized {
                         let error = JSONRPCErrorError {

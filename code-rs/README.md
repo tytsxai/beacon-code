@@ -21,7 +21,7 @@ Rust CLI 使用 `config.toml` 而非 `config.json`。详细选项见 [`docs/conf
 
 ## 汉化维护原则
 
-- 汉化改动仅落在 `code-rs/`，保留 `codex-rs/` 作为对照 workspace。
+- 汉化改动仅落在 `code-rs/`，保留 `third_party/upstream/codex-rs/` 作为对照 workspace。
 - 默认界面为英文；设置 `ui_locale = "zh-CN"` 可切换为中文，缺失条目自动回退英文避免功能回归。
 - 字符串集中管理（单一表/模块），上游增量改文案时只需补键，降低合并冲突。
 - 所有汉化变更需继续通过 `./build-fast.sh`，遇到 warning 视为失败。

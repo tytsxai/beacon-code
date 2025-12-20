@@ -67,7 +67,7 @@ impl NotificationsSettingsView {
                 };
                 self.app_event_tx.send_background_event_with_ticket(
                     &self.ticket,
-                    format!("TUI notifications are filtered in config: [{}]", filters),
+                    format!("TUI notifications are filtered in config: [{filters}]"),
                 );
                 self.app_event_tx.send_background_event_with_ticket(
                     &self.ticket,

@@ -164,7 +164,7 @@ fn build_browser_line(
             .metadata
             .iter()
             .take(2)
-            .map(|(k, v)| format!("{}={}", k, v))
+            .map(|(k, v)| format!("{k}={v}"))
             .collect::<Vec<_>>()
             .join(", ");
         spans.push(Span::raw("  "));
@@ -196,7 +196,7 @@ fn build_delta_line(delta: &ContextDeltaRecord, primary: Style, dim: Style) -> L
 
     if let Some(seq) = delta.sequence {
         spans.push(Span::raw("  "));
-        spans.push(Span::styled(format!("#{}", seq), dim));
+        spans.push(Span::styled(format!("#{seq}"), dim));
     }
 
     Line::from(spans)

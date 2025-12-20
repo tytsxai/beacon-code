@@ -334,12 +334,12 @@ pub struct Config {
     /// Whether Auto Drive should inherit the chat model instead of a dedicated override.
     pub auto_drive_use_chat_model: bool,
 
-    /// Path to the `codex-linux-sandbox` executable. This must be set if
+    /// Path to the `code-linux-sandbox` executable. This must be set if
     /// [`crate::exec::SandboxType::LinuxSeccomp`] is used. Note that this
     /// cannot be set in the config file: it must be set in code via
     /// [`ConfigOverrides`].
     ///
-    /// When this program is invoked, arg0 will be set to `codex-linux-sandbox`.
+    /// When this program is invoked, arg0 will be set to `code-linux-sandbox`.
     pub code_linux_sandbox_exe: Option<PathBuf>,
 
     /// The value to use for `reasoning.effort` when making a
@@ -1369,7 +1369,7 @@ pub fn set_project_access_mode(
     let proj_tbl = projects_tbl
         .get_mut(project_key.as_str())
         .and_then(|i| i.as_table_mut())
-        .ok_or_else(|| anyhow::anyhow!(format!("failed to create projects.{project_key} table")))?;
+        .ok_or_else(|| anyhow::anyhow!("failed to create projects.{project_key} table"))?;
 
     // Write fields
     proj_tbl.insert(
@@ -1447,7 +1447,7 @@ pub fn add_project_allowed_command(
     let project_tbl = projects_tbl
         .get_mut(project_key.as_str())
         .and_then(|i| i.as_table_mut())
-        .ok_or_else(|| anyhow::anyhow!(format!("failed to create projects.{project_key} table")))?;
+        .ok_or_else(|| anyhow::anyhow!("failed to create projects.{project_key} table"))?;
 
     let mut argv_array = TomlArray::new();
     for arg in command {

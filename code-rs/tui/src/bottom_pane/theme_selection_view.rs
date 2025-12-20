@@ -201,9 +201,9 @@ impl ThemeSelectionView {
                 }
             }
             let name = if crate::theme::custom_theme_is_dark().unwrap_or(false) {
-                format!("Dark - {}", label)
+                format!("Dark - {label}")
             } else {
-                format!("Light - {}", label)
+                format!("Light - {label}")
             };
             v.push((
                 ThemeName::Custom,
@@ -249,7 +249,7 @@ impl ThemeSelectionView {
             } else {
                 options.len().saturating_sub(1)
             };
-            if self.selected_theme_index + 1 <= limit {
+            if self.selected_theme_index < limit {
                 self.selected_theme_index += 1;
                 if self.selected_theme_index < options.len() {
                     self.current_theme = options[self.selected_theme_index].0;
@@ -260,7 +260,7 @@ impl ThemeSelectionView {
         } else {
             let names = crate::spinner::spinner_names();
             // Allow moving onto the extra pseudo-row (Generate your own…)
-            if self.selected_spinner_index + 1 <= names.len() {
+            if self.selected_spinner_index < names.len() {
                 self.selected_spinner_index += 1;
                 if self.selected_spinner_index < names.len() {
                     if let Some(name) = names.get(self.selected_spinner_index) {
@@ -342,7 +342,7 @@ impl ThemeSelectionView {
                 Err(e) => {
                     tx.send_background_before_next_output_with_ticket(
                         &before_ticket,
-                        format!("Failed to start runtime: {}", e),
+                        format!("Failed to start runtime: {e}"),
                     );
                     return;
                 }
@@ -354,7 +354,7 @@ impl ThemeSelectionView {
                     Err(e) => {
                         tx.send_background_before_next_output_with_ticket(
                             &before_ticket,
-                            format!("Config error: {}", e),
+                            format!("Config error: {e}"),
                         );
                         return;
                     }
@@ -424,7 +424,7 @@ impl ThemeSelectionView {
                     Err(e) => {
                         tx.send_background_before_next_output_with_ticket(
                             &before_ticket,
-                            format!("Request error: {}", e),
+                            format!("Request error: {e}"),
                         );
                         tracing::info!("spinner request error: {}", e);
                         return;
@@ -448,7 +448,7 @@ impl ThemeSelectionView {
                         }
                         Ok(code_core::ResponseEvent::Completed { .. }) => { tracing::info!("LLM: completed"); break; }
                         Err(e) => {
-                            let msg = format!("{}", e);
+                            let msg = format!("{e}");
                             tracing::info!("LLM stream error: {}", msg);
                             last_err = Some(msg);
                             break; // Stop consuming after a terminal transport error
@@ -509,7 +509,7 @@ impl ThemeSelectionView {
                                 Ok(v) => v,
                                 Err(e2) => {
                                     let _ = progress_tx.send(ProgressMsg::CompletedErr {
-                                        error: format!("{}", e2),
+                                        error: format!("{e2}"),
                                         _raw_snippet: out.chars().take(200).collect::<String>(),
                                     });
                                     return;
@@ -518,8 +518,8 @@ impl ThemeSelectionView {
                         } else {
                             // Prefer a clearer message if we saw a transport error
                             let msg = last_err
-                                .map(|le| format!("model stream error: {}", le))
-                                .unwrap_or_else(|| format!("{}", e));
+                                .map(|le| format!("model stream error: {le}"))
+                                .unwrap_or_else(|| format!("{e}"));
                             let _ = progress_tx.send(ProgressMsg::CompletedErr {
                                 error: msg,
                                 _raw_snippet: out.chars().take(200).collect::<String>(),
@@ -528,18 +528,18 @@ impl ThemeSelectionView {
                         }
                     }
                 };
-                let interval = v.get("interval").and_then(|x| x.as_u64()).unwrap_or(120).clamp(50, 300);
+                let interval = v.get("interval").and_then(serde_json::Value::as_u64).unwrap_or(120).clamp(50, 300);
                 let display_name = v
                     .get("name")
                     .and_then(|x| x.as_str())
-                    .map(|s| s.trim())
+                    .map(str::trim)
                     .filter(|s| !s.is_empty())
                     .unwrap_or("Custom")
                     .to_string();
                 let mut frames: Vec<String> = v
                     .get("frames")
                     .and_then(|x| x.as_array())
-                    .map(|arr| arr.iter().filter_map(|f| f.as_str().map(|s| s.to_string())).collect())
+                    .map(|arr| arr.iter().filter_map(|f| f.as_str().map(std::string::ToString::to_string)).collect())
                     .unwrap_or_default();
 
                 // Enforce frame width limit (truncate to first 20 characters)
@@ -578,7 +578,6 @@ impl ThemeSelectionView {
                 &fallback_ticket,
                 "Failed to generate spinner preview: background worker unavailable".to_string(),
             );
-            return;
         }
     }
 
@@ -592,9 +591,7 @@ impl ThemeSelectionView {
         // Capture a compact example of the current theme as guidance
         fn color_to_hex(c: ratatui::style::Color) -> Option<String> {
             match c {
-                ratatui::style::Color::Rgb(r, g, b) => {
-                    Some(format!("#{:02X}{:02X}{:02X}", r, g, b))
-                }
+                ratatui::style::Color::Rgb(r, g, b) => Some(format!("#{r:02X}{g:02X}{b:02X}")),
                 _ => None,
             }
         }
@@ -677,7 +674,7 @@ impl ThemeSelectionView {
                 Err(e) => {
                     tx.send_background_before_next_output_with_ticket(
                         &before_ticket,
-                        format!("Failed to start runtime: {}", e),
+                        format!("Failed to start runtime: {e}"),
                     );
                     return;
                 }
@@ -688,7 +685,7 @@ impl ThemeSelectionView {
                     Err(e) => {
                         tx.send_background_before_next_output_with_ticket(
                             &before_ticket,
-                            format!("Config error: {}", e),
+                            format!("Config error: {e}"),
                         );
                         return;
                     }
@@ -713,7 +710,7 @@ impl ThemeSelectionView {
                 // Prompt with example and detailed field usage to help the model choose appropriate colors
                 let developer = format!(
                     "You are designing a TUI color theme for a terminal UI.\n\nOutput: Strict JSON only. Include fields: `name` (string), `is_dark` (boolean), and `colors` (object of hex strings #RRGGBB).\n\nImportant rules:\n- Include EVERY `colors` key below. If you are not changing a value, copy it from the Current example.\n- Ensure strong contrast and readability for text vs background and for dim/bright variants.\n- Favor accessible color contrast (WCAG-ish) where possible.\n\nColor semantics (how the UI uses them):\n- background: main screen background.\n- foreground: primary foreground accents for widgets.\n- text: normal body text; must be readable on background.\n- text_dim: secondary/description text; slightly lower contrast than text.\n- text_bright: headings/emphasis; higher contrast than text.\n- primary: primary action/highlight color for selected items/buttons.\n- secondary: secondary accents (less prominent than primary).\n- border: container borders/dividers; should be visible but subtle against background.\n- border_focused: border when focused/active; slightly stronger than border.\n- selection: background for selected list rows; must contrast with text.\n- cursor: text caret color in input fields; must contrast with background.\n- success/warning/error/info: status badges and notices.\n- keyword/string/comment/function: syntax highlight accents in code blocks.\n- spinner: glyph color for loading animations; should be visible on background.\n- progress: progress-bar foreground color.\n\nCurrent theme example (copy unchanged values from here):\n{}",
-                    example.to_string()
+                    example
                 );
                 let mut input: Vec<code_protocol::models::ResponseItem> = Vec::new();
                 input.push(code_protocol::models::ResponseItem::Message { id: None, role: "developer".to_string(), content: vec![code_protocol::models::ContentItem::InputText { text: developer }] });
@@ -777,7 +774,7 @@ impl ThemeSelectionView {
                     Err(e) => {
                         tx.send_background_before_next_output_with_ticket(
                             &before_ticket,
-                            format!("Request error: {}", e),
+                            format!("Request error: {e}"),
                         );
                         return;
                     }
@@ -811,8 +808,8 @@ impl ThemeSelectionView {
                         }
                         Ok(code_core::ResponseEvent::Completed { .. }) => break,
                         Err(e) => {
-                            let msg = format!("{}", e);
-                            let _ = progress_tx.send(ProgressMsg::ThinkingDelta(format!("(stream error: {})", msg)));
+                            let msg = format!("{e}");
+                            let _ = progress_tx.send(ProgressMsg::ThinkingDelta(format!("(stream error: {msg})")));
                             last_err = Some(msg);
                             break; // Stop consuming after a terminal transport error
                         }
@@ -824,7 +821,7 @@ impl ThemeSelectionView {
                 // If we received no content at all, surface the transport error explicitly
                 if out.trim().is_empty() {
                     let err = last_err
-                        .map(|e| format!("model stream error: {}", e))
+                        .map(|e| format!("model stream error: {e}"))
                         .unwrap_or_else(|| "model stream returned no content".to_string());
                     let _ = progress_tx.send(ProgressMsg::CompletedErr {
                         error: err,
@@ -863,7 +860,7 @@ impl ThemeSelectionView {
                                 Ok(v) => v,
                                 Err(e2) => {
                                     let _ = progress_tx.send(ProgressMsg::CompletedErr {
-                                        error: format!("{}", e2),
+                                        error: format!("{e2}"),
                                         _raw_snippet: out.chars().take(200).collect(),
                                     });
                                     return;
@@ -872,8 +869,8 @@ impl ThemeSelectionView {
                         } else {
                             // Prefer a clearer message if we saw a transport error
                             let msg = last_err
-                                .map(|le| format!("model stream error: {}", le))
-                                .unwrap_or_else(|| format!("{}", e));
+                                .map(|le| format!("model stream error: {le}"))
+                                .unwrap_or_else(|| format!("{e}"));
                             let _ = progress_tx.send(ProgressMsg::CompletedErr {
                                 error: msg,
                                 _raw_snippet: out.chars().take(200).collect(),
@@ -883,7 +880,7 @@ impl ThemeSelectionView {
                     }
                 };
                 let name = v.get("name").and_then(|x| x.as_str()).unwrap_or("Custom").trim().to_string();
-                let is_dark = v.get("is_dark").and_then(|x| x.as_bool());
+                let is_dark = v.get("is_dark").and_then(serde_json::Value::as_bool);
                 let mut colors = code_core::config_types::ThemeColors::default();
                 if let Some(map) = v.get("colors").and_then(|x| x.as_object()) {
                     let get = |k: &str| map.get(k).and_then(|x| x.as_str()).map(|s| s.trim().to_string());
@@ -922,7 +919,6 @@ impl ThemeSelectionView {
                 &fallback_ticket,
                 "Failed to generate theme: background worker unavailable".to_string(),
             );
-            return;
         }
     }
 }
@@ -1305,7 +1301,7 @@ impl ThemeSelectionView {
                                         }
                                         crate::spinner::add_custom_spinner(
                                             "custom".to_string(),
-                                            display_name.clone(),
+                                            display_name,
                                             interval,
                                             frames,
                                         );
@@ -1419,7 +1415,7 @@ impl ThemeSelectionView {
                                             crate::theme::init_theme(
                                                 &code_core::config_types::ThemeConfig {
                                                     name: ThemeName::Custom,
-                                                    colors: colors.clone(),
+                                                    colors: colors,
                                                     label: Some(name.clone()),
                                                     is_dark: s.proposed_is_dark.get(),
                                                 },
@@ -1435,13 +1431,11 @@ impl ThemeSelectionView {
                                         }
                                         if s.preview_on.get() {
                                             self.send_before_next_output(format!(
-                                                "Set theme to {}",
-                                                name
+                                                "Set theme to {name}"
                                             ));
                                         } else {
                                             self.send_before_next_output(format!(
-                                                "Saved custom theme {} (not active)",
-                                                name
+                                                "Saved custom theme {name} (not active)"
                                             ));
                                         }
                                         go_overview = true;
@@ -1519,15 +1513,13 @@ impl ThemeSelectionView {
                     }
                     match s.step.get() {
                         CreateStep::Prompt => {
-                            if let Some((idx, _)) = s.prompt.grapheme_indices(true).last() {
+                            if let Some((idx, _)) = s.prompt.grapheme_indices(true).next_back() {
                                 s.prompt.truncate(idx);
                             } else {
                                 s.prompt.clear();
                             }
                         }
-                        CreateStep::Action | CreateStep::Review => {
-                            return;
-                        }
+                        CreateStep::Action | CreateStep::Review => {}
                     }
                 } else if let Mode::CreateTheme(ref mut s) = self.mode {
                     if s.is_loading.get() {
@@ -1535,15 +1527,13 @@ impl ThemeSelectionView {
                     }
                     match s.step.get() {
                         CreateStep::Prompt => {
-                            if let Some((idx, _)) = s.prompt.grapheme_indices(true).last() {
+                            if let Some((idx, _)) = s.prompt.grapheme_indices(true).next_back() {
                                 s.prompt.truncate(idx);
                             } else {
                                 s.prompt.clear();
                             }
                         }
-                        CreateStep::Action | CreateStep::Review => {
-                            return;
-                        }
+                        CreateStep::Action | CreateStep::Review => {}
                     }
                 }
             }
@@ -1959,7 +1949,7 @@ impl<'a> BottomPaneView<'a> for ThemeSelectionView {
                                         }
                                         crate::spinner::add_custom_spinner(
                                             "custom".to_string(),
-                                            display_name.clone(),
+                                            display_name,
                                             interval,
                                             frames,
                                         );
@@ -2080,7 +2070,7 @@ impl<'a> BottomPaneView<'a> for ThemeSelectionView {
                                             crate::theme::init_theme(
                                                 &code_core::config_types::ThemeConfig {
                                                     name: ThemeName::Custom,
-                                                    colors: colors.clone(),
+                                                    colors: colors,
                                                     label: Some(name.clone()),
                                                     is_dark: s.proposed_is_dark.get(),
                                                 },
@@ -2098,13 +2088,11 @@ impl<'a> BottomPaneView<'a> for ThemeSelectionView {
                                         // Informative status depending on whether we set active
                                         if s.preview_on.get() {
                                             self.send_before_next_output(format!(
-                                                "Set theme to {}",
-                                                name
+                                                "Set theme to {name}"
                                             ));
                                         } else {
                                             self.send_before_next_output(format!(
-                                                "Saved custom theme {} (not active)",
-                                                name
+                                                "Saved custom theme {name} (not active)"
                                             ));
                                         }
                                         go_overview = true;
@@ -2188,9 +2176,7 @@ impl<'a> BottomPaneView<'a> for ThemeSelectionView {
                         CreateStep::Prompt => {
                             s.prompt.pop();
                         }
-                        CreateStep::Action | CreateStep::Review => {
-                            return;
-                        }
+                        CreateStep::Action | CreateStep::Review => {}
                     }
                 } else if let Mode::CreateTheme(ref mut s) = self.mode {
                     if s.is_loading.get() {
@@ -2200,9 +2186,7 @@ impl<'a> BottomPaneView<'a> for ThemeSelectionView {
                         CreateStep::Prompt => {
                             s.prompt.pop();
                         }
-                        CreateStep::Action | CreateStep::Review => {
-                            return;
-                        }
+                        CreateStep::Action | CreateStep::Review => {}
                     }
                 }
             }
@@ -2542,7 +2526,7 @@ impl<'a> BottomPaneView<'a> for ThemeSelectionView {
                                     sm.step.set(CreateStep::Action);
                                     sm.thinking_lines
                                         .borrow_mut()
-                                        .push(format!("Error: {}", error));
+                                        .push(format!("Error: {error}"));
                                     sm.thinking_current.borrow_mut().clear();
                                 }
                                 self.app_event_tx.send(AppEvent::RequestRedraw);
@@ -2595,7 +2579,7 @@ impl<'a> BottomPaneView<'a> for ThemeSelectionView {
                             .cloned()
                             .unwrap_or_else(|| "Waiting for model…".to_string())
                     };
-                    let mut latest_render = latest.to_string();
+                    let mut latest_render = latest;
                     if !latest_render.ends_with('…') {
                         latest_render.push_str(" …");
                     }
@@ -2639,7 +2623,7 @@ impl<'a> BottomPaneView<'a> for ThemeSelectionView {
                             Style::default().fg(theme.text)
                         };
                         form_lines.push(Line::from(Span::styled(
-                            format!("Now showing {} [{}]", name, onoff),
+                            format!("Now showing {name} [{onoff}]"),
                             style,
                         )));
                         form_lines.push(Line::default());
@@ -2692,7 +2676,7 @@ impl<'a> BottomPaneView<'a> for ThemeSelectionView {
                             Style::default().fg(theme.text)
                         };
                         form_lines.push(Line::from(Span::styled(
-                            format!("Now showing {} [{}]", name, onoff),
+                            format!("Now showing {name} [{onoff}]"),
                             style,
                         )));
                         form_lines.push(Line::default());
@@ -2729,7 +2713,7 @@ impl<'a> BottomPaneView<'a> for ThemeSelectionView {
                         spans.push(Span::raw(" "));
                         spans.push(Span::styled(preview, fg));
                         spans.push(Span::raw(" "));
-                        spans.push(Span::styled(format!("{}...", label), fg));
+                        spans.push(Span::styled(format!("{label}..."), fg));
                         spans.push(Span::raw(" "));
                         spans.push(Span::styled("─".repeat(border_len as usize), border));
                         form_lines.push(Line::from(spans));
@@ -2793,26 +2777,26 @@ impl<'a> BottomPaneView<'a> for ThemeSelectionView {
                 // Exactly one blank line above Description
                 form_lines.push(Line::default());
                 // Show error above description if any
-                if let Some(last) = s.thinking_lines.borrow().last().cloned() {
-                    if last.starts_with("Error:") {
+                if let Some(last) = s.thinking_lines.borrow().last().cloned()
+                    && last.starts_with("Error:")
+                {
+                    form_lines.push(Line::from(Span::styled(
+                        last,
+                        Style::default().fg(crate::colors::error()),
+                    )));
+                    if let Some(raw) = s.last_raw_output.borrow().as_ref() {
                         form_lines.push(Line::from(Span::styled(
-                            last,
-                            Style::default().fg(crate::colors::error()),
+                            "Model output (raw):",
+                            Style::default().fg(theme.text_dim),
                         )));
-                        if let Some(raw) = s.last_raw_output.borrow().as_ref() {
+                        for ln in raw.split('\n') {
                             form_lines.push(Line::from(Span::styled(
-                                "Model output (raw):",
-                                Style::default().fg(theme.text_dim),
+                                ln.to_string(),
+                                Style::default().fg(theme.text),
                             )));
-                            for ln in raw.split('\n') {
-                                form_lines.push(Line::from(Span::styled(
-                                    ln.to_string(),
-                                    Style::default().fg(theme.text),
-                                )));
-                            }
                         }
-                        form_lines.push(Line::default());
                     }
+                    form_lines.push(Line::default());
                 }
                 let caret = Span::styled("▏", Style::default().fg(theme.info));
                 let mut desc_spans: Vec<Span> = Vec::new();
@@ -2924,7 +2908,7 @@ impl<'a> BottomPaneView<'a> for ThemeSelectionView {
                                     sm.step.set(CreateStep::Action);
                                     sm.thinking_lines
                                         .borrow_mut()
-                                        .push(format!("Error: {}", error));
+                                        .push(format!("Error: {error}"));
                                     sm.thinking_current.borrow_mut().clear();
                                 }
                                 self.app_event_tx.send(AppEvent::RequestRedraw);
@@ -2970,7 +2954,7 @@ impl<'a> BottomPaneView<'a> for ThemeSelectionView {
                             .cloned()
                             .unwrap_or_else(|| "Waiting for model…".to_string())
                     };
-                    let mut latest_render = latest.to_string();
+                    let mut latest_render = latest;
                     if !latest_render.ends_with('…') {
                         latest_render.push_str(" …");
                     }
@@ -3011,7 +2995,7 @@ impl<'a> BottomPaneView<'a> for ThemeSelectionView {
                         Style::default().fg(theme.text)
                     };
                     form_lines.push(Line::from(Span::styled(
-                        format!("Now showing {} [{}]", name, onoff),
+                        format!("Now showing {name} [{onoff}]"),
                         toggle_style,
                     )));
                     form_lines.push(Line::default());
@@ -3047,26 +3031,26 @@ impl<'a> BottomPaneView<'a> for ThemeSelectionView {
                 )));
                 form_lines.push(Line::default());
                 // If there was a recent error, show it once above description (with full raw output)
-                if let Some(last) = s.thinking_lines.borrow().last().cloned() {
-                    if last.starts_with("Error:") {
+                if let Some(last) = s.thinking_lines.borrow().last().cloned()
+                    && last.starts_with("Error:")
+                {
+                    form_lines.push(Line::from(Span::styled(
+                        last,
+                        Style::default().fg(crate::colors::error()),
+                    )));
+                    if let Some(raw) = s.last_raw_output.borrow().as_ref() {
                         form_lines.push(Line::from(Span::styled(
-                            last,
-                            Style::default().fg(crate::colors::error()),
+                            "Model output (raw):",
+                            Style::default().fg(theme.text_dim),
                         )));
-                        if let Some(raw) = s.last_raw_output.borrow().as_ref() {
+                        for ln in raw.split('\n') {
                             form_lines.push(Line::from(Span::styled(
-                                "Model output (raw):",
-                                Style::default().fg(theme.text_dim),
+                                ln.to_string(),
+                                Style::default().fg(theme.text),
                             )));
-                            for ln in raw.split('\n') {
-                                form_lines.push(Line::from(Span::styled(
-                                    ln.to_string(),
-                                    Style::default().fg(theme.text),
-                                )));
-                            }
                         }
-                        form_lines.push(Line::default());
                     }
+                    form_lines.push(Line::default());
                 }
                 form_lines.push(Line::from(Span::styled(
                     "Code can generate a custom theme just for you!",
@@ -3259,7 +3243,7 @@ impl<'a> BottomPaneView<'a> for ThemeSelectionView {
                 spans.push(Span::styled(frame, fg));
                 spans.push(Span::raw(" "));
                 // label with dots
-                spans.push(Span::styled(format!("{}... ", label), fg));
+                spans.push(Span::styled(format!("{label}... "), fg));
                 // right rule (match left border logic: x - text_len)
                 spans.push(Span::styled("─".repeat(right_rule as usize), border));
                 Paragraph::new(Line::from(spans))

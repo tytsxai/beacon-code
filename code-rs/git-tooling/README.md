@@ -1,4 +1,4 @@
-# codex-git-tooling
+# code-git-tooling
 
 Helpers for interacting with git, primarily used by Code to capture and restore
 workspace snapshots.

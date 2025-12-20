@@ -105,13 +105,13 @@ impl FormTextField {
         }
 
         // If an input filter is active and this is a Char, validate and insert
-        if let KeyCode::Char(c) = key.code {
-            if matches!(self.filter, InputFilter::Id) {
-                if Self::id_char_allowed(c) {
-                    self.textarea.insert_str(&c.to_string());
-                }
-                return true; // consumed either way
+        if let KeyCode::Char(c) = key.code
+            && matches!(self.filter, InputFilter::Id)
+        {
+            if Self::id_char_allowed(c) {
+                self.textarea.insert_str(&c.to_string());
             }
+            return true; // consumed either way
         }
 
         // Delegate remaining keys to TextArea which already handles:
@@ -157,30 +157,25 @@ impl FormTextField {
     /// hidden while overlays are active).
     pub fn render(&self, area: Rect, buf: &mut Buffer, focused: bool) {
         // Paint text using the TextArea renderer for exact wrapping
-        let mut state = self.state.borrow().clone();
+        let mut state = *self.state.borrow();
         StatefulWidgetRef::render_ref(&(&self.textarea), area, buf, &mut state);
         // Persist any scroll changes made during rendering
         *self.state.borrow_mut() = state;
 
         // Draw a pseudo-caret when focused without hiding the underlying glyph.
         // Invert colors on the cursor cell so the character remains visible.
-        if focused {
-            if let Some((cx, cy)) = self
+        if focused
+            && let Some((cx, cy)) = self
                 .textarea
                 .cursor_pos_with_state(area, *self.state.borrow())
-            {
-                let max_x = area.x.saturating_add(area.width.saturating_sub(1));
-                let x = cx.min(max_x);
-                if cy >= area.y
-                    && cy < area.y + area.height
-                    && x >= area.x
-                    && x < area.x + area.width
-                {
-                    let style = Style::default()
-                        .bg(crate::colors::text())
-                        .fg(crate::colors::background());
-                    buf[(x, cy)].set_style(style);
-                }
+        {
+            let max_x = area.x.saturating_add(area.width.saturating_sub(1));
+            let x = cx.min(max_x);
+            if cy >= area.y && cy < area.y + area.height && x >= area.x && x < area.x + area.width {
+                let style = Style::default()
+                    .bg(crate::colors::text())
+                    .fg(crate::colors::background());
+                buf[(x, cy)].set_style(style);
             }
         }
         // Note: We intentionally do not persist state.scroll changes from a

@@ -92,14 +92,8 @@ impl GradientBackground {
                 let gradient_pos = ((col as f32 / width_f) + gradient.bias).clamp(0.0, 1.0);
                 let final_color = colors::mix_toward(gradient.left, gradient.right, gradient_pos);
 
-                let coverage = reveal_coverage(
-                    clamped_progress,
-                    x_norm,
-                    y_norm,
-                    col as u16,
-                    row as u16,
-                    reveal.variant,
-                );
+                let coverage =
+                    reveal_coverage(clamped_progress, x_norm, y_norm, col, row, reveal.variant);
 
                 let softened_color =
                     if reveal.intro_light && clamped_progress < LIGHT_REVEAL_FADE_END {
@@ -118,8 +112,8 @@ impl GradientBackground {
                     clamped_progress,
                     x_norm,
                     y_norm,
-                    col as u16,
-                    row as u16,
+                    col,
+                    row,
                     final_color,
                 );
 

@@ -1957,7 +1957,7 @@ impl BrowserManager {
                     }
                 }
 
-                // Listen for SPA changes via codex:locationchange (only when attached to external Chrome)
+                // Listen for SPA changes via beacon:locationchange (only when attached to external Chrome)
                 let cfg_now = config_arc.read().await.clone();
                 if cfg_now.connect_port.is_some() || cfg_now.connect_ws.is_some() {
                     // Install listener once and poll sequence counter
@@ -1968,7 +1968,7 @@ impl BrowserManager {
                               window.__code_nav_listening = true;
                               window.__code_nav_seq = 0;
                               window.__code_nav_url = String(location.href || '');
-                              window.addEventListener('codex:locationchange', function(){
+                              window.addEventListener('beacon:locationchange', function(){
                                 window.__code_nav_seq += 1;
                                 window.__code_nav_url = String(location.href || '');
                               }, { capture: true });

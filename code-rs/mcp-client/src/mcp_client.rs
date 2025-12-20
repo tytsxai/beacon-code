@@ -269,13 +269,16 @@ impl McpClient {
                 let typed: R::Result = serde_json::from_value(result)?;
                 Ok(typed)
             }
-            JSONRPCMessage::Error(err) => Err(anyhow!(format!(
-                "server returned JSON-RPC error: code = {}, message = {}",
-                err.error.code, err.error.message
-            ))),
-            other => Err(anyhow!(format!(
+            JSONRPCMessage::Error(err) => {
+                let code = err.error.code;
+                let message = err.error.message;
+                Err(anyhow!(
+                    "server returned JSON-RPC error: code = {code}, message = {message}"
+                ))
+            }
+            other => Err(anyhow!(
                 "unexpected message variant received in reply path: {other:?}"
-            ))),
+            )),
         }
     }
 

@@ -123,7 +123,7 @@ enum Subcommand {
     /// Internal debugging commands.
     Debug(DebugArgs),
 
-    /// Debug: replay ordering from response.json and codex-tui.log
+    /// Debug: replay ordering from response.json and code-tui.log
     #[clap(hide = false)]
     OrderReplay(OrderReplayArgs),
 
@@ -199,7 +199,7 @@ struct LoginCommand {
 
     #[arg(
         long = "with-api-key",
-        help = "Read the API key from stdin (e.g. `printenv OPENAI_API_KEY | codex login --with-api-key`)"
+        help = "Read the API key from stdin (e.g. `printenv OPENAI_API_KEY | code login --with-api-key`)"
     )]
     with_api_key: bool,
 
@@ -257,8 +257,8 @@ struct OrderReplayArgs {
     /// Path to a response.json captured under ~/.code/debug_logs/*_response.json
     /// (legacy ~/.codex/debug_logs/ is still read).
     response_json: std::path::PathBuf,
-    /// Path to codex-tui.log (typically ~/.code/log/codex-tui.log; legacy
-    /// ~/.codex/log/codex-tui.log is still read).
+    /// Path to code-tui.log (typically ~/.code/log/code-tui.log; legacy
+    /// ~/.codex/log/codex-tui.log is still accepted).
     tui_log: std::path::PathBuf,
 }
 
@@ -305,10 +305,7 @@ async fn cli_main(code_linux_sandbox_exe: Option<PathBuf>) -> anyhow::Result<()>
                 session_id,
             } = code_tui::run_main(interactive, code_linux_sandbox_exe).await?;
             if !token_usage.is_zero() {
-                println!(
-                    "{}",
-                    code_core::protocol::FinalOutput::from(token_usage.clone())
-                );
+                println!("{}", code_core::protocol::FinalOutput::from(token_usage));
             }
             if let Some(session_id) = session_id {
                 println!(
@@ -368,10 +365,7 @@ async fn cli_main(code_linux_sandbox_exe: Option<PathBuf>) -> anyhow::Result<()>
                 session_id,
             } = code_tui::run_main(interactive, code_linux_sandbox_exe).await?;
             if !token_usage.is_zero() {
-                println!(
-                    "{}",
-                    code_core::protocol::FinalOutput::from(token_usage.clone())
-                );
+                println!("{}", code_core::protocol::FinalOutput::from(token_usage));
             }
             if let Some(session_id) = session_id {
                 println!(
@@ -400,7 +394,7 @@ async fn cli_main(code_linux_sandbox_exe: Option<PathBuf>) -> anyhow::Result<()>
                         .await;
                     } else if login_cli.api_key.is_some() {
                         eprintln!(
-                            "The --api-key flag is no longer supported. Pipe the key instead, e.g. `printenv OPENAI_API_KEY | codex login --with-api-key`."
+                            "The --api-key flag is no longer supported. Pipe the key instead, e.g. `printenv OPENAI_API_KEY | code login --with-api-key`."
                         );
                         std::process::exit(1);
                     } else if login_cli.with_api_key {
@@ -495,7 +489,7 @@ fn prepend_config_flags(
         .splice(0..0, cli_config_overrides.raw_overrides);
 }
 
-/// Build the final `TuiCli` for a `codex resume` invocation.
+/// Build the final `TuiCli` for a `code resume` invocation.
 fn finalize_resume_interactive(
     mut interactive: TuiCli,
     root_config_overrides: CliConfigOverrides,
@@ -513,7 +507,7 @@ fn finalize_resume_interactive(
     merge_resume_cli_flags(&mut interactive, resume_cli);
 
     if let Err(err) = apply_resume_directives(&mut interactive, session_id, last) {
-        eprintln!("{}", err);
+        eprintln!("{err}");
         process::exit(1);
     }
 
@@ -523,7 +517,7 @@ fn finalize_resume_interactive(
     interactive
 }
 
-/// Merge flags provided to `codex resume` so they take precedence over any
+/// Merge flags provided to `code resume` so they take precedence over any
 /// root-level flags. Only overrides fields explicitly set on the resume-scoped
 /// CLI. Also appends `-c key=value` overrides with highest precedence.
 fn merge_resume_cli_flags(interactive: &mut TuiCli, resume_cli: TuiCli) {
@@ -606,11 +600,10 @@ fn resolve_resume_path(session_id: Option<&str>, last: bool) -> anyhow::Result<O
         return Ok(None);
     }
 
-    let code_home =
-        code_core::config::find_code_home()
-            .context("failed to locate Beacon Code home directory")?;
+    let code_home = code_core::config::find_code_home()
+        .context("failed to locate Beacon Code home directory")?;
 
-    let sess = session_id.map(|s| s.to_string());
+    let sess = session_id.map(std::string::ToString::to_string);
     let fetch = async move {
         let catalog = SessionCatalog::new(code_home.clone());
         if let Some(id) = sess.as_deref() {
@@ -645,7 +638,7 @@ fn resolve_resume_path(session_id: Option<&str>, last: bool) -> anyhow::Result<O
 
     match TokioHandle::try_current() {
         Ok(handle) => {
-            let handle = handle.clone();
+            let handle = handle;
             std::thread::spawn(move || handle.block_on(fetch))
                 .join()
                 .map_err(|_| anyhow!("resume lookup thread panicked"))?
@@ -695,8 +688,8 @@ fn order_replay_main(args: OrderReplayArgs) -> anyhow::Result<()> {
         for ev in events {
             let data = ev.get("data");
             if let Some(d) = data {
-                let out = d.get("output_index").and_then(|x| x.as_u64());
-                let seq = d.get("sequence_number").and_then(|x| x.as_u64());
+                let out = d.get("output_index").and_then(serde_json::Value::as_u64);
+                let seq = d.get("sequence_number").and_then(serde_json::Value::as_u64);
                 if let (Some(out), Some(seq)) = (out, seq) {
                     items.push((out, seq));
                 }
@@ -752,7 +745,7 @@ fn order_replay_main(args: OrderReplayArgs) -> anyhow::Result<()> {
 
     println!("Expected (first 20 sorted by out,seq):");
     for (i, (out, seq)) in expected.iter().take(20).enumerate() {
-        println!("  {:>3}: out={} seq={}", i, out, seq);
+        println!("  {i:>3}: out={out} seq={seq}");
     }
 
     println!("\nActual inserts (first 40):");
@@ -774,10 +767,7 @@ fn order_replay_main(args: OrderReplayArgs) -> anyhow::Result<()> {
     let pos_out2 = actual
         .iter()
         .position(|l| l.ordered && l.req == 1 && l.out == 2);
-    println!(
-        "\nCheck (req=1): first out=1 at {:?}, first out=2 at {:?}",
-        pos_out1, pos_out2
-    );
+    println!("\nCheck (req=1): first out=1 at {pos_out1:?}, first out=2 at {pos_out2:?}");
     if let (Some(p1), Some(p2)) = (pos_out1, pos_out2) {
         if p1 < p2 {
             println!("Result: OK (assistant precedes tool)");
@@ -806,7 +796,7 @@ async fn preview_main(args: PreviewArgs) -> anyhow::Result<()> {
     let (owner, name) = repo
         .split_once('/')
         .map(|(o, n)| (o.to_string(), n.to_string()))
-        .ok_or_else(|| anyhow::anyhow!(format!("Invalid repo format: {}", repo)))?;
+        .ok_or_else(|| anyhow::anyhow!("Invalid repo format: {repo}"))?;
 
     let os = env::consts::OS;
     let arch = env::consts::ARCH;
@@ -816,11 +806,11 @@ async fn preview_main(args: PreviewArgs) -> anyhow::Result<()> {
         ("macos", "x86_64") => "x86_64-apple-darwin",
         ("macos", "aarch64") => "aarch64-apple-darwin",
         ("windows", _) => "x86_64-pc-windows-msvc",
-        _ => bail!(format!("Unsupported platform: {}/{}", os, arch)),
+        _ => bail!("Unsupported platform: {os}/{arch}"),
     };
 
     let client = reqwest::Client::builder()
-        .user_agent("codex-preview/1")
+        .user_agent("beacon-preview/1")
         .build()?;
 
     // Resolve slug/tag from id
@@ -830,7 +820,8 @@ async fn preview_main(args: PreviewArgs) -> anyhow::Result<()> {
         let s = r.status();
         let t = r.text().await?;
         if !s.is_success() {
-            anyhow::bail!(format!("GET {} -> {} {}", url, s.as_u16(), t));
+            let status = s.as_u16();
+            anyhow::bail!("GET {url} -> {status} {t}");
         }
         Ok(serde_json::from_str(&t).unwrap_or(serde_json::Value::Null))
     }
@@ -840,7 +831,7 @@ async fn preview_main(args: PreviewArgs) -> anyhow::Result<()> {
         name: &str,
         slug: &str,
     ) -> anyhow::Result<String> {
-        let base = format!("preview-{}", slug);
+        let base = format!("preview-{slug}");
         let url = format!("https://api.github.com/repos/{owner}/{name}/releases?per_page=100");
         let v = fetch_json(client, &url).await?;
         let mut latest = base.clone();
@@ -887,7 +878,7 @@ async fn preview_main(args: PreviewArgs) -> anyhow::Result<()> {
         let resp = client.get(u).send().await?;
         if resp.status().is_success() {
             let data = resp.bytes().await?;
-            let filename = u.split('/').last().unwrap_or("download.bin");
+            let filename = u.split('/').next_back().unwrap_or("download.bin");
             let p = tmp.path().join(filename);
             fs::write(&p, &data)?;
             downloaded = Some((p, u.clone()));
@@ -900,10 +891,10 @@ async fn preview_main(args: PreviewArgs) -> anyhow::Result<()> {
     fn first_match(dir: &Path, pat: &str) -> Option<std::path::PathBuf> {
         for entry in fs::read_dir(dir).ok()? {
             let p = entry.ok()?.path();
-            if let Some(name) = p.file_name().and_then(|s| s.to_str()) {
-                if name.starts_with(pat) {
-                    return Some(p);
-                }
+            if let Some(name) = p.file_name().and_then(|s| s.to_str())
+                && name.starts_with(pat)
+            {
+                return Some(p);
             }
         }
         None
@@ -937,7 +928,7 @@ async fn preview_main(args: PreviewArgs) -> anyhow::Result<()> {
     if os != "windows" {
         // If we downloaded a tar.gz, extract
         if path.extension().and_then(|e| e.to_str()) == Some("gz") {
-            let tgz = path.clone();
+            let tgz = path;
             let file = fs::File::open(&tgz)?;
             let gz = GzDecoder::new(file);
             let mut ar = tar::Archive::new(gz);
@@ -972,7 +963,7 @@ async fn preview_main(args: PreviewArgs) -> anyhow::Result<()> {
             let dest = match exe.extension().and_then(|e| e.to_str()) {
                 Some(ext) => {
                     let stem = exe.file_stem().and_then(|s| s.to_str()).unwrap_or("code");
-                    out_dir.join(format!("{}-{}.{}", stem, slug, ext))
+                    out_dir.join(format!("{stem}-{slug}.{ext}"))
                 }
                 None => out_dir.join(format!(
                     "{}-{}",
@@ -1003,9 +994,9 @@ async fn preview_main(args: PreviewArgs) -> anyhow::Result<()> {
             // Derive base name from archive (e.g., code-aarch64-apple-darwin.zst -> code-aarch64-apple-darwin-<slug>.{exe?})
             let stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("code");
             let dest = if cfg!(windows) {
-                out_dir.join(format!("{}-{}.exe", stem, slug))
+                out_dir.join(format!("{stem}-{slug}.exe"))
             } else {
-                out_dir.join(format!("{}-{}", stem, slug))
+                out_dir.join(format!("{stem}-{slug}"))
             };
             let status = std::process::Command::new("zstd")
                 .arg("-d")
@@ -1054,11 +1045,11 @@ async fn doctor_main() -> anyhow::Result<()> {
         .map(|p| p.display().to_string())
         .unwrap_or_else(|_| "<unknown>".to_string());
     println!("code version: {}", code_version::version());
-    println!("current_exe: {}", exe);
+    println!("current_exe: {exe}");
 
     // PATH
     let path = env::var("PATH").unwrap_or_default();
-    println!("PATH: {}", path);
+    println!("PATH: {path}");
 
     // Helper to run a shell command and capture stdout (best-effort)
     async fn run_cmd(cmd: &str, args: &[&str]) -> String {
@@ -1076,12 +1067,12 @@ async fn doctor_main() -> anyhow::Result<()> {
         async move {
             let out = run_cmd(
                 "/bin/bash",
-                &["-lc", &format!("which -a {} 2>/dev/null || true", name)],
+                &["-lc", &format!("which -a {name} 2>/dev/null || true")],
             )
             .await;
             out.split('\n')
                 .filter(|s| !s.is_empty())
-                .map(|s| s.to_string())
+                .map(std::string::ToString::to_string)
                 .collect::<Vec<_>>()
         }
     };
@@ -1106,7 +1097,7 @@ async fn doctor_main() -> anyhow::Result<()> {
         println!("  <none>");
     } else {
         for p in &code_paths {
-            println!("  {}", p);
+            println!("  {p}");
         }
     }
     println!("\nFound 'coder' on PATH (in order):");
@@ -1114,19 +1105,19 @@ async fn doctor_main() -> anyhow::Result<()> {
         println!("  <none>");
     } else {
         for p in &coder_paths {
-            println!("  {}", p);
+            println!("  {p}");
         }
     }
 
     // Try to run --version for each resolved binary to show where mismatches come from
     async fn show_versions(caption: &str, paths: &[String]) {
-        println!("\n{}:", caption);
+        println!("\n{caption}:");
         for p in paths {
             let out = run_cmd(p, &["--version"]).await;
             if out.is_empty() {
-                println!("  {} -> (no output)", p);
+                println!("  {p} -> (no output)");
             } else {
-                println!("  {} -> {}", p, out);
+                println!("  {p} -> {out}");
             }
         }
     }
@@ -1136,17 +1127,17 @@ async fn doctor_main() -> anyhow::Result<()> {
     // Detect Bun shims
     let bun_home = env::var("BUN_INSTALL")
         .ok()
-        .or_else(|| env::var("HOME").ok().map(|h| format!("{}/.bun", h)));
+        .or_else(|| env::var("HOME").ok().map(|h| format!("{h}/.bun")));
     if let Some(bun) = bun_home {
-        let bun_bin = format!("{}/bin", bun);
-        let bun_coder = format!("{}/coder", bun_bin);
+        let bun_bin = format!("{bun}/bin");
+        let bun_coder = format!("{bun_bin}/coder");
         if coder_paths.iter().any(|p| p == &bun_coder) {
-            println!("\nBun shim detected for 'coder': {}", bun_coder);
+            println!("\nBun shim detected for 'coder': {bun_coder}");
             println!("Suggestion: remove old Bun global with: bun remove -g @tytsxai/beacon-code");
         }
-        let bun_code = format!("{}/code", bun_bin);
+        let bun_code = format!("{bun_bin}/code");
         if code_paths.iter().any(|p| p == &bun_code) {
-            println!("Bun shim detected for 'code': {}", bun_code);
+            println!("Bun shim detected for 'code': {bun_code}");
             println!("Suggestion: prefer 'coder' or remove Bun shim if it conflicts.");
         }
     }
@@ -1172,10 +1163,10 @@ async fn doctor_main() -> anyhow::Result<()> {
     let npm_root = run_cmd("npm", &["root", "-g"]).await;
     let npm_prefix = run_cmd("npm", &["prefix", "-g"]).await;
     if !npm_root.is_empty() {
-        println!("\nnpm root -g: {}", npm_root);
+        println!("\nnpm root -g: {npm_root}");
     }
     if !npm_prefix.is_empty() {
-        println!("npm prefix -g: {}", npm_prefix);
+        println!("npm prefix -g: {npm_prefix}");
     }
 
     println!("\nIf versions differ, remove older installs and keep one package manager:");
@@ -1275,7 +1266,7 @@ mod tests {
     {
         let _guard = CODE_HOME_MUTEX
             .lock()
-            .unwrap_or_else(|poison| poison.into_inner());
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         let temp_home = TempDir::new().expect("temp code home");
         let prev_code_home = std::env::var("CODE_HOME").ok();
         let prev_codex_home = std::env::var("CODEX_HOME").ok();
@@ -1370,7 +1361,7 @@ mod tests {
         let user_line = RolloutLine {
             timestamp: last_event_at.to_string(),
             item: RolloutItem::ResponseItem(ResponseItem::Message {
-                id: Some(format!("user-{}", id)),
+                id: Some(format!("user-{id}")),
                 role: "user".to_string(),
                 content: vec![ContentItem::InputText {
                     text: user_message.to_string(),
@@ -1381,10 +1372,10 @@ mod tests {
         let response_line = RolloutLine {
             timestamp: last_event_at.to_string(),
             item: RolloutItem::ResponseItem(ResponseItem::Message {
-                id: Some(format!("msg-{}", id)),
+                id: Some(format!("msg-{id}")),
                 role: "assistant".to_string(),
                 content: vec![ContentItem::OutputText {
-                    text: format!("Ack: {}", user_message),
+                    text: format!("Ack: {user_message}"),
                 }],
             }),
         };
@@ -1424,7 +1415,7 @@ mod tests {
             let session_id_str = session_id.to_string();
             create_session_fixture(code_home, &session_id);
 
-            let args = vec![
+            let args = [
                 "codex".to_string(),
                 "resume".to_string(),
                 session_id_str.clone(),
@@ -1473,8 +1464,7 @@ mod tests {
             let path_str = path.to_string_lossy();
             assert!(
                 path_str.contains("22222222-2222-4222-8222-222222222222"),
-                "path resolved to {}",
-                path_str
+                "path resolved to {path_str}"
             );
         });
     }
@@ -1500,8 +1490,7 @@ mod tests {
             let result_str = result.to_string_lossy();
             assert!(
                 result_str.contains("33333333-3333-4333-8333-333333333333"),
-                "path resolved to {}",
-                result_str
+                "path resolved to {result_str}"
             );
         });
     }
@@ -1550,8 +1539,7 @@ mod tests {
             let path_str = path.to_string_lossy();
             assert!(
                 path_str.contains("55555555-5555-4555-8555-555555555555"),
-                "path resolved to {}",
-                path_str
+                "path resolved to {path_str}"
             );
         });
     }

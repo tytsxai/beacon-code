@@ -3,7 +3,7 @@
 //! Example usage:
 //!
 //! ```bash
-//! cargo run -p codex-mcp-client -- `code-mcp-server`
+//! cargo run -p code-mcp-client -- code-mcp-server
 //! ```
 //!
 //! Any additional arguments after the first one are forwarded to the spawned
@@ -41,7 +41,9 @@ async fn main() -> Result<()> {
     let mut args: Vec<OsString> = std::env::args_os().skip(1).collect();
 
     if args.is_empty() || args[0] == "--help" || args[0] == "-h" {
-        eprintln!("Usage: mcp-client <program> [args..]\n\nExample: mcp-client code-mcp-server");
+        eprintln!(
+            "Usage: code-mcp-client <program> [args..]\n\nExample: code-mcp-client code-mcp-server"
+        );
         std::process::exit(1);
     }
     let original_args = args.clone();
@@ -61,7 +63,7 @@ async fn main() -> Result<()> {
             elicitation: None,
         },
         client_info: Implementation {
-            name: "codex-mcp-client".to_owned(),
+            name: "code-mcp-client".to_owned(),
             version: env!("CARGO_PKG_VERSION").to_owned(),
             title: Some("Beacon Code".to_string()),
             // This field is used by Beacon Code when it is an MCP server: it should

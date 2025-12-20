@@ -211,7 +211,7 @@ pub enum Op {
     Compact,
     /// Request the agent to perform a dedicated code review.
     Review { review_request: ReviewRequest },
-    /// Request to shut down codex instance.
+    /// Request to shut down the Code instance.
     Shutdown,
 }
 

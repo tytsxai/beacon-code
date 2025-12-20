@@ -16,10 +16,10 @@ fn demo_command_enabled() -> bool {
             normalized == "perf" || normalized.starts_with("dev")
         };
 
-        if let Some(profile) = BUILD_PROFILE.or(option_env!("PROFILE")) {
-            if profile_matches(profile) {
-                return true;
-            }
+        if let Some(profile) = BUILD_PROFILE.or(option_env!("PROFILE"))
+            && profile_matches(profile)
+        {
+            return true;
         }
 
         if let Ok(exe_path) = std::env::current_exe() {
@@ -226,7 +226,7 @@ pub fn process_slash_command_message(message: &str) -> ProcessedCommand {
     let command_portion = if has_slash { &trimmed[1..] } else { trimmed };
     let mut parts = command_portion.splitn(2, |c: char| c.is_whitespace());
     let command_str = parts.next().unwrap_or("");
-    let args_raw = parts.next().map(|s| s.trim()).unwrap_or("");
+    let args_raw = parts.next().map(str::trim).unwrap_or("");
     let canonical_command = command_str.to_ascii_lowercase();
 
     if matches!(canonical_command.as_str(), "quit" | "exit") {
@@ -315,7 +315,7 @@ mod tests {
                 assert!(prompt.contains("Build a release plan"));
                 assert!(prompt.contains("tighten scope"));
             }
-            other => panic!("expected ExpandedPrompt, got {:?}", other),
+            other => panic!("expected ExpandedPrompt, got {other:?}"),
         }
     }
 
@@ -326,7 +326,7 @@ mod tests {
             ProcessedCommand::RegularCommand(SlashCommand::Auto, command_text) => {
                 assert!(command_text.contains("inspect the failing build"));
             }
-            other => panic!("expected RegularCommand, got {:?}", other),
+            other => panic!("expected RegularCommand, got {other:?}"),
         }
     }
 }

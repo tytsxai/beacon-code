@@ -234,10 +234,15 @@ fn cleanup_logs(
 
     if let Some(max_bytes) = config.log_max_bytes {
         let log_dir = code_home.join("log");
-        let log_path = log_dir.join("codex-tui.log");
-        if let Err(err) = truncate_log_if_oversize(&log_path, now, config, max_bytes) {
-            stats.errors += 1;
-            warn!("failed to truncate {:?}: {err}", log_path);
+        for log_name in ["code-tui.log", "codex-tui.log"] {
+            let log_path = log_dir.join(log_name);
+            if !log_path.exists() {
+                continue;
+            }
+            if let Err(err) = truncate_log_if_oversize(&log_path, now, config, max_bytes) {
+                stats.errors += 1;
+                warn!("failed to truncate {:?}: {err}", log_path);
+            }
         }
     }
 
@@ -1181,7 +1186,7 @@ mod tests {
         let code_home = temp.path();
         let log_dir = code_home.join("log");
         fs::create_dir_all(&log_dir).unwrap();
-        let log_path = log_dir.join("codex-tui.log");
+        let log_path = log_dir.join("code-tui.log");
         fs::write(&log_path, b"0123456789abcdef").unwrap();
 
         let now = datetime!(2025-10-10 12:00:00 UTC);

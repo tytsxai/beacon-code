@@ -4,7 +4,7 @@ This guide documents the process for moving shared crates from `codex-rs` into `
 
 ## Overview
 
-The `code-rs` repository currently contains thin wrapper crates that re-export functionality from their `codex-rs` counterparts. This creates a cross-repository dependency via relative paths (`../codex-rs/...`). The migration process moves the implementation into `code-rs` so that the crate owns its code and no longer depends on `codex-rs`.
+The `code-rs` repository currently contains thin wrapper crates that re-export functionality from their `codex-rs` counterparts. This creates a cross-repository dependency via relative paths (`../third_party/upstream/codex-rs/...`). The migration process moves the implementation into `code-rs` so that the crate owns its code and no longer depends on `codex-rs`.
 
 ## Case Study: linux-sandbox Migration
 
@@ -162,7 +162,7 @@ Remove the cross-repository dependency reference.
 ```toml
 [workspace.dependencies]
 # ...
-codex-linux-sandbox = { path = "../codex-rs/linux-sandbox" }
+codex-linux-sandbox = { path = "../third_party/upstream/codex-rs/linux-sandbox" }
 # ...
 ```
 
@@ -371,7 +371,7 @@ The migration process transforms a thin wrapper crate into a fully independent i
 5. **Removing** the codex-<crate> dependency from workspace Cargo.toml
 6. **Building** and verifying the migrated crate and its dependents
 
-The result is a crate that owns its implementation and no longer depends on `../codex-rs`, making code-rs more independent and easier to maintain.
+The result is a crate that owns its implementation and no longer depends on `../third_party/upstream/codex-rs`, making code-rs more independent and easier to maintain.
 
 ## linux-sandbox Migration Results
 

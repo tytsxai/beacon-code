@@ -633,22 +633,21 @@ impl AgentsSettingsContent {
                 .as_deref()
                 .map(str::trim)
                 .filter(|value| !value.is_empty())
+                && let Some(width) = available_width
             {
-                if let Some(width) = available_width {
-                    let status_width = UnicodeWidthStr::width(status.0);
-                    let prefix_width = 2 + max_name_width + 2 + 2 + status_width;
-                    if width > prefix_width + 3 {
-                        let desc_width = width - prefix_width - 3;
-                        if desc_width > 0 {
-                            let truncated = Self::truncate_to_width(desc, desc_width);
-                            if !truncated.is_empty() {
-                                spans.push(Span::raw("  "));
-                                spans.push(Span::styled(
-                                    truncated,
-                                    Style::default().fg(crate::colors::text_dim()),
-                                ));
-                                showed_desc = true;
-                            }
+                let status_width = UnicodeWidthStr::width(status.0);
+                let prefix_width = 2 + max_name_width + 2 + 2 + status_width;
+                if width > prefix_width + 3 {
+                    let desc_width = width - prefix_width - 3;
+                    if desc_width > 0 {
+                        let truncated = Self::truncate_to_width(desc, desc_width);
+                        if !truncated.is_empty() {
+                            spans.push(Span::raw("  "));
+                            spans.push(Span::styled(
+                                truncated,
+                                Style::default().fg(crate::colors::text_dim()),
+                            ));
+                            showed_desc = true;
                         }
                     }
                 }
@@ -721,7 +720,7 @@ impl AgentsSettingsContent {
                 },
             ));
             spans.push(Span::styled(
-                format!("/{}", cmd),
+                format!("/{cmd}"),
                 if selected {
                     Style::default()
                         .fg(crate::colors::primary())
@@ -1157,15 +1156,14 @@ impl ChromeSettingsContent {
 
     fn confirm(&mut self) {
         if let Some((option, _, _)) = Self::options().get(self.selected_index) {
-            let _ = self
-                .app_event_tx
+            self.app_event_tx
                 .send(AppEvent::ChromeLaunchOptionSelected(*option, self.port));
             self.is_complete = true;
         }
     }
 
     fn cancel(&mut self) {
-        let _ = self.app_event_tx.send(AppEvent::ChromeLaunchOptionSelected(
+        self.app_event_tx.send(AppEvent::ChromeLaunchOptionSelected(
             ChromeLaunchOption::Cancel,
             self.port,
         ));
@@ -1213,22 +1211,22 @@ impl SettingsContent for ChromeSettingsContent {
             let selected = idx == self.selected_index;
             if selected {
                 lines.push(Line::from(vec![Span::styled(
-                    format!("› {}", label),
+                    format!("› {label}"),
                     Style::default()
                         .fg(crate::colors::success())
                         .add_modifier(Modifier::BOLD),
                 )]));
                 lines.push(Line::from(vec![Span::styled(
-                    format!("  {}", description),
+                    format!("  {description}"),
                     Style::default().fg(crate::colors::secondary()),
                 )]));
             } else {
                 lines.push(Line::from(vec![Span::styled(
-                    format!("  {}", label),
+                    format!("  {label}"),
                     Style::default().fg(crate::colors::text()),
                 )]));
                 lines.push(Line::from(vec![Span::styled(
-                    format!("  {}", description),
+                    format!("  {description}"),
                     Style::default().fg(crate::colors::text_dim()),
                 )]));
             }
@@ -1379,10 +1377,10 @@ impl SettingsOverlayView {
             .first()
             .map(|row| row.section)
             .unwrap_or(self.last_section);
-        if let SettingsOverlayMode::Menu(state) = &mut self.mode {
-            if !rows.iter().any(|row| row.section == state.selected()) {
-                state.set_selected(fallback);
-            }
+        if let SettingsOverlayMode::Menu(state) = &mut self.mode
+            && !rows.iter().any(|row| row.section == state.selected())
+        {
+            state.set_selected(fallback);
         }
         self.overview_rows = rows;
     }
@@ -1800,7 +1798,7 @@ impl SettingsOverlayView {
                 let label_trim = label.trim_end();
                 let value_trim = value.trim_start();
                 line.spans
-                    .push(Span::styled(format!("{}:", label_trim), label_style));
+                    .push(Span::styled(format!("{label_trim}:"), label_style));
                 if !value_trim.is_empty() {
                     line.spans.push(Span::styled(" ".to_string(), dim_style));
                     let value_style = self.summary_value_style(value_trim);
@@ -1818,7 +1816,7 @@ impl SettingsOverlayView {
     fn summary_value_style(&self, value: &str) -> Style {
         let trimmed = value.trim();
         let normalized = trimmed
-            .trim_end_matches(|c: char| matches!(c, '.' | '!' | ','))
+            .trim_end_matches(['.', '!', ','])
             .to_ascii_lowercase();
         if matches!(normalized.as_str(), "on" | "enabled" | "yes") {
             Style::default().fg(crate::colors::success())

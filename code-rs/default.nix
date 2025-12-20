@@ -18,8 +18,7 @@ rec {
     };
 
     doCheck = false;
-    # Cargo.toml depends on ../codex-rs, so point the builder at the
-    # repository root and then cd back into this package's directory.
+    # Build from the repo root so workspace dependencies resolve correctly.
     src = ../.;
     sourceRoot = "${baseNameOf ../.}/${baseNameOf ./.}";
     nativeBuildInputs = with pkgs; [
@@ -41,12 +40,12 @@ rec {
     ];
     shellHook = ''
       echo "Entering development shell for code-rs"
-      alias codex="cd ${package.src}/tui; cargo run; cd -"
+      alias code="cd ${package.src}/tui; cargo run; cd -"
       ${pkgs.rustPlatform.cargoSetupHook}
     '';
   };
   app = {
     type = "app";
-    program = "${package}/bin/codex";
+    program = "${package}/bin/code";
   };
 }

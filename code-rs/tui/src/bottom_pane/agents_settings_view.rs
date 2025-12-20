@@ -436,7 +436,7 @@ impl SubagentEditorView {
                     .fg(crate::colors::primary())
                     .add_modifier(Modifier::BOLD);
             }
-            spans.push(Span::styled(format!("{} {}", checked, a), style));
+            spans.push(Span::styled(format!("{checked} {a}"), style));
             spans.push(Span::raw("  "));
         }
 
@@ -572,11 +572,11 @@ impl<'a> BottomPaneView<'a> for SubagentEditorView {
             spans.push(Span::raw("  "));
             // [x] read-only
             let ro = if self.read_only { "[x]" } else { "[ ]" };
-            spans.push(Span::styled(format!("{} read-only", ro), sel(1)));
+            spans.push(Span::styled(format!("{ro} read-only"), sel(1)));
             spans.push(Span::raw("  "));
             // [x] write (inverse of read_only)
             let wr = if self.read_only { "[ ]" } else { "[x]" };
-            spans.push(Span::styled(format!("{} write", wr), sel(1)));
+            spans.push(Span::styled(format!("{wr} write"), sel(1)));
             lines.push(Line::from(spans));
         }
 

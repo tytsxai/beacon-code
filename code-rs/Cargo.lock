@@ -1402,8 +1402,10 @@ dependencies = [
 name = "code-mcp-types"
 version = "0.0.0"
 dependencies = [
- "mcp-types",
+ "schemars 0.8.22",
+ "serde",
  "serde_json",
+ "ts-rs",
 ]
 
 [[package]]
@@ -3757,17 +3759,6 @@ checksum = "8ea1f30cedd69f0a2954655f7188c6a834246d2bcf1e315e2ac40c4b24dc9519"
 dependencies = [
  "cfg-if",
  "rayon",
-]
-
-[[package]]
-name = "mcp-types"
-version = "0.0.0"
-source = "git+https://github.com/tytsxai/beacon-code.git?rev=6c384eb9c610f9a83037d9cad120fb792e782c7c#6c384eb9c610f9a83037d9cad120fb792e782c7c"
-dependencies = [
- "schemars 0.8.22",
- "serde",
- "serde_json",
- "ts-rs",
 ]
 
 [[package]]

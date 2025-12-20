@@ -12,7 +12,7 @@ if [ $# -ne 1 ]; then
 fi
 
 CRATE_NAME="$1"
-CODEX_CRATE_PATH="../codex-rs/${CRATE_NAME}"
+CODEX_CRATE_PATH="../third_party/upstream/codex-rs/${CRATE_NAME}"
 CODE_CRATE_PATH="${CRATE_NAME}"
 
 # Colors for output
@@ -81,7 +81,7 @@ echo "   find ${CODE_CRATE_PATH}/src -name '*.rs' -exec sed -i 's/codex_core/cod
 echo "   find ${CODE_CRATE_PATH}/src -name '*.rs' -exec sed -i 's/codex_${CRATE_NAME//-/_}/code_${CRATE_NAME//-/_}/g' {} +"
 echo ""
 echo "5. Update workspace Cargo.toml:"
-echo "   - Remove 'codex-${CRATE_NAME} = { path = \"../codex-rs/${CRATE_NAME}\" }'"
+echo "   - Remove 'codex-${CRATE_NAME} = { path = \"../third_party/upstream/codex-rs/${CRATE_NAME}\" }'"
 echo ""
 echo "6. Build and verify:"
 echo "   cargo build -p code-${CRATE_NAME}"

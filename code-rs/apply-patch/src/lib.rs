@@ -26,7 +26,7 @@ use tree_sitter_bash::LANGUAGE as BASH;
 
 pub use standalone_executable::main;
 
-// Back-compat shim for codex-core callers
+// Back-compat shim for code-core callers
 // The core crate expects a simple async FileSystem abstraction and a default
 // StdFileSystem implementation. Upstream refactored apply-patch to operate
 // directly on std::fs; we preserve these minimal exports here so downstream

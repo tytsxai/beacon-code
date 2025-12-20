@@ -30,7 +30,7 @@ pub(crate) fn spawn_agent(
         } = match server.new_conversation(config).await {
             Ok(v) => v,
             Err(e) => {
-                tracing::error!("failed to initialize codex: {e}");
+                tracing::error!("failed to initialize Beacon Code: {e}");
                 let message = format!("Failed to start Beacon Code session: {e}");
                 app_event_tx_clone.send(AppEvent::InsertHistoryWithKind {
                     id: None,

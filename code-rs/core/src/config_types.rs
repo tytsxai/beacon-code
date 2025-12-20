@@ -610,7 +610,7 @@ pub struct History {
     pub persistence: HistoryPersistence,
 
     /// If set, the maximum size of the history file in bytes.
-    /// TODO(mbolin): Not currently honored.
+    /// When exceeded, older entries are pruned while keeping the newest entry.
     pub max_bytes: Option<usize>,
 }
 

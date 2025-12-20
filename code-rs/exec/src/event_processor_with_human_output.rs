@@ -150,11 +150,7 @@ impl EventProcessor for EventProcessorWithHumanOutput {
     /// screen.
     fn print_config_summary(&mut self, config: &Config, prompt: &str) {
         const VERSION: &str = env!("CARGO_PKG_VERSION");
-        ts_println!(
-            self,
-            "Beacon Code v{}\n--------",
-            VERSION
-        );
+        ts_println!(self, "Beacon Code v{}\n--------", VERSION);
 
         let entries = create_config_summary_entries(config);
 
@@ -215,7 +211,11 @@ impl EventProcessor for EventProcessorWithHumanOutput {
             }
             EventMsg::AgentMessageDelta(AgentMessageDeltaEvent { delta }) => {
                 if !self.answer_started {
-                    ts_println!(self, "{}\n", "codex".style(self.italic).style(self.magenta));
+                    ts_println!(
+                        self,
+                        "{}\n",
+                        "beacon".style(self.italic).style(self.magenta)
+                    );
                     self.answer_started = true;
                 }
                 print!("{delta}");
@@ -279,7 +279,7 @@ impl EventProcessor for EventProcessorWithHumanOutput {
                     ts_println!(
                         self,
                         "{}\n{}",
-                        "codex".style(self.italic).style(self.magenta),
+                        "beacon".style(self.italic).style(self.magenta),
                         message,
                     );
                 } else {
@@ -536,7 +536,7 @@ impl EventProcessor for EventProcessorWithHumanOutput {
                         ts_println!(
                             self,
                             "{}\n{}",
-                            "codex".style(self.italic).style(self.magenta),
+                            "beacon".style(self.italic).style(self.magenta),
                             agent_reasoning_event.text,
                         );
                     } else {
@@ -555,7 +555,7 @@ impl EventProcessor for EventProcessorWithHumanOutput {
                 ts_println!(
                     self,
                     "{} {}",
-                    "codex session".style(self.magenta).style(self.bold),
+                    "beacon session".style(self.magenta).style(self.bold),
                     conversation_id.to_string().style(self.dimmed)
                 );
 

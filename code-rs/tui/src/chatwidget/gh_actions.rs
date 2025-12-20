@@ -16,23 +16,23 @@ pub(super) enum TokenSource {
 /// Obtain a GitHub token, preferring environment variables and falling back to `gh`.
 /// Returns the token string and its source if available.
 pub(super) fn get_github_token() -> Option<(String, TokenSource)> {
-    if let Ok(t) = std::env::var("GITHUB_TOKEN") {
-        if !t.is_empty() {
-            return Some((t, TokenSource::Env));
-        }
+    if let Ok(t) = std::env::var("GITHUB_TOKEN")
+        && !t.is_empty()
+    {
+        return Some((t, TokenSource::Env));
     }
-    if let Ok(t) = std::env::var("GH_TOKEN") {
-        if !t.is_empty() {
-            return Some((t, TokenSource::Env));
-        }
+    if let Ok(t) = std::env::var("GH_TOKEN")
+        && !t.is_empty()
+    {
+        return Some((t, TokenSource::Env));
     }
     // Fallback: use GitHub CLI if installed and logged in.
-    if let Ok(out) = Command::new("gh").args(["auth", "token"]).output() {
-        if out.status.success() {
-            let token = String::from_utf8_lossy(&out.stdout).trim().to_string();
-            if !token.is_empty() {
-                return Some((token, TokenSource::GhCli));
-            }
+    if let Ok(out) = Command::new("gh").args(["auth", "token"]).output()
+        && out.status.success()
+    {
+        let token = String::from_utf8_lossy(&out.stdout).trim().to_string();
+        if !token.is_empty() {
+            return Some((token, TokenSource::GhCli));
         }
     }
     None
@@ -66,7 +66,7 @@ pub(super) fn maybe_watch_after_push(
     }
 
     // Spawn a detached task so we don't block UI; clone what we need.
-    let tx = app_event_tx.clone();
+    let tx = app_event_tx;
     tokio::spawn(async move {
         let ticket = ticket.clone();
         // Gather repo info (branch, sha, origin URL) from the current cwd.
@@ -86,7 +86,7 @@ pub(super) fn maybe_watch_after_push(
         let api_base = format!("https://api.github.com/repos/{owner}/{repo}/actions/runs");
         let token = get_github_token().map(|(t, _)| t);
         let client = reqwest::Client::builder()
-            .user_agent("codex-cli-rs/github-monitor")
+            .user_agent("beacon-cli-rs/github-monitor")
             .build()
             .unwrap_or_else(|_| reqwest::Client::new());
 
@@ -140,24 +140,22 @@ pub(super) fn maybe_watch_after_push(
             for run in runs {
                 let run_sha = run.get("head_sha").and_then(|v| v.as_str()).unwrap_or("");
                 if run_sha.eq_ignore_ascii_case(&head_sha) {
-                    found_run_id = run.get("id").and_then(|v| v.as_u64());
+                    found_run_id = run.get("id").and_then(serde_json::Value::as_u64);
                     // If it is already completed, check outcome now; otherwise continue polling below.
-                    if let Some(status) = run.get("status").and_then(|v| v.as_str()) {
-                        if status == "completed" {
-                            let conclusion = run
-                                .get("conclusion")
-                                .and_then(|v| v.as_str())
-                                .unwrap_or("unknown");
-                            if conclusion != "success" {
-                                let html =
-                                    run.get("html_url").and_then(|v| v.as_str()).unwrap_or("");
-                                surface_failure(
-                                    &tx, &ticket, &owner, &repo, &branch, &head_sha, html,
-                                    conclusion,
-                                );
-                            }
-                            return;
+                    if let Some(status) = run.get("status").and_then(|v| v.as_str())
+                        && status == "completed"
+                    {
+                        let conclusion = run
+                            .get("conclusion")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or("unknown");
+                        if conclusion != "success" {
+                            let html = run.get("html_url").and_then(|v| v.as_str()).unwrap_or("");
+                            surface_failure(
+                                &tx, &ticket, &owner, &repo, &branch, &head_sha, html, conclusion,
+                            );
                         }
+                        return;
                     }
                 }
             }

@@ -95,21 +95,19 @@ pub(super) fn ensure_tool_card<C: ToolCardCell>(
     if slot.signature() != signature.as_deref() {
         slot.set_signature(signature.clone());
     }
-    if let Some(id) = slot.history_id {
-        if let Some(idx) = chat.cell_index_for_history_id(id) {
-            if cell_matches::<C>(chat, idx, slot, signature.as_deref()) {
-                slot.cell_index = Some(idx);
-                return idx;
-            }
-        }
+    if let Some(id) = slot.history_id
+        && let Some(idx) = chat.cell_index_for_history_id(id)
+        && cell_matches::<C>(chat, idx, slot, signature.as_deref())
+    {
+        slot.cell_index = Some(idx);
+        return idx;
     }
 
-    if let Some(idx) = slot.cell_index {
-        if idx < chat.history_cells.len()
-            && cell_matches::<C>(chat, idx, slot, signature.as_deref())
-        {
-            return idx;
-        }
+    if let Some(idx) = slot.cell_index
+        && idx < chat.history_cells.len()
+        && cell_matches::<C>(chat, idx, slot, signature.as_deref())
+    {
+        return idx;
     }
 
     if let Some(idx) = find_card_index::<C>(chat, slot, signature.as_deref()) {
@@ -132,13 +130,13 @@ pub(super) fn replace_tool_card<C: ToolCardCell>(
 ) -> usize {
     let mut order_changed = slot.has_order_change();
 
-    if order_changed && TypeId::of::<C>() == TypeId::of::<AgentRunCell>() {
-        if should_anchor_agent_slot(chat, slot) {
-            if let Some(previous) = slot.last_inserted_order() {
-                slot.set_order_key(previous);
-                order_changed = false;
-            }
-        }
+    if order_changed
+        && TypeId::of::<C>() == TypeId::of::<AgentRunCell>()
+        && should_anchor_agent_slot(chat, slot)
+        && let Some(previous) = slot.last_inserted_order()
+    {
+        slot.set_order_key(previous);
+        order_changed = false;
     }
 
     if order_changed {
@@ -150,7 +148,7 @@ pub(super) fn replace_tool_card<C: ToolCardCell>(
     slot.cell_index = Some(idx);
     slot.history_id = chat.history_cell_ids.get(idx).and_then(|slot| *slot);
     slot.last_order_key = Some(slot.order_key);
-    let signature = slot.signature().map(|s| s.to_string());
+    let signature = slot.signature().map(std::string::ToString::to_string);
     prune_tool_card_duplicates::<C>(chat, slot, idx, signature.as_deref());
     idx
 }
@@ -181,30 +179,21 @@ fn should_anchor_agent_slot(chat: &ChatWidget<'_>, slot: &ToolCardSlot) -> bool 
 }
 
 fn remove_existing_card<C: ToolCardCell>(chat: &mut ChatWidget<'_>, slot: &mut ToolCardSlot) {
-    let signature = slot.signature().map(|s| s.to_string());
+    let signature = slot.signature().map(std::string::ToString::to_string);
 
     let mut target_idx = if let Some(id) = slot.history_id {
-        if let Some(idx) = chat.cell_index_for_history_id(id) {
-            if cell_matches::<C>(chat, idx, slot, signature.as_deref()) {
-                Some(idx)
-            } else {
-                None
-            }
-        } else {
-            None
-        }
+        chat.cell_index_for_history_id(id)
+            .filter(|&idx| cell_matches::<C>(chat, idx, slot, signature.as_deref()))
     } else {
         None
     };
 
-    if target_idx.is_none() {
-        if let Some(idx) = slot.cell_index {
-            if idx < chat.history_cells.len()
-                && cell_matches::<C>(chat, idx, slot, signature.as_deref())
-            {
-                target_idx = Some(idx);
-            }
-        }
+    if target_idx.is_none()
+        && let Some(idx) = slot.cell_index
+        && idx < chat.history_cells.len()
+        && cell_matches::<C>(chat, idx, slot, signature.as_deref())
+    {
+        target_idx = Some(idx);
     }
 
     if target_idx.is_none() {
@@ -312,10 +301,10 @@ fn identity_matches<C: ToolCardCell>(
         (None, _) => true,
     };
 
-    if !key_match {
-        if let (Some(previous), Some(actual)) = (slot.previous_key(), typed.tool_card_key()) {
-            key_match = actual == previous;
-        }
+    if !key_match
+        && let (Some(previous), Some(actual)) = (slot.previous_key(), typed.tool_card_key())
+    {
+        key_match = actual == previous;
     }
     let signature_match = match (signature, typed.dedupe_signature().as_deref()) {
         (Some(lhs), Some(rhs)) => lhs == rhs,

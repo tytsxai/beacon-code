@@ -133,7 +133,7 @@ where
     if total == AUTH_HEADER_PREFIX.len() {
         buf.zeroize();
         return Err(anyhow!(
-            "OPENAI_API_KEY must be provided via stdin (e.g. printenv OPENAI_API_KEY | codex responses-api-proxy)"
+            "OPENAI_API_KEY must be provided via stdin (e.g. printenv OPENAI_API_KEY | code-responses-api-proxy)"
         ));
     }
 

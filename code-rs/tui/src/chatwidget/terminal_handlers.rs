@@ -132,15 +132,16 @@ fn encode_key_for_pty(key_event: KeyEvent) -> Option<Vec<u8>> {
     let mods = key_event.modifiers;
     match key_event.code {
         KeyCode::Char(ch) => {
-            if mods.contains(KeyModifiers::CONTROL) && !mods.contains(KeyModifiers::SUPER) {
-                if let Some(ctrl) = control_byte(ch) {
-                    let mut out = Vec::new();
-                    if mods.contains(KeyModifiers::ALT) {
-                        out.push(0x1b);
-                    }
-                    out.push(ctrl);
-                    return Some(out);
+            if mods.contains(KeyModifiers::CONTROL)
+                && !mods.contains(KeyModifiers::SUPER)
+                && let Some(ctrl) = control_byte(ch)
+            {
+                let mut out = Vec::new();
+                if mods.contains(KeyModifiers::ALT) {
+                    out.push(0x1b);
                 }
+                out.push(ctrl);
+                return Some(out);
             }
             let mut out = Vec::new();
             if mods.contains(KeyModifiers::ALT) {
@@ -242,13 +243,13 @@ fn function_key_sequence(n: u8, mods: KeyModifiers) -> Vec<u8> {
 
     if let Some(param) = ansi_modifier_param(mods) {
         if tilde {
-            format!("\x1b[{};{}~", prefix, param).into_bytes()
+            format!("\x1b[{prefix};{param}~").into_bytes()
         } else {
-            format!("\x1b[1;{}{}", param, suffix).into_bytes()
+            format!("\x1b[1;{param}{suffix}").into_bytes()
         }
     } else if tilde {
-        format!("\x1b[{}~", prefix).into_bytes()
+        format!("\x1b[{prefix}~").into_bytes()
     } else {
-        format!("\x1bO{}", suffix).into_bytes()
+        format!("\x1bO{suffix}").into_bytes()
     }
 }

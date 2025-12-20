@@ -324,15 +324,13 @@ impl App<'_> {
             AuthMode::ApiKey,
             config.responses_originator_header.clone(),
         );
-        let conversation_manager = Arc::new(ConversationManager::new(
-            auth_manager.clone(),
-            SessionSource::Cli,
-        ));
+        let conversation_manager =
+            Arc::new(ConversationManager::new(auth_manager, SessionSource::Cli));
 
         // Split queues so interactive input never waits behind bulk updates.
         let (high_tx, app_event_rx_high) = channel();
         let (bulk_tx, app_event_rx_bulk) = channel();
-        let app_event_tx = AppEventSender::new_dual(high_tx.clone(), bulk_tx.clone());
+        let app_event_tx = AppEventSender::new_dual(high_tx, bulk_tx);
         let pending_redraw = Arc::new(AtomicBool::new(false));
         let redraw_inflight = Arc::new(AtomicBool::new(false));
         let post_frame_redraw = Arc::new(AtomicBool::new(false));
@@ -623,10 +621,10 @@ impl App<'_> {
                 if title.is_empty() {
                     b.clone()
                 } else {
-                    format!("{}: {}", title, b)
+                    format!("{title}: {b}")
                 }
             }
-            _ => title.clone(),
+            _ => title,
         };
 
         if message.is_empty() {
@@ -650,7 +648,7 @@ impl App<'_> {
     }
 
     fn emit_osc9_notification(message: &str) {
-        let payload = format!("\u{1b}]9;{}\u{7}", message);
+        let payload = format!("\u{1b}]9;{message}\u{7}");
         let mut stdout = std::io::stdout();
         let _ = stdout.write_all(payload.as_bytes());
         let _ = stdout.flush();
@@ -728,11 +726,11 @@ impl App<'_> {
             return;
         }
 
-        let joined_display = try_join(command.iter().map(|s| s.as_str()))
+        let joined_display = try_join(command.iter().map(std::string::String::as_str))
             .ok()
             .unwrap_or_else(|| command.join(" "));
 
-        let display_line = display.clone().unwrap_or_else(|| joined_display.clone());
+        let display_line = display.unwrap_or_else(|| joined_display.clone());
 
         if !display_line.trim().is_empty() {
             let line = format!("$ {display_line}\n");
@@ -775,7 +773,7 @@ impl App<'_> {
                 });
                 if let Some(ref ctrl) = controller_tx {
                     let _ = ctrl.send(TerminalRunEvent::Chunk {
-                        data: msg.clone().into_bytes(),
+                        data: msg.into_bytes(),
                         _is_stderr: true,
                     });
                     let _ = ctrl.send(TerminalRunEvent::Exit {
@@ -807,7 +805,7 @@ impl App<'_> {
                     });
                     if let Some(ref ctrl) = controller_tx {
                         let _ = ctrl.send(TerminalRunEvent::Chunk {
-                            data: msg.clone().into_bytes(),
+                            data: msg.into_bytes(),
                             _is_stderr: true,
                         });
                         let _ = ctrl.send(TerminalRunEvent::Exit {
@@ -836,7 +834,7 @@ impl App<'_> {
                     });
                     if let Some(ref ctrl) = controller_tx {
                         let _ = ctrl.send(TerminalRunEvent::Chunk {
-                            data: msg.clone().into_bytes(),
+                            data: msg.into_bytes(),
                             _is_stderr: true,
                         });
                         let _ = ctrl.send(TerminalRunEvent::Exit {
@@ -866,7 +864,7 @@ impl App<'_> {
                     });
                     if let Some(ref ctrl) = controller_tx {
                         let _ = ctrl.send(TerminalRunEvent::Chunk {
-                            data: msg.clone().into_bytes(),
+                            data: msg.into_bytes(),
                             _is_stderr: true,
                         });
                         let _ = ctrl.send(TerminalRunEvent::Exit {
@@ -895,7 +893,7 @@ impl App<'_> {
                     });
                     if let Some(ref ctrl) = controller_tx {
                         let _ = ctrl.send(TerminalRunEvent::Chunk {
-                            data: msg.clone().into_bytes(),
+                            data: msg.into_bytes(),
                             _is_stderr: true,
                         });
                         let _ = ctrl.send(TerminalRunEvent::Exit {
@@ -930,7 +928,7 @@ impl App<'_> {
                 });
                 if let Some(ref ctrl) = controller_tx {
                     let _ = ctrl.send(TerminalRunEvent::Chunk {
-                        data: msg.clone().into_bytes(),
+                        data: msg.into_bytes(),
                         _is_stderr: true,
                     });
                     let _ = ctrl.send(TerminalRunEvent::Exit {
@@ -954,7 +952,7 @@ impl App<'_> {
             id,
             TerminalRunState {
                 command: stored_command,
-                display: display_line.clone(),
+                display: display_line,
                 cancel_tx: Some(cancel_tx),
                 running: true,
                 controller: controller_clone,
@@ -964,9 +962,9 @@ impl App<'_> {
         );
 
         let tx = self.app_event_tx.clone();
-        let controller_tx_task = controller_tx.clone();
+        let controller_tx_task = controller_tx;
         let master_for_task = Arc::clone(&master);
-        let writer_tx_for_task = writer_tx_shared.clone();
+        let writer_tx_for_task = writer_tx_shared;
         tokio::spawn(async move {
             let start_time = Instant::now();
             let controller_tx = controller_tx_task;
@@ -1060,7 +1058,7 @@ impl App<'_> {
                     });
                     if let Some(ref ctrl) = controller_tx {
                         let _ = ctrl.send(TerminalRunEvent::Chunk {
-                            data: msg.clone().into_bytes(),
+                            data: msg.into_bytes(),
                             _is_stderr: true,
                         });
                     }
@@ -1075,7 +1073,7 @@ impl App<'_> {
                     });
                     if let Some(ref ctrl) = controller_tx {
                         let _ = ctrl.send(TerminalRunEvent::Chunk {
-                            data: msg.clone().into_bytes(),
+                            data: msg.into_bytes(),
                             _is_stderr: true,
                         });
                     }
@@ -1320,7 +1318,7 @@ impl App<'_> {
                     // releases can be dropped, and synthesize a press when a release arrives
                     // without a prior press.
                     if !self.enhanced_keys_supported {
-                        let key_code = key_event.code.clone();
+                        let key_code = key_event.code;
                         match key_event.kind {
                             KeyEventKind::Press | KeyEventKind::Repeat => {
                                 self.non_enhanced_pressed_keys.insert(key_code);
@@ -1639,7 +1637,7 @@ impl App<'_> {
                     if let AppState::Chat { widget } = &mut self.app_state {
                         widget.register_approved_command(
                             command.clone(),
-                            match_kind.clone(),
+                            match_kind,
                             semantic_prefix.clone(),
                         );
                         if persist {
@@ -1647,7 +1645,7 @@ impl App<'_> {
                                 &self.config.code_home,
                                 &self.config.cwd,
                                 &command,
-                                match_kind.clone(),
+                                match_kind,
                             ) {
                                 widget.history_push_plain_state(history_cell::new_error_event(
                                     format!("Failed to persist always-allow command: {err:#}",),
@@ -1736,10 +1734,10 @@ impl App<'_> {
                     let mut remove_entry = false;
                     if let Some(run) = self.terminal_runs.get_mut(&id) {
                         let had_controller = run.controller.is_some();
-                        if let Some(tx) = run.cancel_tx.take() {
-                            if !tx.is_closed() {
-                                let _ = tx.send(());
-                            }
+                        if let Some(tx) = run.cancel_tx.take()
+                            && !tx.is_closed()
+                        {
+                            let _ = tx.send(());
                         }
                         run.running = false;
                         run.controller = None;
@@ -1784,14 +1782,14 @@ impl App<'_> {
                     self.start_terminal_run(id, command, Some(command_display), controller);
                 }
                 AppEvent::TerminalSendInput { id, data } => {
-                    if let Some(run) = self.terminal_runs.get_mut(&id) {
-                        if let Some(writer_shared) = run.writer_tx.as_ref() {
-                            let mut guard = writer_shared.lock().unwrap();
-                            if let Some(tx) = guard.as_ref() {
-                                if tx.send(data).is_err() {
-                                    guard.take();
-                                }
-                            }
+                    if let Some(run) = self.terminal_runs.get_mut(&id)
+                        && let Some(writer_shared) = run.writer_tx.as_ref()
+                    {
+                        let mut guard = writer_shared.lock().unwrap();
+                        if let Some(tx) = guard.as_ref()
+                            && tx.send(data).is_err()
+                        {
+                            guard.take();
                         }
                     }
                 }
@@ -1802,17 +1800,16 @@ impl App<'_> {
                     if let AppState::Chat { widget } = &mut self.app_state {
                         widget.terminal_apply_resize(id, rows, cols);
                     }
-                    if let Some(run) = self.terminal_runs.get(&id) {
-                        if let Some(pty) = run.pty.as_ref() {
-                            if let Ok(guard) = pty.lock() {
-                                let _ = guard.resize(PtySize {
-                                    rows,
-                                    cols,
-                                    pixel_width: 0,
-                                    pixel_height: 0,
-                                });
-                            }
-                        }
+                    if let Some(run) = self.terminal_runs.get(&id)
+                        && let Some(pty) = run.pty.as_ref()
+                        && let Ok(guard) = pty.lock()
+                    {
+                        let _ = guard.resize(PtySize {
+                            rows,
+                            cols,
+                            pixel_width: 0,
+                            pixel_height: 0,
+                        });
                     }
                 }
                 AppEvent::TerminalUpdateMessage { id, message } => {
@@ -1861,11 +1858,10 @@ impl App<'_> {
                     }
                 }
                 AppEvent::RequestValidationToolInstall { name, command } => {
-                    if let AppState::Chat { widget } = &mut self.app_state {
-                        if let Some(launch) = widget.launch_validation_tool_install(&name, &command)
-                        {
-                            self.app_event_tx.send(AppEvent::OpenTerminal(launch));
-                        }
+                    if let AppState::Chat { widget } = &mut self.app_state
+                        && let Some(launch) = widget.launch_validation_tool_install(&name, &command)
+                    {
+                        self.app_event_tx.send(AppEvent::OpenTerminal(launch));
                     }
                 }
                 AppEvent::RunUpdateCommand {
@@ -1873,14 +1869,12 @@ impl App<'_> {
                     display,
                     latest_version,
                 } => {
-                    if crate::updates::upgrade_ui_enabled() {
-                        if let AppState::Chat { widget } = &mut self.app_state {
-                            if let Some(launch) =
-                                widget.launch_update_command(command, display, latest_version)
-                            {
-                                self.app_event_tx.send(AppEvent::OpenTerminal(launch));
-                            }
-                        }
+                    if crate::updates::upgrade_ui_enabled()
+                        && let AppState::Chat { widget } = &mut self.app_state
+                        && let Some(launch) =
+                            widget.launch_update_command(command, display, latest_version)
+                    {
+                        self.app_event_tx.send(AppEvent::OpenTerminal(launch));
                     }
                 }
                 AppEvent::SetAutoUpgradeEnabled(enabled) => {
@@ -1922,10 +1916,10 @@ impl App<'_> {
                     name,
                     selected_index,
                 } => {
-                    if let AppState::Chat { widget } = &mut self.app_state {
-                        if let Some(launch) = widget.launch_agent_install(name, selected_index) {
-                            self.app_event_tx.send(AppEvent::OpenTerminal(launch));
-                        }
+                    if let AppState::Chat { widget } = &mut self.app_state
+                        && let Some(launch) = widget.launch_agent_install(name, selected_index)
+                    {
+                        self.app_event_tx.send(AppEvent::OpenTerminal(launch));
                     }
                 }
                 AppEvent::AgentsOverviewSelectionChanged { index } => {
@@ -2075,7 +2069,7 @@ impl App<'_> {
                     // For prompt-expanding commands (/plan, /solve, /code) we let the
                     // expanded prompt be recorded by the normal submission path.
                     if !command.is_prompt_expanding() {
-                        let _ = self.app_event_tx.send(AppEvent::CodexOp(Op::AddToHistory {
+                        self.app_event_tx.send(AppEvent::CodexOp(Op::AddToHistory {
                             text: command_text.clone(),
                         }));
                     }
@@ -3049,16 +3043,16 @@ impl App<'_> {
                                 Ok(session) => {
                                     let authorize_url = session.authorize_url();
                                     let user_code = session.user_code().to_string();
-                                    let _ = tx.send(AppEvent::LoginDeviceCodeReady {
+                                    tx.send(AppEvent::LoginDeviceCodeReady {
                                         authorize_url,
                                         user_code,
                                     });
                                     let result =
                                         session.wait_for_tokens().await.map_err(|e| e.to_string());
-                                    let _ = tx.send(AppEvent::LoginDeviceCodeComplete { result });
+                                    tx.send(AppEvent::LoginDeviceCodeComplete { result });
                                 }
                                 Err(err) => {
-                                    let _ = tx.send(AppEvent::LoginDeviceCodeFailed {
+                                    tx.send(AppEvent::LoginDeviceCodeFailed {
                                         message: err.to_string(),
                                     });
                                 }
@@ -3205,16 +3199,14 @@ impl App<'_> {
                             let mut user_seen = 0usize;
                             let mut cut = items.len();
                             for (idx, it) in items.iter().enumerate().rev() {
-                                if let code_protocol::models::ResponseItem::Message {
-                                    role, ..
-                                } = it
+                                if let code_protocol::models::ResponseItem::Message { role, .. } =
+                                    it
+                                    && role == "user"
                                 {
-                                    if role == "user" {
-                                        user_seen += 1;
-                                        if user_seen == nth {
-                                            cut = idx;
-                                            break;
-                                        }
+                                    user_seen += 1;
+                                    if user_seen == nth {
+                                        cut = idx;
+                                        break;
                                     }
                                 }
                             }
@@ -3347,10 +3339,10 @@ impl App<'_> {
                     }
 
                     // Prefill composer with the edited text
-                    if let AppState::Chat { widget } = &mut self.app_state {
-                        if !prefill.is_empty() {
-                            widget.insert_str(&prefill);
-                        }
+                    if let AppState::Chat { widget } = &mut self.app_state
+                        && !prefill.is_empty()
+                    {
+                        widget.insert_str(&prefill);
                     }
                     self.app_event_tx.send(AppEvent::RequestRedraw);
                 }
@@ -3645,111 +3637,111 @@ impl BufferDiffProfiler {
         let current_buffer = frame.buffer.clone();
         self.frame_seq = self.frame_seq.saturating_add(1);
 
-        if let Some(prev_buffer) = &self.prev {
-            if self.should_log_frame() {
-                if prev_buffer.area != current_buffer.area {
-                    tracing::info!(
-                        target: "code_tui::buffer_diff",
-                        frame = self.frame_seq,
-                        prev_width = prev_buffer.area.width,
-                        prev_height = prev_buffer.area.height,
-                        width = current_buffer.area.width,
-                        height = current_buffer.area.height,
-                        "Buffer area changed; skipping diff metrics for this frame"
-                    );
+        if let Some(prev_buffer) = &self.prev
+            && self.should_log_frame()
+        {
+            if prev_buffer.area != current_buffer.area {
+                tracing::info!(
+                    target: "code_tui::buffer_diff",
+                    frame = self.frame_seq,
+                    prev_width = prev_buffer.area.width,
+                    prev_height = prev_buffer.area.height,
+                    width = current_buffer.area.width,
+                    height = current_buffer.area.height,
+                    "Buffer area changed; skipping diff metrics for this frame"
+                );
+            } else {
+                let inspected = prev_buffer.content.len().min(current_buffer.content.len());
+                let updates = prev_buffer.diff(&current_buffer);
+                let changed = updates.len();
+                if changed == 0 {
+                    self.prev = Some(current_buffer);
+                    return;
+                }
+                let percent = if inspected > 0 {
+                    (changed as f64 / inspected as f64) * 100.0
                 } else {
-                    let inspected = prev_buffer.content.len().min(current_buffer.content.len());
-                    let updates = prev_buffer.diff(&current_buffer);
-                    let changed = updates.len();
-                    if changed == 0 {
-                        self.prev = Some(current_buffer);
-                        return;
-                    }
-                    let percent = if inspected > 0 {
-                        (changed as f64 / inspected as f64) * 100.0
-                    } else {
-                        0.0
-                    };
-                    if changed < self.min_changed && percent < self.min_percent {
-                        self.prev = Some(current_buffer);
-                        return;
-                    }
-                    let mut min_col = u16::MAX;
-                    let mut max_col = 0u16;
-                    let mut rows = BTreeSet::new();
-                    let mut longest_run = 0usize;
-                    let mut current_run = 0usize;
-                    let mut last_cell = None;
-                    for (x, y, _) in &updates {
-                        min_col = min_col.min(*x);
-                        max_col = max_col.max(*x);
-                        rows.insert(*y);
-                        match last_cell {
-                            Some((last_x, last_y)) if *y == last_y && *x == last_x + 1 => {
-                                current_run += 1;
-                            }
-                            _ => {
-                                current_run = 1;
-                            }
+                    0.0
+                };
+                if changed < self.min_changed && percent < self.min_percent {
+                    self.prev = Some(current_buffer);
+                    return;
+                }
+                let mut min_col = u16::MAX;
+                let mut max_col = 0u16;
+                let mut rows = BTreeSet::new();
+                let mut longest_run = 0usize;
+                let mut current_run = 0usize;
+                let mut last_cell = None;
+                for (x, y, _) in &updates {
+                    min_col = min_col.min(*x);
+                    max_col = max_col.max(*x);
+                    rows.insert(*y);
+                    match last_cell {
+                        Some((last_x, last_y)) if *y == last_y && *x == last_x + 1 => {
+                            current_run += 1;
                         }
-                        if current_run > longest_run {
-                            longest_run = current_run;
+                        _ => {
+                            current_run = 1;
                         }
-                        last_cell = Some((*x, *y));
                     }
-                    let row_min = rows.iter().copied().min().unwrap_or(0);
-                    let row_max = rows.iter().copied().max().unwrap_or(0);
-                    let mut spans: Vec<(u16, u16)> = Vec::new();
-                    if !rows.is_empty() {
-                        let mut iter = rows.iter();
-                        let mut start = *iter.next().unwrap();
-                        let mut prev = start;
-                        for &row in iter {
-                            if row == prev + 1 {
-                                prev = row;
-                                continue;
-                            }
-                            spans.push((start, prev));
-                            start = row;
+                    if current_run > longest_run {
+                        longest_run = current_run;
+                    }
+                    last_cell = Some((*x, *y));
+                }
+                let row_min = rows.iter().copied().min().unwrap_or(0);
+                let row_max = rows.iter().copied().max().unwrap_or(0);
+                let mut spans: Vec<(u16, u16)> = Vec::new();
+                if !rows.is_empty() {
+                    let mut iter = rows.iter();
+                    let mut start = *iter.next().unwrap();
+                    let mut prev = start;
+                    for &row in iter {
+                        if row == prev + 1 {
                             prev = row;
+                            continue;
                         }
                         spans.push((start, prev));
+                        start = row;
+                        prev = row;
                     }
-                    spans.sort_by(|(a_start, a_end), (b_start, b_end)| {
-                        let a_len = usize::from(*a_end) - usize::from(*a_start) + 1;
-                        let b_len = usize::from(*b_end) - usize::from(*b_start) + 1;
-                        b_len.cmp(&a_len)
-                    });
-                    let top_spans: Vec<(u16, u16)> = spans.into_iter().take(3).collect();
-                    let (col_min, col_max) = if min_col == u16::MAX {
-                        (0u16, 0u16)
-                    } else {
-                        (min_col, max_col)
-                    };
-                    let skipped_cells = current_buffer
-                        .content
-                        .iter()
-                        .filter(|cell| cell.skip)
-                        .count();
-                    tracing::info!(
-                        target: "code_tui::buffer_diff",
-                        frame = self.frame_seq,
-                        inspected,
-                        changed,
-                        percent = format!("{percent:.2}"),
-                        width = current_buffer.area.width,
-                        height = current_buffer.area.height,
-                        dirty_rows = rows.len(),
-                        longest_run,
-                        row_min,
-                        row_max,
-                        col_min,
-                        col_max,
-                        row_spans = ?top_spans,
-                        skipped_cells,
-                        "Buffer diff metrics"
-                    );
+                    spans.push((start, prev));
                 }
+                spans.sort_by(|(a_start, a_end), (b_start, b_end)| {
+                    let a_len = usize::from(*a_end) - usize::from(*a_start) + 1;
+                    let b_len = usize::from(*b_end) - usize::from(*b_start) + 1;
+                    b_len.cmp(&a_len)
+                });
+                let top_spans: Vec<(u16, u16)> = spans.into_iter().take(3).collect();
+                let (col_min, col_max) = if min_col == u16::MAX {
+                    (0u16, 0u16)
+                } else {
+                    (min_col, max_col)
+                };
+                let skipped_cells = current_buffer
+                    .content
+                    .iter()
+                    .filter(|cell| cell.skip)
+                    .count();
+                tracing::info!(
+                    target: "code_tui::buffer_diff",
+                    frame = self.frame_seq,
+                    inspected,
+                    changed,
+                    percent = format!("{percent:.2}"),
+                    width = current_buffer.area.width,
+                    height = current_buffer.area.height,
+                    dirty_rows = rows.len(),
+                    longest_run,
+                    row_min,
+                    row_max,
+                    col_min,
+                    col_max,
+                    row_spans = ?top_spans,
+                    skipped_cells,
+                    "Buffer diff metrics"
+                );
             }
         }
 
@@ -3758,7 +3750,7 @@ impl BufferDiffProfiler {
 
     fn should_log_frame(&self) -> bool {
         let interval = self.log_every.max(1) as u64;
-        interval == 1 || self.frame_seq % interval == 0
+        interval == 1 || self.frame_seq.is_multiple_of(interval)
     }
 }
 

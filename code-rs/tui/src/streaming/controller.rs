@@ -118,7 +118,7 @@ impl StreamController {
 
     pub(crate) fn clear_all(&mut self) {
         tracing::debug!("clear_all called, current_stream={:?}", self.current_stream);
-        self.states.iter_mut().for_each(|s| s.clear());
+        self.states.iter_mut().for_each(super::StreamState::clear);
         self.current_stream = None;
         self.finishing_after_drain = false;
         self.thinking_placeholder_shown = false;
@@ -177,14 +177,17 @@ impl StreamController {
             None => return,
         };
         // Parse trailing #s<idx>
-        let idx = id.split('#').last().and_then(|frag| frag.strip_prefix('s'));
+        let idx = id
+            .split('#')
+            .next_back()
+            .and_then(|frag| frag.strip_prefix('s'));
         if let Some(sidx) = idx {
             let seq_part = self
                 .state(kind)
                 .last_sequence_number
-                .map(|n| format!(" seq{}", n))
+                .map(|n| format!(" seq{n}"))
                 .unwrap_or_default();
-            let marker = format!("[s{}{}]", sidx, seq_part);
+            let marker = format!("[s{sidx}{seq_part}]");
             let dim = crate::colors::text_dim();
             lines.push(Line::from(ratatui::text::Span::styled(
                 marker,
@@ -341,7 +344,7 @@ impl StreamController {
                         sink.insert_history_with_kind(
                             self.current_stream_id.clone(),
                             kind,
-                            vec![ratatui::text::Line::from("codex")],
+                            vec![ratatui::text::Line::from("beacon")],
                         );
                     }
                 }
@@ -673,19 +676,19 @@ impl StreamController {
                     Ok(val) => !val.is_empty() && val != "0",
                     Err(_) => false,
                 };
-                if enabled {
-                    if let Some(id) = self.current_stream_id() {
-                        if let Some(sidx) =
-                            id.split('#').last().and_then(|frag| frag.strip_prefix('s'))
-                        {
-                            let marker = format!("[s{} final]", sidx);
-                            let dim = crate::colors::text_dim();
-                            out_lines.push(Line::from(ratatui::text::Span::styled(
-                                marker,
-                                ratatui::style::Style::default().fg(dim),
-                            )));
-                        }
-                    }
+                if enabled
+                    && let Some(id) = self.current_stream_id()
+                    && let Some(sidx) = id
+                        .split('#')
+                        .next_back()
+                        .and_then(|frag| frag.strip_prefix('s'))
+                {
+                    let marker = format!("[s{sidx} final]");
+                    let dim = crate::colors::text_dim();
+                    out_lines.push(Line::from(ratatui::text::Span::styled(
+                        marker,
+                        ratatui::style::Style::default().fg(dim),
+                    )));
                 }
             }
             lines_with_header.extend(out_lines);

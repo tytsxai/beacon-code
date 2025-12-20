@@ -98,7 +98,7 @@ fn run_refresh(app_event_tx: AppEventSender, config: Config, debug_enabled: bool
 
         let proto_snapshot = snapshot.context("rate limit snapshot missing from response")?;
 
-        let snapshot: RateLimitSnapshotEvent = proto_snapshot.clone();
+        let snapshot: RateLimitSnapshotEvent = proto_snapshot;
 
         #[cfg(feature = "code-fork")]
         handle_rate_limit(&snapshot, &app_event_tx);
@@ -119,10 +119,10 @@ fn run_refresh(app_event_tx: AppEventSender, config: Config, debug_enabled: bool
 }
 
 fn build_runtime() -> Result<Runtime> {
-    Ok(tokio::runtime::Builder::new_multi_thread()
+    tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
-        .context("building rate limit refresh runtime")?)
+        .context("building rate limit refresh runtime")
 }
 
 fn build_model_client(

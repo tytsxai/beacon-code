@@ -1415,14 +1415,12 @@ impl ReviewDecision {
     }
 
     fn from_elicit(elicit: &mcp_types::ElicitResult) -> Option<Self> {
-        if let Some(content) = &elicit.content {
-            if let Some(decision_value) = content.get("decision") {
-                if let Some(decision_str) = decision_value.as_str() {
-                    if let Some(mapped) = Self::from_str_loose(decision_str) {
-                        return Some(mapped);
-                    }
-                }
-            }
+        if let Some(content) = &elicit.content
+            && let Some(decision_value) = content.get("decision")
+            && let Some(decision_str) = decision_value.as_str()
+            && let Some(mapped) = Self::from_str_loose(decision_str)
+        {
+            return Some(mapped);
         }
 
         Self::from_action_loose(&elicit.action)

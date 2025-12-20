@@ -80,7 +80,6 @@ code-utils-json-to-toml = { path = "utils/json-to-toml" }
 code-utils-readiness = { path = "utils/readiness" }
 code-auto-drive-core = { path = "code-auto-drive-core" }
 mcp-types = { path = "mcp-types", package = "code-mcp-types" }
-upstream-mcp-types = { git = "https://github.com/tytsxai/beacon-code.git", package = "mcp-types", rev = "6c384eb9c610f9a83037d9cad120fb792e782c7c" }
 
 # External
 allocative = "0.3.3"

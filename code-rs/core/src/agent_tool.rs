@@ -902,7 +902,7 @@ async fn execute_model_with_permissions(
 
     // Special case: for the built‑in Beacon Code agent, prefer invoking the currently
     // running executable with the `exec` subcommand rather than relying on a
-    // `codex` binary to be present on PATH. This improves portability,
+    // `code` binary to be present on PATH. This improves portability,
     // especially on Windows where global shims may be missing.
     let model_lower = model.to_lowercase();
     let command_lower = command_for_spawn.to_ascii_lowercase();

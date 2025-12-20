@@ -78,7 +78,7 @@ pub fn paste_image_as_png() -> Result<(Vec<u8>, PastedImageInfo), PasteImageErro
 pub fn paste_image_to_temp_png() -> Result<(PathBuf, PastedImageInfo), PasteImageError> {
     let (png, info) = paste_image_as_png()?;
     let tmp = Builder::new()
-        .prefix("codex-clipboard-")
+        .prefix("beacon-clipboard-")
         .suffix(".png")
         .tempfile()
         .map_err(|e| PasteImageError::IoError(e.to_string()))?;
@@ -145,7 +145,7 @@ pub fn try_decode_base64_image_to_temp_png(
     }
 
     let tmp = Builder::new()
-        .prefix("codex-clipboard-")
+        .prefix("beacon-clipboard-")
         .suffix(".png")
         .tempfile()
         .map_err(|e| PasteImageError::IoError(e.to_string()))?;
@@ -172,10 +172,10 @@ pub fn try_decode_base64_image_to_temp_png(
 pub fn normalize_pasted_path(pasted: &str) -> Option<PathBuf> {
     let pasted = pasted.trim();
 
-    if let Ok(url) = url::Url::parse(pasted) {
-        if url.scheme() == "file" {
-            return url.to_file_path().ok();
-        }
+    if let Ok(url) = url::Url::parse(pasted)
+        && url.scheme() == "file"
+    {
+        return url.to_file_path().ok();
     }
 
     let looks_like_windows_path = {

@@ -126,7 +126,7 @@ pub fn set_custom_theme_is_dark(is_dark: Option<bool>) {
 }
 
 pub fn custom_theme_is_dark() -> Option<bool> {
-    CUSTOM_THEME_IS_DARK.read().unwrap().clone()
+    *CUSTOM_THEME_IS_DARK.read().unwrap()
 }
 
 /// Switch to a different predefined theme
@@ -143,16 +143,15 @@ pub fn switch_theme(theme_name: ThemeName) {
 
 /// Parse a color string (hex or named color)
 fn parse_color(color_str: &str) -> Option<Color> {
-    if let Some(hex) = color_str.strip_prefix('#') {
-        if hex.len() == 6 {
-            if let (Ok(r), Ok(g), Ok(b)) = (
-                u8::from_str_radix(&hex[0..2], 16),
-                u8::from_str_radix(&hex[2..4], 16),
-                u8::from_str_radix(&hex[4..6], 16),
-            ) {
-                return Some(Color::Rgb(r, g, b));
-            }
-        }
+    if let Some(hex) = color_str.strip_prefix('#')
+        && hex.len() == 6
+        && let (Ok(r), Ok(g), Ok(b)) = (
+            u8::from_str_radix(&hex[0..2], 16),
+            u8::from_str_radix(&hex[2..4], 16),
+            u8::from_str_radix(&hex[4..6], 16),
+        )
+    {
+        return Some(Color::Rgb(r, g, b));
     }
 
     // Named colors
@@ -179,110 +178,110 @@ fn parse_color(color_str: &str) -> Option<Color> {
 
 /// Apply custom color overrides to a theme
 fn apply_custom_colors(theme: &mut Theme, colors: &ThemeColors) {
-    if let Some(ref c) = colors.primary {
-        if let Some(color) = parse_color(c) {
-            theme.primary = color;
-        }
+    if let Some(ref c) = colors.primary
+        && let Some(color) = parse_color(c)
+    {
+        theme.primary = color;
     }
-    if let Some(ref c) = colors.secondary {
-        if let Some(color) = parse_color(c) {
-            theme.secondary = color;
-        }
+    if let Some(ref c) = colors.secondary
+        && let Some(color) = parse_color(c)
+    {
+        theme.secondary = color;
     }
-    if let Some(ref c) = colors.background {
-        if let Some(color) = parse_color(c) {
-            theme.background = color;
-        }
+    if let Some(ref c) = colors.background
+        && let Some(color) = parse_color(c)
+    {
+        theme.background = color;
     }
-    if let Some(ref c) = colors.foreground {
-        if let Some(color) = parse_color(c) {
-            theme.foreground = color;
-        }
+    if let Some(ref c) = colors.foreground
+        && let Some(color) = parse_color(c)
+    {
+        theme.foreground = color;
     }
-    if let Some(ref c) = colors.border {
-        if let Some(color) = parse_color(c) {
-            theme.border = color;
-        }
+    if let Some(ref c) = colors.border
+        && let Some(color) = parse_color(c)
+    {
+        theme.border = color;
     }
-    if let Some(ref c) = colors.border_focused {
-        if let Some(color) = parse_color(c) {
-            theme.border_focused = color;
-        }
+    if let Some(ref c) = colors.border_focused
+        && let Some(color) = parse_color(c)
+    {
+        theme.border_focused = color;
     }
-    if let Some(ref c) = colors.selection {
-        if let Some(color) = parse_color(c) {
-            theme.selection = color;
-        }
+    if let Some(ref c) = colors.selection
+        && let Some(color) = parse_color(c)
+    {
+        theme.selection = color;
     }
-    if let Some(ref c) = colors.cursor {
-        if let Some(color) = parse_color(c) {
-            theme.cursor = color;
-        }
+    if let Some(ref c) = colors.cursor
+        && let Some(color) = parse_color(c)
+    {
+        theme.cursor = color;
     }
-    if let Some(ref c) = colors.success {
-        if let Some(color) = parse_color(c) {
-            theme.success = color;
-        }
+    if let Some(ref c) = colors.success
+        && let Some(color) = parse_color(c)
+    {
+        theme.success = color;
     }
-    if let Some(ref c) = colors.warning {
-        if let Some(color) = parse_color(c) {
-            theme.warning = color;
-        }
+    if let Some(ref c) = colors.warning
+        && let Some(color) = parse_color(c)
+    {
+        theme.warning = color;
     }
-    if let Some(ref c) = colors.error {
-        if let Some(color) = parse_color(c) {
-            theme.error = color;
-        }
+    if let Some(ref c) = colors.error
+        && let Some(color) = parse_color(c)
+    {
+        theme.error = color;
     }
-    if let Some(ref c) = colors.info {
-        if let Some(color) = parse_color(c) {
-            theme.info = color;
-        }
+    if let Some(ref c) = colors.info
+        && let Some(color) = parse_color(c)
+    {
+        theme.info = color;
     }
-    if let Some(ref c) = colors.text {
-        if let Some(color) = parse_color(c) {
-            theme.text = color;
-        }
+    if let Some(ref c) = colors.text
+        && let Some(color) = parse_color(c)
+    {
+        theme.text = color;
     }
-    if let Some(ref c) = colors.text_dim {
-        if let Some(color) = parse_color(c) {
-            theme.text_dim = color;
-        }
+    if let Some(ref c) = colors.text_dim
+        && let Some(color) = parse_color(c)
+    {
+        theme.text_dim = color;
     }
-    if let Some(ref c) = colors.text_bright {
-        if let Some(color) = parse_color(c) {
-            theme.text_bright = color;
-        }
+    if let Some(ref c) = colors.text_bright
+        && let Some(color) = parse_color(c)
+    {
+        theme.text_bright = color;
     }
-    if let Some(ref c) = colors.keyword {
-        if let Some(color) = parse_color(c) {
-            theme.keyword = color;
-        }
+    if let Some(ref c) = colors.keyword
+        && let Some(color) = parse_color(c)
+    {
+        theme.keyword = color;
     }
-    if let Some(ref c) = colors.string {
-        if let Some(color) = parse_color(c) {
-            theme.string = color;
-        }
+    if let Some(ref c) = colors.string
+        && let Some(color) = parse_color(c)
+    {
+        theme.string = color;
     }
-    if let Some(ref c) = colors.comment {
-        if let Some(color) = parse_color(c) {
-            theme.comment = color;
-        }
+    if let Some(ref c) = colors.comment
+        && let Some(color) = parse_color(c)
+    {
+        theme.comment = color;
     }
-    if let Some(ref c) = colors.function {
-        if let Some(color) = parse_color(c) {
-            theme.function = color;
-        }
+    if let Some(ref c) = colors.function
+        && let Some(color) = parse_color(c)
+    {
+        theme.function = color;
     }
-    if let Some(ref c) = colors.spinner {
-        if let Some(color) = parse_color(c) {
-            theme.spinner = color;
-        }
+    if let Some(ref c) = colors.spinner
+        && let Some(color) = parse_color(c)
+    {
+        theme.spinner = color;
     }
-    if let Some(ref c) = colors.progress {
-        if let Some(color) = parse_color(c) {
-            theme.progress = color;
-        }
+    if let Some(ref c) = colors.progress
+        && let Some(color) = parse_color(c)
+    {
+        theme.progress = color;
     }
 }
 
@@ -373,10 +372,10 @@ const ANSI16_COLORS: [(u8, u8, u8); 16] = [
 ];
 
 pub(crate) fn palette_mode() -> PaletteMode {
-    if let Some(level) = supports_color::on_cached(supports_color::Stream::Stdout) {
-        if level.has_16m {
-            return PaletteMode::Ansi256;
-        }
+    if let Some(level) = supports_color::on_cached(supports_color::Stream::Stdout)
+        && level.has_16m
+    {
+        return PaletteMode::Ansi256;
     }
     PaletteMode::Ansi16
 }
@@ -404,7 +403,7 @@ pub(crate) fn map_theme_for_palette(
             ThemeName::LightPhotonAnsi16 | ThemeName::DarkCarbonAnsi16 => name,
             ThemeName::Custom => {
                 let is_dark = custom_is_dark_hint
-                    .or_else(|| custom_theme_is_dark())
+                    .or_else(custom_theme_is_dark)
                     .unwrap_or(false);
                 if is_dark {
                     ThemeName::DarkCarbonAnsi16
@@ -438,10 +437,12 @@ fn quantize_theme_to_ansi256(theme: &mut Theme) {
         if !for_background {
             return None;
         }
-        if let Color::Rgb(r, g, b) = c {
-            if r >= 245 && g >= 245 && b >= 245 {
-                return Some(Color::Indexed(15));
-            }
+        if let Color::Rgb(r, g, b) = c
+            && r >= 245
+            && g >= 245
+            && b >= 245
+        {
+            return Some(Color::Indexed(15));
         }
         None
     }
@@ -599,9 +600,9 @@ fn rgb_to_ansi256_index(r: u8, g: u8, b: u8) -> u8 {
     };
 
     let mut seen_cube_indices: HashSet<u8> = HashSet::new();
-    for rr in neighbor_steps(ri as usize) {
-        for gg in neighbor_steps(gi as usize) {
-            for bb in neighbor_steps(bi as usize) {
+    for rr in neighbor_steps(ri) {
+        for gg in neighbor_steps(gi) {
+            for bb in neighbor_steps(bi) {
                 if rr > 5 || gg > 5 || bb > 5 {
                     continue;
                 }

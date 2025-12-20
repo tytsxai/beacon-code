@@ -39,11 +39,11 @@ impl ApprovalModalView<'_> {
 
     /// Advance to next request if the current one is finished.
     fn maybe_advance(&mut self) {
-        if self.current.is_complete() {
-            if let Some((req, ticket)) = self.queue.pop_front() {
-                self.current =
-                    super::build_user_approval_widget(req, ticket, self.app_event_tx.clone());
-            }
+        if self.current.is_complete()
+            && let Some((req, ticket)) = self.queue.pop_front()
+        {
+            self.current =
+                super::build_user_approval_widget(req, ticket, self.app_event_tx.clone());
         }
     }
 }

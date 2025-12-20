@@ -77,32 +77,32 @@ impl HistoryCell for ToolCallCell {
         lines.push(self.header_line());
         lines.extend(render_arguments(&self.state.arguments));
 
-        if let Some(result) = &self.state.result_preview {
-            if !result.lines.is_empty() {
-                lines.push(Line::from(""));
-                for line in &result.lines {
-                    lines.push(Line::styled(
-                        line.clone(),
-                        Style::default().fg(crate::colors::text_dim()),
-                    ));
-                }
-                if result.truncated {
-                    lines.push(Line::styled(
-                        "… truncated ",
-                        Style::default().fg(crate::colors::text_dim()),
-                    ));
-                }
+        if let Some(result) = &self.state.result_preview
+            && !result.lines.is_empty()
+        {
+            lines.push(Line::from(""));
+            for line in &result.lines {
+                lines.push(Line::styled(
+                    line.clone(),
+                    Style::default().fg(crate::colors::text_dim()),
+                ));
+            }
+            if result.truncated {
+                lines.push(Line::styled(
+                    "… truncated ",
+                    Style::default().fg(crate::colors::text_dim()),
+                ));
             }
         }
 
-        if let Some(error) = &self.state.error_message {
-            if !error.is_empty() {
-                lines.push(Line::from(""));
-                lines.push(Line::styled(
-                    error.clone(),
-                    Style::default().fg(crate::colors::error()),
-                ));
-            }
+        if let Some(error) = &self.state.error_message
+            && !error.is_empty()
+        {
+            lines.push(Line::from(""));
+            lines.push(Line::styled(
+                error.clone(),
+                Style::default().fg(crate::colors::error()),
+            ));
         }
 
         lines.push(Line::from(""));
@@ -223,9 +223,9 @@ impl HistoryCell for RunningToolCallCell {
                 Self::strip_zero_seconds_suffix(format_duration(Duration::from_millis(cap_ms)));
             let suffix = if show_elapsed {
                 let elapsed_str = Self::strip_zero_seconds_suffix(format_duration(elapsed));
-                format!(" ({} / up to {})", elapsed_str, cap_str)
+                format!(" ({elapsed_str} / up to {cap_str})")
             } else {
-                format!(" (up to {})", cap_str)
+                format!(" (up to {cap_str})")
             };
             spans.push(Span::styled(
                 suffix,

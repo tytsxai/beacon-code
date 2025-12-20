@@ -245,7 +245,7 @@ impl McpConnectionManager {
                         elicitation: Some(json!({})),
                     },
                     client_info: Implementation {
-                        name: "codex-mcp-client".to_owned(),
+                        name: "beacon-mcp-client".to_owned(),
                         version: env!("CARGO_PKG_VERSION").to_owned(),
                         title: Some("Beacon Code".into()),
                         // This field is used by Beacon Code when it is an MCP

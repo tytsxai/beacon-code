@@ -29,7 +29,9 @@ At a glance:
   - `applyPatchApproval`, `execCommandApproval`
 - Notifications (server → client)
   - `loginChatGptComplete`, `authStatusChange`
-  - `codex/event` stream with agent events
+  - `codex/event` stream with agent events (legacy method name)
+
+MCP tool names: `code` and `code-reply` (legacy aliases: `codex`, `codex-reply`).
 
 See code for full type definitions and exact shapes: `app-server-protocol/src/protocol.rs`.
 
@@ -38,16 +40,16 @@ See code for full type definitions and exact shapes: `app-server-protocol/src/pr
 Run Beacon as an MCP server and connect an MCP client:
 
 ```bash
-codex mcp-server | your_mcp_client
+code mcp-server | your_mcp_client
 ```
 
 For a simple inspection UI, you can also try:
 
 ```bash
-npx @modelcontextprotocol/inspector codex mcp-server
+npx @modelcontextprotocol/inspector code mcp-server
 ```
 
-Use the separate `codex mcp` subcommand to manage configured MCP server launchers in `config.toml`.
+Use the separate `code mcp` subcommand to manage configured MCP server launchers in `config.toml`.
 
 ## Conversations
 

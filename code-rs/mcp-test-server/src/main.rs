@@ -59,7 +59,7 @@ fn main() {
                 sleep_env_ms("SLOW_INIT_MS");
                 let result = json!({
                     "capabilities": { "tools": { "listChanged": true } },
-                    "serverInfo": { "name": "codex-mcp-test-server", "version": "0.0.1" },
+                    "serverInfo": { "name": "beacon-mcp-test-server", "version": "0.0.1" },
                     "protocolVersion": "2025-06-18"
                 });
                 let resp = JsonRpcResp { jsonrpc: "2.0".into(), id: req.id, result: Some(result), error: None };

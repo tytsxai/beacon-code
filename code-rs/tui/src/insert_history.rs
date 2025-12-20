@@ -424,8 +424,8 @@ impl Command for SetUnderlineColor {
             CColor::DarkCyan => write!(f, "\x1b[58:5:14m"),
             CColor::White => write!(f, "\x1b[58:5:7m"),
             CColor::Grey => write!(f, "\x1b[58:5:15m"),
-            CColor::Rgb { r, g, b } => write!(f, "\x1b[58:2::{}:{}:{}m", r, g, b),
-            CColor::AnsiValue(n) => write!(f, "\x1b[58:5:{}m", n),
+            CColor::Rgb { r, g, b } => write!(f, "\x1b[58:2::{r}:{g}:{b}m"),
+            CColor::AnsiValue(n) => write!(f, "\x1b[58:5:{n}m"),
             CColor::Reset => write!(f, "\x1b[59m"), // Reset underline color
         }
     }
@@ -468,7 +468,7 @@ fn word_wrap_line(line: &Line, width: usize) -> Vec<Line<'static>> {
             || (only('_') && count('_') >= 3)
         {
             let hr = Line::from(Span::styled(
-                std::iter::repeat('─').take(width).collect::<String>(),
+                std::iter::repeat_n('─', width).collect::<String>(),
                 ratatui::style::Style::default().fg(crate::colors::assistant_hr()),
             ));
             return vec![hr];

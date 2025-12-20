@@ -11,6 +11,8 @@ use crate::code_tool_config::create_tool_for_acp_prompt;
 use crate::code_tool_config::create_tool_for_acp_set_model;
 use crate::code_tool_config::create_tool_for_code_tool_call_param;
 use crate::code_tool_config::create_tool_for_code_tool_call_reply_param;
+use crate::code_tool_config::create_tool_for_legacy_codex_tool_call_param;
+use crate::code_tool_config::create_tool_for_legacy_codex_tool_call_reply_param;
 use crate::error_code::INTERNAL_ERROR_CODE;
 use crate::error_code::INVALID_REQUEST_ERROR_CODE;
 use crate::outgoing_message::OutgoingMessageSender;
@@ -96,7 +98,7 @@ impl MessageProcessor {
             conversation_manager.clone(),
             outgoing.clone(),
             code_linux_sandbox_exe.clone(),
-            config_for_processor.clone(),
+            config_for_processor,
         );
         let session_map: SessionMap = Arc::new(Mutex::new(HashMap::new()));
         Self {
@@ -112,15 +114,15 @@ impl MessageProcessor {
     }
 
     pub(crate) async fn process_request(&mut self, request: JSONRPCRequest) {
-        if let Ok(request_json) = serde_json::to_value(request.clone()) {
-            if let Ok(code_request) = serde_json::from_value::<ClientRequest>(request_json) {
-                // If the request is a Beacon Code request, handle it with the
-                // message processor.
-                self.code_message_processor
-                    .process_request(code_request)
-                    .await;
-                return;
-            }
+        if let Ok(request_json) = serde_json::to_value(request.clone())
+            && let Ok(code_request) = serde_json::from_value::<ClientRequest>(request_json)
+        {
+            // If the request is a Beacon Code request, handle it with the
+            // message processor.
+            self.code_message_processor
+                .process_request(code_request)
+                .await;
+            return;
         }
 
         tracing::trace!("processing JSON-RPC request: {}", request.method);
@@ -214,45 +216,45 @@ impl MessageProcessor {
 
         let mut request = request;
 
-        if request.method == mcp_types::InitializeRequest::METHOD {
-            if let Some(params) = request.params.as_mut() {
-                if let Some(protocol_version) = params.get_mut("protocolVersion") {
-                    if let Some(num) = protocol_version.as_i64() {
-                        *protocol_version = serde_json::Value::String(num.to_string());
-                    } else if let Some(num) = protocol_version.as_u64() {
-                        *protocol_version = serde_json::Value::String(num.to_string());
-                    } else if protocol_version.is_null() {
-                        *protocol_version = serde_json::Value::String("1".to_string());
-                    }
+        if request.method == mcp_types::InitializeRequest::METHOD
+            && let Some(params) = request.params.as_mut()
+        {
+            if let Some(protocol_version) = params.get_mut("protocolVersion") {
+                if let Some(num) = protocol_version.as_i64() {
+                    *protocol_version = serde_json::Value::String(num.to_string());
+                } else if let Some(num) = protocol_version.as_u64() {
+                    *protocol_version = serde_json::Value::String(num.to_string());
+                } else if protocol_version.is_null() {
+                    *protocol_version = serde_json::Value::String("1".to_string());
+                }
+            }
+
+            if let serde_json::Value::Object(map) = params {
+                if !map.contains_key("capabilities") {
+                    let capabilities = map
+                        .remove("clientCapabilities")
+                        .unwrap_or_else(|| serde_json::Value::Object(Default::default()));
+
+                    let mut cap_wrapper = serde_json::Map::new();
+                    cap_wrapper.insert("experimental".to_string(), capabilities);
+                    map.insert(
+                        "capabilities".to_string(),
+                        serde_json::Value::Object(cap_wrapper),
+                    );
                 }
 
-                if let serde_json::Value::Object(map) = params {
-                    if !map.contains_key("capabilities") {
-                        let capabilities = map
-                            .remove("clientCapabilities")
-                            .unwrap_or_else(|| serde_json::Value::Object(Default::default()));
-
-                        let mut cap_wrapper = serde_json::Map::new();
-                        cap_wrapper.insert("experimental".to_string(), capabilities);
-                        map.insert(
-                            "capabilities".to_string(),
-                            serde_json::Value::Object(cap_wrapper),
-                        );
-                    }
-
-                    map.entry("clientInfo").or_insert_with(|| {
-                        let mut info = serde_json::Map::new();
-                        info.insert(
-                            "name".to_string(),
-                            serde_json::Value::String("unknown-client".into()),
-                        );
-                        info.insert(
-                            "version".to_string(),
-                            serde_json::Value::String("0.0.0".into()),
-                        );
-                        serde_json::Value::Object(info)
-                    });
-                }
+                map.entry("clientInfo").or_insert_with(|| {
+                    let mut info = serde_json::Map::new();
+                    info.insert(
+                        "name".to_string(),
+                        serde_json::Value::String("unknown-client".into()),
+                    );
+                    info.insert(
+                        "version".to_string(),
+                        serde_json::Value::String("0.0.0".into()),
+                    );
+                    serde_json::Value::Object(info)
+                });
             }
         }
 
@@ -521,6 +523,8 @@ impl MessageProcessor {
             tools: vec![
                 create_tool_for_code_tool_call_param(),
                 create_tool_for_code_tool_call_reply_param(),
+                create_tool_for_legacy_codex_tool_call_param(),
+                create_tool_for_legacy_codex_tool_call_reply_param(),
                 create_tool_for_acp_new_session(),
                 create_tool_for_acp_prompt(),
                 create_tool_for_acp_set_model(),
@@ -541,8 +545,8 @@ impl MessageProcessor {
         let CallToolRequestParams { name, arguments } = params;
 
         match name.as_str() {
-            "codex" => self.handle_tool_call_codex(id, arguments).await,
-            "codex-reply" => {
+            "code" | "codex" => self.handle_tool_call_codex(id, arguments).await,
+            "code-reply" | "codex-reply" => {
                 self.handle_tool_call_code_session_reply(id, arguments)
                     .await
             }
@@ -577,9 +581,7 @@ impl MessageProcessor {
                     Ok(cfg) => cfg,
                     Err(e) => {
                         let message =
-                            format!(
-                                "Failed to load Beacon Code configuration from overrides: {e}"
-                            );
+                            format!("Failed to load Beacon Code configuration from overrides: {e}");
                         let result = CallToolResult {
                             content: vec![ContentBlock::TextContent(TextContent {
                                 r#type: "text".to_owned(),
@@ -619,7 +621,7 @@ impl MessageProcessor {
             },
             None => {
                 let message =
-                    "Missing arguments for codex tool-call; the `prompt` field is required."
+                    "Missing arguments for code tool-call; the `prompt` field is required."
                         .to_string();
                 let result = CallToolResult {
                     content: vec![ContentBlock::TextContent(TextContent {
@@ -674,10 +676,8 @@ impl MessageProcessor {
             Some(json_val) => match serde_json::from_value::<CodexToolCallReplyParam>(json_val) {
                 Ok(params) => params,
                 Err(e) => {
-                    tracing::error!(
-                        "Failed to parse Beacon Code tool call reply parameters: {e}"
-                    );
-                    let message = format!("Failed to parse codex-reply parameters: {e}");
+                    tracing::error!("Failed to parse Beacon Code tool call reply parameters: {e}");
+                    let message = format!("Failed to parse code-reply parameters: {e}");
                     let result = CallToolResult {
                         content: vec![ContentBlock::TextContent(TextContent {
                             r#type: "text".to_owned(),
@@ -697,9 +697,9 @@ impl MessageProcessor {
             },
             None => {
                 tracing::error!(
-                    "Missing arguments for codex-reply tool-call; the `session_id` and `prompt` fields are required."
+                    "Missing arguments for code-reply tool-call; the `session_id` and `prompt` fields are required."
                 );
-                let message = "Missing arguments for codex-reply tool-call; the `session_id` and `prompt` fields are required.".to_owned();
+                let message = "Missing arguments for code-reply tool-call; the `session_id` and `prompt` fields are required.".to_owned();
                 let result = CallToolResult {
                     content: vec![ContentBlock::TextContent(TextContent {
                         r#type: "text".to_owned(),
@@ -1047,14 +1047,14 @@ impl MessageProcessor {
         let Some(session_entry) = session_entry else {
             let error = JSONRPCErrorError {
                 code: INVALID_REQUEST_ERROR_CODE,
-                message: format!("unknown session id: {}", acp_session_id),
+                message: format!("unknown session id: {acp_session_id}"),
                 data: None,
             };
             self.outgoing.send_error(request_id, error).await;
             return;
         };
 
-        let session = session_entry.conversation.clone();
+        let session = session_entry.conversation;
 
         let outgoing = self.outgoing.clone();
         let requests_code_map = self.running_requests_id_to_code_uuid.clone();
@@ -1145,7 +1145,7 @@ impl MessageProcessor {
         let Some(entry) = entry else {
             return Err(JSONRPCErrorError {
                 code: INVALID_REQUEST_ERROR_CODE,
-                message: format!("unknown session id: {}", session_id),
+                message: format!("unknown session id: {session_id}"),
                 data: None,
             });
         };
@@ -1154,7 +1154,7 @@ impl MessageProcessor {
         let selection = match resolve_model_selection(&model_id, &config_guard) {
             Some(selection) => selection,
             None => {
-                let message = format!("unknown model id: {}", model_id.to_string());
+                let message = format!("unknown model id: {model_id}");
                 return Err(JSONRPCErrorError {
                     code: INVALID_REQUEST_ERROR_CODE,
                     message,
@@ -1180,14 +1180,14 @@ impl MessageProcessor {
 
         drop(config_guard);
 
-        if let Some(op) = configure_op {
-            if let Err(err) = entry.conversation.submit(op).await {
-                return Err(JSONRPCErrorError {
-                    code: INTERNAL_ERROR_CODE,
-                    message: err.to_string(),
-                    data: None,
-                });
-            }
+        if let Some(op) = configure_op
+            && let Err(err) = entry.conversation.submit(op).await
+        {
+            return Err(JSONRPCErrorError {
+                code: INTERNAL_ERROR_CODE,
+                message: err.to_string(),
+                data: None,
+            });
         }
 
         if let Some(models_meta) = models_meta_value {
@@ -1504,14 +1504,12 @@ fn convert_mcp_servers(
             }
             acp::McpServer::Http { name, .. } => {
                 return Err(anyhow!(
-                    "unsupported MCP transport for server '{}': HTTP servers are not yet supported",
-                    name
+                    "unsupported MCP transport for server '{name}': HTTP servers are not yet supported"
                 ));
             }
             acp::McpServer::Sse { name, .. } => {
                 return Err(anyhow!(
-                    "unsupported MCP transport for server '{}': SSE servers are not yet supported",
-                    name
+                    "unsupported MCP transport for server '{name}': SSE servers are not yet supported"
                 ));
             }
         }
@@ -1660,7 +1658,7 @@ fn configure_session_op_from_config(config: &Config) -> Op {
         model_text_verbosity: config.model_text_verbosity,
         user_instructions: config.user_instructions.clone(),
         base_instructions: config.base_instructions.clone(),
-        approval_policy: config.approval_policy.clone(),
+        approval_policy: config.approval_policy,
         sandbox_policy: config.sandbox_policy.clone(),
         disable_response_storage: config.disable_response_storage,
         notify: config.notify.clone(),

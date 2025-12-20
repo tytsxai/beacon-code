@@ -60,9 +60,18 @@ use code_core::entry_to_rollout_path;
 
 const AUTO_DRIVE_TEST_SUFFIX: &str = "After planning, but before you start, please ensure you can test the outcome of your changes. Test first to ensure it's failing, then again at the end to ensure it passes. Do not use work arounds or mock code to pass - solve the underlying issue. Create new tests as you work if needed. Once done, clean up your tests unless added to an existing test suite.";
 
-pub async fn run_main(cli: Cli, code_linux_sandbox_exe: Option<PathBuf>) -> anyhow::Result<()> {
+pub async fn run_main(mut cli: Cli, code_linux_sandbox_exe: Option<PathBuf>) -> anyhow::Result<()> {
     if let Err(err) = set_default_originator("code_exec") {
-        tracing::warn!(?err, "Failed to set codex exec originator override {err:?}");
+        tracing::warn!(
+            ?err,
+            "Failed to set Beacon Code exec originator override {err:?}"
+        );
+    }
+
+    if !cli.dangerously_bypass_approvals_and_sandbox {
+        cli.dangerously_bypass_approvals_and_sandbox =
+            std::env::var_os("BEACON_UNSAFE_ALLOW_NO_SANDBOX").is_some()
+                || std::env::var_os("CODEX_UNSAFE_ALLOW_NO_SANDBOX").is_some();
     }
 
     let Cli {
@@ -146,7 +155,10 @@ pub async fn run_main(cli: Cli, code_linux_sandbox_exe: Option<PathBuf>) -> anyh
             );
             std::process::exit(1);
         }
-        if auto_drive_goal.as_ref().is_none_or(|goal| goal.is_empty()) {
+        if auto_drive_goal
+            .as_ref()
+            .is_none_or(std::string::String::is_empty)
+        {
             auto_drive_goal = Some(trimmed_prompt.to_string());
         }
     }

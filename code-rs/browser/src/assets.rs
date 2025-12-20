@@ -33,7 +33,7 @@ pub struct AssetManager {
 impl AssetManager {
     pub async fn new() -> Result<Self> {
         let session_id = Uuid::new_v4().to_string();
-        let base_dir = PathBuf::from("/tmp/codex/browser").join(&session_id);
+        let base_dir = PathBuf::from("/tmp/beacon-code/browser").join(&session_id);
 
         fs::create_dir_all(&base_dir).await?;
 

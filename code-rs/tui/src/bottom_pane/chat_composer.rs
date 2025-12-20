@@ -112,7 +112,7 @@ fn format_with_thousands(n: u64) -> String {
     let mut out = String::with_capacity(s.len() + s.len() / 3);
     let mut count = 0usize;
     for ch in s.chars().rev() {
-        if count != 0 && count % 3 == 0 {
+        if count != 0 && count.is_multiple_of(3) {
             out.push(',');
         }
         out.push(ch);
@@ -587,10 +587,8 @@ impl ChatComposer {
         let textarea_rect = input_block.inner(input_area);
 
         // Apply the same inner padding as in render (horizontal only).
-        let padded_textarea_rect = textarea_rect.inner(Margin::new(
-            crate::layout_consts::COMPOSER_INNER_HPAD.into(),
-            0,
-        ));
+        let padded_textarea_rect =
+            textarea_rect.inner(Margin::new(crate::layout_consts::COMPOSER_INNER_HPAD, 0));
 
         let state = self.textarea_state.borrow();
         self.textarea
@@ -659,7 +657,7 @@ impl ChatComposer {
                 .file_name()
                 .and_then(|n| n.to_str())
                 .unwrap_or("image.png");
-            let placeholder = format!("[image: {}]", filename);
+            let placeholder = format!("[image: {filename}]");
             // Insert placeholder and notify chat widget about the mapping.
             self.textarea.insert_str(&placeholder);
             self.textarea.insert_str(" ");
@@ -686,7 +684,7 @@ impl ChatComposer {
                         .file_name()
                         .and_then(|n| n.to_str())
                         .unwrap_or("image.png");
-                    let placeholder = format!("[image: {}]", filename);
+                    let placeholder = format!("[image: {filename}]");
                     self.textarea.insert_str(&placeholder);
                     self.textarea.insert_str(" ");
                     self.typed_anything = true; // Mark that user has interacted via paste
@@ -734,7 +732,7 @@ impl ChatComposer {
     }
 
     fn maybe_start_post_paste_space_guard(&mut self, pasted: &str) {
-        if pasted.chars().last() != Some(' ') {
+        if !pasted.ends_with(' ') {
             return;
         }
         let cursor_pos = self.textarea.cursor();
@@ -742,13 +740,13 @@ impl ChatComposer {
         if cursor_pos == 0 {
             return;
         }
-        if let Some(slice) = self.textarea.text().as_bytes().get(cursor_pos - 1) {
-            if *slice == b' ' {
-                self.post_paste_space_guard = Some(PostPasteSpaceGuard {
-                    expires_at: Instant::now() + Duration::from_secs(2),
-                    cursor_pos,
-                });
-            }
+        if let Some(slice) = self.textarea.text().as_bytes().get(cursor_pos - 1)
+            && *slice == b' '
+        {
+            self.post_paste_space_guard = Some(PostPasteSpaceGuard {
+                expires_at: Instant::now() + Duration::from_secs(2),
+                cursor_pos,
+            });
         }
     }
 
@@ -1128,9 +1126,9 @@ impl ChatComposer {
                         CommandItem::Subagent(i) => {
                             if let Some(name) = popup.subagent_name(i) {
                                 let starts_with_cmd =
-                                    first_line.trim_start().starts_with(&format!("/{}", name));
+                                    first_line.trim_start().starts_with(&format!("/{name}"));
                                 if !starts_with_cmd {
-                                    self.textarea.set_text(&format!("/{} ", name));
+                                    self.textarea.set_text(&format!("/{name} "));
                                 }
                             }
                         }
@@ -1179,7 +1177,7 @@ impl ChatComposer {
                             if let Some(name) = popup.subagent_name(i) {
                                 let first_line = command_text.lines().next().unwrap_or("");
                                 let starts_with =
-                                    first_line.trim_start().starts_with(&format!("/{}", name));
+                                    first_line.trim_start().starts_with(&format!("/{name}"));
                                 if starts_with {
                                     self.active_popup = ActivePopup::None;
                                     return self.handle_key_event_without_popup(KeyEvent::new(
@@ -1187,7 +1185,7 @@ impl ChatComposer {
                                         KeyModifiers::NONE,
                                     ));
                                 }
-                                self.textarea.set_text(&format!("/{} ", name));
+                                self.textarea.set_text(&format!("/{name} "));
                                 let new_cursor = self.textarea.text().len();
                                 self.textarea.set_cursor(new_cursor);
                                 return (InputResult::None, true);
@@ -1271,7 +1269,7 @@ impl ChatComposer {
             } => {
                 // Hide popup without modifying text, remember token to avoid immediate reopen.
                 if let Some(tok) = Self::current_completion_token(&self.textarea) {
-                    self.dismissed_file_popup_token = Some(tok.to_string());
+                    self.dismissed_file_popup_token = Some(tok);
                 }
                 self.active_popup = ActivePopup::None;
                 self.file_popup_origin = None;
@@ -1338,7 +1336,7 @@ impl ChatComposer {
             text[safe_cursor..]
                 .chars()
                 .next()
-                .map(|c| c.is_whitespace())
+                .map(char::is_whitespace)
                 .unwrap_or(false)
         } else {
             false
@@ -1366,7 +1364,7 @@ impl ChatComposer {
         let ws_len_right: usize = after_cursor
             .chars()
             .take_while(|c| c.is_whitespace())
-            .map(|c| c.len_utf8())
+            .map(char::len_utf8)
             .sum();
         let start_right = safe_cursor + ws_len_right;
         let end_right_rel = text[start_right..]
@@ -1610,15 +1608,15 @@ impl ChatComposer {
                 }
 
                 // Use the generic token under cursor for a one-off search.
-                if let Some(tok) = Self::current_generic_token(&self.textarea) {
-                    if !tok.is_empty() {
-                        self.pending_tab_file_query = Some(tok.clone());
-                        self.app_event_tx
-                            .send(crate::app_event::AppEvent::StartFileSearch(tok));
-                        // Do not show a popup yet; wait for results and only
-                        // show if there are matches to avoid flicker.
-                        return (InputResult::None, true);
-                    }
+                if let Some(tok) = Self::current_generic_token(&self.textarea)
+                    && !tok.is_empty()
+                {
+                    self.pending_tab_file_query = Some(tok.clone());
+                    self.app_event_tx
+                        .send(crate::app_event::AppEvent::StartFileSearch(tok));
+                    // Do not show a popup yet; wait for results and only
+                    // show if there are matches to avoid flicker.
+                    return (InputResult::None, true);
                 }
                 (InputResult::None, false)
             }
@@ -1834,12 +1832,11 @@ impl ChatComposer {
             code: KeyCode::Backspace,
             ..
         } = input
+            && self.try_remove_placeholder_at_cursor()
         {
-            if self.try_remove_placeholder_at_cursor() {
-                // Text was modified, reset history navigation
-                self.history.reset_navigation();
-                return (InputResult::None, true);
-            }
+            // Text was modified, reset history navigation
+            self.history.reset_navigation();
+            return (InputResult::None, true);
         }
 
         // Normal input handling
@@ -2002,31 +1999,28 @@ impl ChatComposer {
                 // Allow manually-triggered popups (via Tab) to stay open while the
                 // cursor remains within the same generic token. When the token
                 // changes, trigger a new search; otherwise keep the popup stable.
-                if let Some(FilePopupOrigin::Manual { token }) = &mut self.file_popup_origin {
-                    if let Some(generic) = Self::current_generic_token(&self.textarea) {
-                        if generic.is_empty() {
-                            self.active_popup = ActivePopup::None;
-                            self.dismissed_file_popup_token = None;
-                            self.file_popup_origin = None;
-                            self.current_file_query = None;
+                if let Some(FilePopupOrigin::Manual { token }) = &mut self.file_popup_origin
+                    && let Some(generic) = Self::current_generic_token(&self.textarea)
+                {
+                    if generic.is_empty() {
+                        self.active_popup = ActivePopup::None;
+                        self.dismissed_file_popup_token = None;
+                        self.file_popup_origin = None;
+                        self.current_file_query = None;
+                    } else if *token != generic {
+                        *token = generic.clone();
+                        if let ActivePopup::File(popup) = &mut self.active_popup {
+                            popup.set_query(&generic);
                         } else {
-                            if *token != generic {
-                                *token = generic.clone();
-                                if let ActivePopup::File(popup) = &mut self.active_popup {
-                                    popup.set_query(&generic);
-                                } else {
-                                    let mut popup = FileSearchPopup::new();
-                                    popup.set_query(&generic);
-                                    self.active_popup = ActivePopup::File(popup);
-                                }
-                                self.current_file_query = Some(generic.clone());
-                                self.app_event_tx
-                                    .send(crate::app_event::AppEvent::StartFileSearch(generic));
-                            }
-                            // Keep popup visible while token is still active.
+                            let mut popup = FileSearchPopup::new();
+                            popup.set_query(&generic);
+                            self.active_popup = ActivePopup::File(popup);
                         }
-                        return;
+                        self.current_file_query = Some(generic.clone());
+                        self.app_event_tx
+                            .send(crate::app_event::AppEvent::StartFileSearch(generic));
                     }
+                    return;
                 }
 
                 self.active_popup = ActivePopup::None;
@@ -2105,19 +2099,19 @@ impl ChatComposer {
             let used_str = format_with_thousands(tokens_used);
             spans.push(Span::from(used_str).style(label_style.add_modifier(Modifier::BOLD)));
             spans.push(Span::from(" tokens").style(label_style));
-            if let Some(context_window) = token_usage_info.model_context_window {
-                if context_window > 0 {
-                    let percent_remaining = {
-                        let percent = 100.0 - (tokens_used as f32 / context_window as f32 * 100.0);
-                        percent.clamp(0.0, 100.0) as u8
-                    };
-                    spans.push(Span::from(" (").style(label_style));
-                    spans.push(
-                        Span::from(percent_remaining.to_string())
-                            .style(label_style.add_modifier(Modifier::BOLD)),
-                    );
-                    spans.push(Span::from("% left)").style(label_style));
-                }
+            if let Some(context_window) = token_usage_info.model_context_window
+                && context_window > 0
+            {
+                let percent_remaining = {
+                    let percent = 100.0 - (tokens_used as f32 / context_window as f32 * 100.0);
+                    percent.clamp(0.0, 100.0) as u8
+                };
+                spans.push(Span::from(" (").style(label_style));
+                spans.push(
+                    Span::from(percent_remaining.to_string())
+                        .style(label_style.add_modifier(Modifier::BOLD)),
+                );
+                spans.push(Span::from("% left)").style(label_style));
             }
         }
         spans
@@ -2131,9 +2125,9 @@ impl ChatComposer {
         let mut spans: Vec<Span<'static>> = Vec::new();
         let parts: Vec<String> = text
             .split('•')
-            .map(|part| part.trim())
+            .map(str::trim)
             .filter(|part| !part.is_empty())
-            .map(|part| part.to_string())
+            .map(std::string::ToString::to_string)
             .collect();
 
         for (index, part) in parts.iter().enumerate() {
@@ -2144,7 +2138,7 @@ impl ChatComposer {
             if let Some(key) = key {
                 spans.push(Span::from(key).style(key_style));
                 if !label.is_empty() {
-                    spans.push(Span::from(format!(" {}", label)).style(label_style));
+                    spans.push(Span::from(format!(" {label}")).style(label_style));
                 }
             } else if !label.is_empty() {
                 spans.push(Span::from(label).style(label_style));
@@ -2273,19 +2267,20 @@ impl ChatComposer {
                 } else {
                     true
                 };
-                if show_access_label && !self.auto_drive_active {
-                    if let Some(label) = &self.access_mode_label {
-                        left_spans.push(Span::from(label.clone()).style(label_style));
-                        let show_suffix = if let Some(until) = self.access_mode_hint_expiry {
-                            std::time::Instant::now() <= until
-                        } else {
-                            self.access_mode_label_expiry.is_some()
-                        };
-                        if show_suffix {
-                            left_spans.push(Span::from("  (").style(label_style));
-                            left_spans.push(Span::from("Shift+Tab").style(key_hint_style));
-                            left_spans.push(Span::from(" change)").style(label_style));
-                        }
+                if show_access_label
+                    && !self.auto_drive_active
+                    && let Some(label) = &self.access_mode_label
+                {
+                    left_spans.push(Span::from(label.clone()).style(label_style));
+                    let show_suffix = if let Some(until) = self.access_mode_hint_expiry {
+                        std::time::Instant::now() <= until
+                    } else {
+                        self.access_mode_label_expiry.is_some()
+                    };
+                    if show_suffix {
+                        left_spans.push(Span::from("  (").style(label_style));
+                        left_spans.push(Span::from("Shift+Tab").style(key_hint_style));
+                        left_spans.push(Span::from(" change)").style(label_style));
                     }
                 }
 
@@ -2321,18 +2316,18 @@ impl ChatComposer {
                             left_spans.extend(spans);
                         }
 
-                        if let Some(right_hint) = right_hint {
-                            if !right_hint.is_empty() {
-                                let spans = Self::build_auto_drive_hint_spans(
-                                    &right_hint,
-                                    auto_key_style,
-                                    auto_label_style,
-                                );
-                                if !spans.is_empty() && !right_spans.is_empty() {
-                                    right_spans.push(Span::from("  •  ").style(auto_label_style));
-                                }
-                                right_spans.extend(spans);
+                        if let Some(right_hint) = right_hint
+                            && !right_hint.is_empty()
+                        {
+                            let spans = Self::build_auto_drive_hint_spans(
+                                &right_hint,
+                                auto_key_style,
+                                auto_label_style,
+                            );
+                            if !spans.is_empty() && !right_spans.is_empty() {
+                                right_spans.push(Span::from("  •  ").style(auto_label_style));
                             }
+                            right_spans.extend(spans);
                         }
                     } else {
                         if left_spans.len() > 1 {
@@ -2348,16 +2343,15 @@ impl ChatComposer {
                     }
                 }
 
-                if let Some((msg, until)) = &self.footer_notice {
-                    if std::time::Instant::now() <= *until {
-                        if left_spans.len() > 1 {
-                            left_spans.push(Span::from("   "));
-                        }
-                        left_spans.push(
-                            Span::from(msg.clone())
-                                .style(Style::default().add_modifier(Modifier::DIM)),
-                        );
+                if let Some((msg, until)) = &self.footer_notice
+                    && std::time::Instant::now() <= *until
+                {
+                    if left_spans.len() > 1 {
+                        left_spans.push(Span::from("   "));
                     }
+                    left_spans.push(
+                        Span::from(msg.clone()).style(Style::default().add_modifier(Modifier::DIM)),
+                    );
                 }
 
                 let token_spans: Vec<Span<'static>> = self.token_usage_spans(label_style);
@@ -2628,9 +2622,9 @@ impl WidgetRef for ChatComposer {
         {
             auto_drive_border_gradient = style.border_gradient;
             input_block = input_block
-                .border_style(style.border_style.clone())
+                .border_style(style.border_style)
                 .border_type(style.border_type)
-                .style(style.background_style.clone());
+                .style(style.background_style);
         } else {
             input_block = input_block
                 .border_style(Style::default().fg(crate::colors::border()))
@@ -2640,16 +2634,15 @@ impl WidgetRef for ChatComposer {
 
         if self.is_task_running && !self.embedded_mode {
             if self.auto_drive_active {
-                if let Some(style) = self.auto_drive_style.as_ref() {
-                    if self.status_message.eq_ignore_ascii_case("auto drive goal") {
-                        let title_text = format!(
-                            "{}Auto Drive Goal{}",
-                            style.goal_title_prefix, style.goal_title_suffix
-                        );
-                        let title_line =
-                            Line::from(Span::styled(title_text, style.title_style.clone()));
-                        input_block = input_block.title(title_line);
-                    }
+                if let Some(style) = self.auto_drive_style.as_ref()
+                    && self.status_message.eq_ignore_ascii_case("auto drive goal")
+                {
+                    let title_text = format!(
+                        "{}Auto Drive Goal{}",
+                        style.goal_title_prefix, style.goal_title_suffix
+                    );
+                    let title_line = Line::from(Span::styled(title_text, style.title_style));
+                    input_block = input_block.title(title_line);
                 }
             } else {
                 use std::time::SystemTime;

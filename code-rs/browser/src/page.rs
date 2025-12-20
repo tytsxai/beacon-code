@@ -358,7 +358,7 @@ impl Page {
   try {
     const dispatch = () => {
       try {
-        const ev = new Event('codex:locationchange');
+        const ev = new Event('beacon:locationchange');
         window.dispatchEvent(ev);
         window.__code_last_url = location.href;
       } catch {}

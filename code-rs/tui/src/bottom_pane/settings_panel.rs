@@ -79,7 +79,7 @@ pub(crate) fn render_panel<F>(
         .title_alignment(style.title_alignment);
 
     if !title.is_empty() {
-        let title_span = Span::styled(format!(" {} ", title), style.title_style);
+        let title_span = Span::styled(format!(" {title} "), style.title_style);
         block = block.title(Line::from(vec![title_span]));
     }
 

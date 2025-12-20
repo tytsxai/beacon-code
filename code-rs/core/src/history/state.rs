@@ -1232,7 +1232,7 @@ impl HistoryUsageTracker {
         if should_log {
             let preview = command_preview(&record.command);
             tracing::warn!(
-                target = "codex::history::memory",
+                target = "code::history::memory",
                 %label,
                 history_id = record.id.0,
                 status = ?record.status,
@@ -1290,7 +1290,7 @@ impl HistoryUsageTracker {
         if should_log {
             let preview = assistant_preview(state);
             tracing::warn!(
-                target = "codex::history::memory",
+                target = "code::history::memory",
                 %label,
                 history_id = state.id.0,
                 delta_chunks = chunk_count,

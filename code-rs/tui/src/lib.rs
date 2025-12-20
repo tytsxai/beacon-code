@@ -1,5 +1,5 @@
 // Forbid accidental stdout/stderr writes in the *library* portion of the TUI.
-// The standalone `codex-tui` binary prints a short help message before the
+// The standalone `code-tui` binary prints a short help message before the
 // alternate‑screen mode starts; that file opts‑out locally via `allow`.
 #![deny(clippy::print_stdout, clippy::print_stderr)]
 #![deny(clippy::disallowed_methods)]
@@ -174,13 +174,13 @@ pub mod test_helpers {
 
                 let screen = terminal.backend().vt100().screen();
                 let (rows, cols) = screen.size();
-                let snapshot = screen
+
+                screen
                     .rows(0, cols)
                     .take(rows.into())
                     .map(|row| row.trim_end().to_string())
                     .collect::<Vec<_>>()
-                    .join("\n");
-                snapshot
+                    .join("\n")
             })
             .collect()
     }
@@ -332,6 +332,11 @@ pub async fn run_main(
     code_linux_sandbox_exe: Option<PathBuf>,
 ) -> std::io::Result<ExitSummary> {
     cli.finalize_defaults();
+    if !cli.dangerously_bypass_approvals_and_sandbox {
+        cli.dangerously_bypass_approvals_and_sandbox =
+            std::env::var_os("BEACON_UNSAFE_ALLOW_NO_SANDBOX").is_some()
+                || std::env::var_os("CODEX_UNSAFE_ALLOW_NO_SANDBOX").is_some();
+    }
 
     let (sandbox_mode, approval_policy) = if cli.full_auto {
         (
@@ -411,7 +416,7 @@ pub async fn run_main(
         Ok(code_home) => code_home,
         #[allow(clippy::print_stderr)]
         Err(err) => {
-            eprintln!("Error finding codex home: {err}");
+            eprintln!("Error finding code home: {err}");
             std::process::exit(1);
         }
     };
@@ -435,7 +440,7 @@ pub async fn run_main(
                 Ok(raw) => raw
                     .get("sandbox_workspace_write")
                     .and_then(|value| value.as_table())
-                    .map_or(false, |table| table.contains_key("network_access")),
+                    .is_some_and(|table| table.contains_key("network_access")),
                 Err(_) => false,
             }
         }
@@ -569,7 +574,7 @@ pub async fn run_main(
         log_file_opts.mode(0o600);
     }
 
-    let log_file = log_file_opts.open(log_dir.join("codex-tui.log"))?;
+    let log_file = log_file_opts.open(log_dir.join("code-tui.log"))?;
 
     // Wrap file in non‑blocking writer.
     let (log_writer, _log_guard) = non_blocking(log_file);
@@ -806,7 +811,7 @@ fn restore() {
 
 #[allow(clippy::print_stderr)]
 fn print_timing_summary(summary: &str) {
-    eprintln!("\n== Timing Summary ==\n{}", summary);
+    eprintln!("\n== Timing Summary ==\n{summary}");
 }
 
 #[allow(clippy::print_stdout, clippy::print_stderr)]
@@ -817,7 +822,7 @@ fn cleanup_session_worktrees_and_print() {
         None => return,
     };
     let session_dir = home.join(".code").join("working").join("_session");
-    let file = session_dir.join(format!("pid-{}.txt", pid));
+    let file = session_dir.join(format!("pid-{pid}.txt"));
     reclaim_worktrees_from_file(&file, "current session");
 }
 
@@ -907,21 +912,21 @@ fn maybe_apply_terminal_theme_detection(config: &mut Config, theme_configured_ex
         .ok()
         .filter(|value| !value.is_empty());
 
-    if let Some(cached) = config.tui.cached_terminal_background.as_ref() {
-        if cached_background_matches_env(
+    if let Some(cached) = config.tui.cached_terminal_background.as_ref()
+        && cached_background_matches_env(
             cached,
             &term,
             &term_program,
             &term_program_version,
             &colorfgbg,
-        ) {
-            tracing::debug!(
-                source = cached.source.as_deref().unwrap_or("cached"),
-                "Using cached terminal background detection result",
-            );
-            apply_detected_theme(theme, cached.is_dark);
-            return;
-        }
+        )
+    {
+        tracing::debug!(
+            source = cached.source.as_deref().unwrap_or("cached"),
+            "Using cached terminal background detection result",
+        );
+        apply_detected_theme(theme, cached.is_dark);
+        return;
     }
 
     match crate::terminal_info::detect_dark_terminal_background() {
@@ -942,7 +947,7 @@ fn maybe_apply_terminal_theme_detection(config: &mut Config, theme_configured_ex
                 source: Some(source.to_string()),
                 rgb: detection
                     .rgb
-                    .map(|(r, g, b)| format!("{:02x}{:02x}{:02x}", r, g, b)),
+                    .map(|(r, g, b)| format!("{r:02x}{g:02x}{b:02x}")),
             };
 
             config.tui.cached_terminal_background = Some(cache.clone());
@@ -1177,10 +1182,8 @@ fn determine_repo_trust_state(
                 // network even when we pivot into WorkspaceWrite solely to protect `.git`.
                 let network_access = if workspace_write.network_access {
                     true
-                } else if workspace_write_network_access_explicit {
-                    false
                 } else {
-                    true
+                    !workspace_write_network_access_explicit
                 };
                 config.approval_policy = AskForApproval::Never;
                 config.sandbox_policy = SandboxPolicy::WorkspaceWrite {

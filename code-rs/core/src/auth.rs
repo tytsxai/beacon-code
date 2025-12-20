@@ -296,6 +296,7 @@ impl CodexAuth {
 }
 
 pub const OPENAI_API_KEY_ENV_VAR: &str = "OPENAI_API_KEY";
+pub const BEACON_API_KEY_ENV_VAR: &str = "BEACON_API_KEY";
 pub const CODEX_API_KEY_ENV_VAR: &str = "CODEX_API_KEY";
 
 fn read_openai_api_key_from_env() -> Option<String> {
@@ -305,10 +306,15 @@ fn read_openai_api_key_from_env() -> Option<String> {
 }
 
 pub fn read_code_api_key_from_env() -> Option<String> {
-    env::var(CODEX_API_KEY_ENV_VAR)
-        .ok()
-        .map(|value| value.trim().to_string())
-        .filter(|value| !value.is_empty())
+    for var in [BEACON_API_KEY_ENV_VAR, CODEX_API_KEY_ENV_VAR] {
+        if let Ok(value) = env::var(var) {
+            let trimmed = value.trim();
+            if !trimmed.is_empty() {
+                return Some(trimmed.to_string());
+            }
+        }
+    }
+    None
 }
 
 pub fn get_auth_file(code_home: &Path) -> PathBuf {
@@ -443,7 +449,7 @@ fn load_auth(
             }
             None => {
                 // We have an API key but no tokens in the auth.json file.
-                // Perhaps the user ran `codex login --api-key <KEY>` or updated
+                // Perhaps the user ran `code login --with-api-key` or updated
                 // auth.json by hand. Either way, let's assume they are trying
                 // to use their API key.
                 return Ok(Some(CodexAuth::from_api_key_with_client(api_key, client)));

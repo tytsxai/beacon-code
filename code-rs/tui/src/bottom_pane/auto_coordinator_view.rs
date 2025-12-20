@@ -338,26 +338,26 @@ impl AutoCoordinatorView {
 
     fn frame_style_for_model(&self, model: &AutoActiveViewModel) -> FrameStyle {
         let mut style = self.style.frame.clone();
-        if self.style.variant == AutoDriveVariant::Beacon {
-            if let Some(accent) = style.accent.as_mut() {
-                accent.style = if model.awaiting_submission {
-                    Style::default()
-                        .fg(colors::warning())
-                        .add_modifier(Modifier::BOLD)
-                } else if model.waiting_for_review {
-                    Style::default()
-                        .fg(colors::info())
-                        .add_modifier(Modifier::BOLD)
-                } else if model.cli_running || model.waiting_for_response {
-                    Style::default()
-                        .fg(colors::primary())
-                        .add_modifier(Modifier::BOLD)
-                } else {
-                    Style::default()
-                        .fg(colors::success())
-                        .add_modifier(Modifier::BOLD)
-                };
-            }
+        if self.style.variant == AutoDriveVariant::Beacon
+            && let Some(accent) = style.accent.as_mut()
+        {
+            accent.style = if model.awaiting_submission {
+                Style::default()
+                    .fg(colors::warning())
+                    .add_modifier(Modifier::BOLD)
+            } else if model.waiting_for_review {
+                Style::default()
+                    .fg(colors::info())
+                    .add_modifier(Modifier::BOLD)
+            } else if model.cli_running || model.waiting_for_response {
+                Style::default()
+                    .fg(colors::primary())
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default()
+                    .fg(colors::success())
+                    .add_modifier(Modifier::BOLD)
+            };
         }
         style
     }
@@ -459,10 +459,10 @@ impl AutoCoordinatorView {
     fn runtime_text(&self, model: &AutoActiveViewModel) -> String {
         let label = Self::status_label(model);
         let mut details: Vec<String> = Vec::new();
-        if let Some(duration) = Self::effective_elapsed(model) {
-            if duration.as_secs() > 0 {
-                details.push(Self::format_elapsed(duration));
-            }
+        if let Some(duration) = Self::effective_elapsed(model)
+            && duration.as_secs() > 0
+        {
+            details.push(Self::format_elapsed(duration));
         }
         if let Some(tokens) = model.session_tokens {
             details.push(Self::format_tokens(tokens));
@@ -533,7 +533,7 @@ impl AutoCoordinatorView {
                 }
             }
         } else {
-            let mut title_style = frame_style.title_style.clone();
+            let mut title_style = frame_style.title_style;
             title_style.fg = Some(fallback_color);
             title_style = title_style.add_modifier(Modifier::BOLD);
             base_spans.push(Span::styled(header_label.to_string(), title_style));
@@ -606,7 +606,7 @@ impl AutoCoordinatorView {
 
             match (status_title.as_ref(), status_sent_to_user.as_ref()) {
                 (Some(title), Some(sent)) => {
-                    if let Some(line) = try_apply(&format!("{} · {}", title, sent)) {
+                    if let Some(line) = try_apply(&format!("{title} · {sent}")) {
                         left_line = line;
                     } else if let Some(line) = try_apply(title) {
                         left_line = line;
@@ -935,9 +935,7 @@ impl AutoCoordinatorView {
             .map(|value| value.trim())
             .filter(|value| !value.is_empty());
 
-        if prompt.is_none() {
-            return None;
-        }
+        prompt?;
 
         let context_style = Style::default()
             .fg(colors::text_dim())
@@ -1011,20 +1009,20 @@ impl AutoCoordinatorView {
         );
 
         let button_style = if button.enabled {
-            self.style.button.enabled_style.clone()
+            self.style.button.enabled_style
         } else {
-            self.style.button.disabled_style.clone()
+            self.style.button.disabled_style
         };
 
         let mut lines = Vec::with_capacity(3);
-        lines.push(Line::from(Span::styled(top, button_style.clone())));
+        lines.push(Line::from(Span::styled(top, button_style)));
 
-        let mut middle_spans: Vec<Span<'static>> = vec![Span::styled(middle, button_style.clone())];
-        if let Some(mut hint_spans) = Self::ctrl_hint_spans(ctx.ctrl_hint.as_str()) {
-            if !hint_spans.is_empty() {
-                middle_spans.push(Span::raw("   "));
-                middle_spans.append(&mut hint_spans);
-            }
+        let mut middle_spans: Vec<Span<'static>> = vec![Span::styled(middle, button_style)];
+        if let Some(mut hint_spans) = Self::ctrl_hint_spans(ctx.ctrl_hint.as_str())
+            && !hint_spans.is_empty()
+        {
+            middle_spans.push(Span::raw("   "));
+            middle_spans.append(&mut hint_spans);
         }
         lines.push(Line::from(middle_spans));
 
@@ -1047,10 +1045,10 @@ impl AutoCoordinatorView {
         if lower.starts_with("esc") {
             let rest = &trimmed[3..];
             let mut use_prefix = rest.is_empty();
-            if let Some(ch) = rest.chars().next() {
-                if ch.is_whitespace() || matches!(ch, ':' | '-' | ',' | ';') {
-                    use_prefix = true;
-                }
+            if let Some(ch) = rest.chars().next()
+                && (ch.is_whitespace() || matches!(ch, ':' | '-' | ',' | ';'))
+            {
+                use_prefix = true;
             }
 
             if use_prefix {
@@ -1087,11 +1085,7 @@ impl AutoCoordinatorView {
             .map(|line| {
                 let trimmed = line.trim_end();
                 let w = UnicodeWidthStr::width(trimmed);
-                let lines = if w == 0 {
-                    1
-                } else {
-                    (w + max_width - 1) / max_width
-                };
+                let lines = if w == 0 { 1 } else { w.div_ceil(max_width) };
                 lines.max(1)
             })
             .sum()
@@ -1152,7 +1146,7 @@ impl AutoCoordinatorView {
             }
 
             let ctrl_hint = ctx.ctrl_hint.trim();
-            if !ctx.button.is_some() && !ctrl_hint.is_empty() {
+            if ctx.button.is_none() && !ctrl_hint.is_empty() {
                 let ctrl_height = Self::wrap_count(ctrl_hint, inner_width).max(1);
                 total = total.saturating_add(1); // spacer before ctrl hint
                 total = total.saturating_add(ctrl_height);
@@ -1433,20 +1427,21 @@ impl AutoCoordinatorView {
             }
         }
 
-        if composer_height > 0 && cursor_y < inner.y + inner.height {
-            if let Some(composer) = composer {
-                let max_height = inner.y + inner.height - cursor_y;
-                let rect_height = composer_height.min(max_height);
-                if rect_height > 0 {
-                    let composer_rect = Rect {
-                        x: inner.x,
-                        y: cursor_y,
-                        width: inner.width,
-                        height: rect_height,
-                    };
-                    composer.render_ref(composer_rect, buf);
-                    cursor_y = cursor_y.saturating_add(rect_height);
-                }
+        if composer_height > 0
+            && cursor_y < inner.y + inner.height
+            && let Some(composer) = composer
+        {
+            let max_height = inner.y + inner.height - cursor_y;
+            let rect_height = composer_height.min(max_height);
+            if rect_height > 0 {
+                let composer_rect = Rect {
+                    x: inner.x,
+                    y: cursor_y,
+                    width: inner.width,
+                    height: rect_height,
+                };
+                composer.render_ref(composer_rect, buf);
+                cursor_y = cursor_y.saturating_add(rect_height);
             }
         }
 
@@ -1508,7 +1503,7 @@ impl AutoCoordinatorView {
             let segments = if line_width == 0 {
                 1
             } else {
-                (line_width + width - 1) / width
+                line_width.div_ceil(width)
             };
             acc.saturating_add(segments.max(1))
         })
@@ -1522,31 +1517,31 @@ impl AutoCoordinatorView {
 
         if hours > 0 {
             if minutes > 0 {
-                format!("{}h {:02}m", hours, minutes)
+                format!("{hours}h {minutes:02}m")
             } else {
-                format!("{}h", hours)
+                format!("{hours}h")
             }
         } else if minutes > 0 {
             if seconds > 0 {
-                format!("{}m {:02}s", minutes, seconds)
+                format!("{minutes}m {seconds:02}s")
             } else {
-                format!("{}m", minutes)
+                format!("{minutes}m")
             }
         } else {
-            format!("{}s", seconds)
+            format!("{seconds}s")
         }
     }
 
     fn format_turns(turns: usize) -> String {
         let label = if turns == 1 { "turn" } else { "turns" };
-        format!("{} {}", turns, label)
+        format!("{turns} {label}")
     }
 
     fn format_tokens(tokens: u64) -> String {
         if tokens >= 1_000 {
             format!("{}k tokens", tokens / 1_000)
         } else {
-            format!("{} tokens", tokens)
+            format!("{tokens} tokens")
         }
     }
 
@@ -1573,7 +1568,7 @@ impl AutoCoordinatorView {
     fn compose_status_line(model: &AutoActiveViewModel) -> Option<String> {
         let (sent_to_user, title) = Self::status_labels(model);
         match (title, sent_to_user) {
-            (Some(title), Some(sent)) => Some(format!("{} · {}", title, sent)),
+            (Some(title), Some(sent)) => Some(format!("{title} · {sent}")),
             (Some(title), None) => Some(title),
             (None, Some(sent)) => Some(sent),
             (None, None) => None,

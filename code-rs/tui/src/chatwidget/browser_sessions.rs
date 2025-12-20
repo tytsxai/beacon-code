@@ -67,12 +67,15 @@ fn insert_browser_anchor(
 
 fn browser_anchor_line(tracker: &BrowserSessionTracker) -> Line<'static> {
     let label = tracker.cell.summary_label();
-    let url = tracker.cell.current_url().map(|value| value.to_string());
+    let url = tracker
+        .cell
+        .current_url()
+        .map(std::string::ToString::to_string);
 
     let mut spans: Vec<Span<'static>> = Vec::new();
     spans.push(Span::raw("Started "));
 
-    let mut title = label.clone();
+    let mut title = label;
     if title.trim().is_empty() {
         title = url
             .as_ref()
@@ -81,10 +84,10 @@ fn browser_anchor_line(tracker: &BrowserSessionTracker) -> Line<'static> {
     }
     spans.push(Span::styled(title.clone(), Style::new().bold()));
 
-    if let Some(url) = url.as_ref() {
-        if url != &title {
-            spans.push(Span::raw(format!(" ({})", url)));
-        }
+    if let Some(url) = url.as_ref()
+        && url != &title
+    {
+        spans.push(Span::raw(format!(" ({url})")));
     }
 
     spans.push(Span::raw(" — latest view is shown below."));
@@ -118,23 +121,24 @@ pub(super) fn handle_custom_tool_begin(
         .unwrap_or_else(|| BrowserSessionTracker::new(order_key));
     tracker.slot.set_order_key(order_key);
 
-    if let Some(Value::Object(json)) = params.as_ref() {
-        if tool_name == "browser_open" {
-            if let Some(url) = json.get("url").and_then(|v| v.as_str()) {
-                tracker.cell.set_url(url.to_string());
-            }
-            if let Some(headless) = json.get("headless").and_then(|v| v.as_bool()) {
-                tracker.cell.set_headless(Some(headless));
-            }
+    if let Some(Value::Object(json)) = params.as_ref()
+        && tool_name == "browser_open"
+    {
+        if let Some(url) = json.get("url").and_then(|v| v.as_str()) {
+            tracker.cell.set_url(url.to_string());
+        }
+        if let Some(headless) = json.get("headless").and_then(serde_json::Value::as_bool) {
+            tracker.cell.set_headless(Some(headless));
         }
     }
 
     ensure_cell_picker(chat, &tracker.cell);
-    if tracker.slot.has_order_change() && !tracker.anchor_inserted {
-        if let Some(previous) = tracker.slot.last_inserted_order() {
-            insert_browser_anchor(chat, previous, &tracker);
-            tracker.anchor_inserted = true;
-        }
+    if tracker.slot.has_order_change()
+        && !tracker.anchor_inserted
+        && let Some(previous) = tracker.slot.last_inserted_order()
+    {
+        insert_browser_anchor(chat, previous, &tracker);
+        tracker.anchor_inserted = true;
     }
     tool_cards::assign_tool_card_key(&mut tracker.slot, &mut tracker.cell, Some(key.clone()));
     tool_cards::ensure_tool_card::<BrowserSessionCell>(chat, &mut tracker.slot, &tracker.cell);
@@ -193,12 +197,11 @@ pub(super) fn handle_custom_tool_end(
     tracker.slot.set_order_key(order_key);
 
     let params_to_use = params.as_ref();
-    if tool_name == "browser_open" {
-        if let Some(Value::Object(json)) = params_to_use {
-            if let Some(url) = json.get("url").and_then(|v| v.as_str()) {
-                tracker.cell.set_url(url.to_string());
-            }
-        }
+    if tool_name == "browser_open"
+        && let Some(Value::Object(json)) = params_to_use
+        && let Some(url) = json.get("url").and_then(|v| v.as_str())
+    {
+        tracker.cell.set_url(url.to_string());
     }
 
     let summary = summarize_action(tool_name, params_to_use, result);
@@ -220,11 +223,12 @@ pub(super) fn handle_custom_tool_end(
     tracker.elapsed = tracker.elapsed.saturating_add(duration);
 
     ensure_cell_picker(chat, &tracker.cell);
-    if tracker.slot.has_order_change() && !tracker.anchor_inserted {
-        if let Some(previous) = tracker.slot.last_inserted_order() {
-            insert_browser_anchor(chat, previous, &tracker);
-            tracker.anchor_inserted = true;
-        }
+    if tracker.slot.has_order_change()
+        && !tracker.anchor_inserted
+        && let Some(previous) = tracker.slot.last_inserted_order()
+    {
+        insert_browser_anchor(chat, previous, &tracker);
+        tracker.anchor_inserted = true;
     }
     tool_cards::assign_tool_card_key(&mut tracker.slot, &mut tracker.cell, Some(key.clone()));
     tool_cards::replace_tool_card::<BrowserSessionCell>(chat, &mut tracker.slot, &tracker.cell);
@@ -261,16 +265,17 @@ pub(super) fn handle_background_event(
     let console_line = if message.starts_with("⚠️") {
         message.to_string()
     } else {
-        format!("⚠️  {}", message)
+        format!("⚠️  {message}")
     };
     tracker.cell.add_console_message(console_line);
 
     ensure_cell_picker(chat, &tracker.cell);
-    if tracker.slot.has_order_change() && !tracker.anchor_inserted {
-        if let Some(previous) = tracker.slot.last_inserted_order() {
-            insert_browser_anchor(chat, previous, &tracker);
-            tracker.anchor_inserted = true;
-        }
+    if tracker.slot.has_order_change()
+        && !tracker.anchor_inserted
+        && let Some(previous) = tracker.slot.last_inserted_order()
+    {
+        insert_browser_anchor(chat, previous, &tracker);
+        tracker.anchor_inserted = true;
     }
     tool_cards::assign_tool_card_key(&mut tracker.slot, &mut tracker.cell, Some(key.clone()));
     tool_cards::replace_tool_card::<BrowserSessionCell>(chat, &mut tracker.slot, &tracker.cell);
@@ -326,11 +331,12 @@ pub(super) fn handle_screenshot_update(
         .record_screenshot(relative, screenshot_path.clone(), Some(url.to_string()));
 
     ensure_cell_picker(chat, &tracker.cell);
-    if tracker.slot.has_order_change() && !tracker.anchor_inserted {
-        if let Some(previous) = tracker.slot.last_inserted_order() {
-            insert_browser_anchor(chat, previous, &tracker);
-            tracker.anchor_inserted = true;
-        }
+    if tracker.slot.has_order_change()
+        && !tracker.anchor_inserted
+        && let Some(previous) = tracker.slot.last_inserted_order()
+    {
+        insert_browser_anchor(chat, previous, &tracker);
+        tracker.anchor_inserted = true;
     }
     tool_cards::assign_tool_card_key(&mut tracker.slot, &mut tracker.cell, Some(key.clone()));
     tool_cards::replace_tool_card::<BrowserSessionCell>(chat, &mut tracker.slot, &tracker.cell);
@@ -360,7 +366,7 @@ fn browser_key(order: Option<&OrderMeta>, call_id: &str) -> String {
     if let Some(meta) = order {
         format!("req:{}:{}", meta.request_ordinal, call_id)
     } else {
-        format!("call:{}", call_id)
+        format!("call:{call_id}")
     }
 }
 
@@ -376,26 +382,25 @@ fn select_session_key(
             .browser_session_by_order
             .get(&BrowserSessionOrderKey::from_order_meta(meta))
             .cloned()
+            && chat.tools_state.browser_sessions.contains_key(&existing)
         {
-            if chat.tools_state.browser_sessions.contains_key(&existing) {
-                return existing;
-            }
+            return existing;
         }
-        if let Some(last) = chat.tools_state.browser_last_key.clone() {
-            if chat.tools_state.browser_sessions.contains_key(&last) {
-                return last;
-            }
+        if let Some(last) = chat.tools_state.browser_last_key.clone()
+            && chat.tools_state.browser_sessions.contains_key(&last)
+        {
+            return last;
         }
     }
 
     let mut key = browser_key(order, call_id);
 
-    if order.is_none() && tool_name != "browser_open" {
-        if let Some(last) = chat.tools_state.browser_last_key.clone() {
-            if chat.tools_state.browser_sessions.contains_key(&last) {
-                key = last;
-            }
-        }
+    if order.is_none()
+        && tool_name != "browser_open"
+        && let Some(last) = chat.tools_state.browser_last_key.clone()
+        && chat.tools_state.browser_sessions.contains_key(&last)
+    {
+        key = last;
     }
 
     key
@@ -447,11 +452,11 @@ fn summarize_action(
             let description = params
                 .and_then(|value| value.get("description"))
                 .and_then(Value::as_str)
-                .map(|s| s.to_string());
+                .map(std::string::ToString::to_string);
             let selector = params
                 .and_then(|value| value.get("selector"))
                 .and_then(Value::as_str)
-                .map(|s| s.to_string());
+                .map(std::string::ToString::to_string);
             summary.target = description.clone().or_else(|| selector.clone());
             if let (Some(_), Some(sel)) = (description.as_ref(), selector.as_ref()) {
                 summary.value = Some(sel.clone());
@@ -465,7 +470,7 @@ fn summarize_action(
                             .and_then(|value| value.get("y"))
                             .and_then(Value::as_f64),
                     )
-                    .map(|(x, y)| format!("({:.0}, {:.0})", x, y));
+                    .map(|(x, y)| format!("({x:.0}, {y:.0})"));
             }
         }
         "browser_scroll" => {
@@ -478,9 +483,9 @@ fn summarize_action(
                 .and_then(Value::as_i64)
                 .unwrap_or(0);
             let label = if dx == 0 {
-                format!("dy={}", dy)
+                format!("dy={dy}")
             } else {
-                format!("dx={} dy={}", dx, dy)
+                format!("dx={dx} dy={dy}")
             };
             if !(dx == 0 && dy == 0) {
                 summary.value = Some(label);
@@ -525,7 +530,7 @@ fn summarize_action(
                         .and_then(|value| value.get("y"))
                         .and_then(Value::as_f64),
                 )
-                .map(|(x, y)| format!("to ({:.0}, {:.0})", x, y));
+                .map(|(x, y)| format!("to ({x:.0}, {y:.0})"));
             let relative = params
                 .and_then(|value| value.get("dx"))
                 .and_then(Value::as_f64)
@@ -534,7 +539,7 @@ fn summarize_action(
                         .and_then(|value| value.get("dy"))
                         .and_then(Value::as_f64),
                 )
-                .map(|(dx, dy)| format!("by ({:.0}, {:.0})", dx, dy));
+                .map(|(dx, dy)| format!("by ({dx:.0}, {dy:.0})"));
             summary.value = absolute.or(relative);
         }
         "browser_console" => {
@@ -542,7 +547,7 @@ fn summarize_action(
                 .and_then(|value| value.get("lines"))
                 .and_then(Value::as_u64)
             {
-                summary.value = Some(format!("last {}", lines));
+                summary.value = Some(format!("last {lines}"));
             }
         }
         "browser_javascript" => {
@@ -565,7 +570,7 @@ fn summarize_action(
             summary.target = params
                 .and_then(|value| value.get("selector"))
                 .and_then(Value::as_str)
-                .map(|s| s.to_string());
+                .map(std::string::ToString::to_string);
         }
         "browser_close" => {
             summary.action = "Close".to_string();
@@ -574,11 +579,11 @@ fn summarize_action(
             summary.target = params
                 .and_then(|value| value.get("target"))
                 .and_then(Value::as_str)
-                .map(|s| s.to_string());
+                .map(std::string::ToString::to_string);
             summary.value = params
                 .and_then(|value| value.get("value"))
                 .and_then(Value::as_str)
-                .map(|s| s.to_string());
+                .map(std::string::ToString::to_string);
         }
     }
 
@@ -632,11 +637,11 @@ fn summarize_action_result(result: &Result<String, String>) -> (Option<String>, 
                 let status = map
                     .get("status")
                     .and_then(Value::as_str)
-                    .map(|s| s.to_string());
+                    .map(std::string::ToString::to_string);
                 let message = map
                     .get("message")
                     .and_then(Value::as_str)
-                    .map(|s| s.to_string());
+                    .map(std::string::ToString::to_string);
                 let summary_text = status.or(message).unwrap_or_else(|| truncate(trimmed, 64));
 
                 let status_code = map.get("status_code").and_then(|value| match value {
@@ -661,7 +666,7 @@ fn summarize_action_result(result: &Result<String, String>) -> (Option<String>, 
 }
 
 fn extract_leading_status_code(text: &str) -> Option<String> {
-    let digits: String = text.chars().take_while(|ch| ch.is_ascii_digit()).collect();
+    let digits: String = text.chars().take_while(char::is_ascii_digit).collect();
     if digits.len() == 3 {
         Some(digits)
     } else {
@@ -674,6 +679,6 @@ fn truncate(input: &str, max: usize) -> String {
         input.to_string()
     } else {
         let truncated: String = input.chars().take(max).collect();
-        format!("{}…", truncated)
+        format!("{truncated}…")
     }
 }

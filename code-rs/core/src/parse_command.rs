@@ -366,11 +366,11 @@ mod tests {
     #[test]
     fn supports_jq_with_directory_path() {
         assert_parsed(
-            &vec_str(&["jq", "-r", ".name, .bin", "codex-cli/package.json"]),
+            &vec_str(&["jq", "-r", ".name, .bin", "beacon-cli/package.json"]),
             vec![ParsedCommand::Search {
-                cmd: "jq -r '.name, .bin' codex-cli/package.json".to_string(),
+                cmd: "jq -r '.name, .bin' beacon-cli/package.json".to_string(),
                 query: Some(".name, .bin".to_string()),
-                path: Some("codex-cli/package.json".to_string()),
+                path: Some("beacon-cli/package.json".to_string()),
             }],
         );
     }

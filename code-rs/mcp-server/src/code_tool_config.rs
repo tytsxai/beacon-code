@@ -1,4 +1,4 @@
-//! Configuration object accepted by the `codex` MCP tool-call.
+//! Configuration object accepted by the Beacon Code MCP tool-call.
 
 use agent_client_protocol as acp;
 use code_core::config_types::ClientTools;
@@ -16,7 +16,7 @@ use serde_json::json;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
-/// Client-supplied configuration for a `codex` tool-call.
+/// Client-supplied configuration for a Beacon Code tool-call.
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
 #[serde(rename_all = "kebab-case")]
 pub struct CodexToolCallParam {
@@ -46,7 +46,7 @@ pub struct CodexToolCallParam {
     pub sandbox: Option<CodexToolCallSandboxMode>,
 
     /// Individual config settings that will override what is in
-    /// CODEX_HOME/config.toml.
+    /// CODE_HOME/config.toml (legacy CODEX_HOME/config.toml is still read).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub config: Option<HashMap<String, serde_json::Value>>,
 
@@ -101,8 +101,7 @@ impl From<CodexToolCallSandboxMode> for SandboxMode {
     }
 }
 
-/// Builds a `Tool` definition (JSON schema etc.) for the Beacon Code tool-call.
-pub(crate) fn create_tool_for_code_tool_call_param() -> Tool {
+fn build_code_tool_call_tool(name: &str, title: &str) -> Tool {
     let schema = SchemaSettings::draft2019_09()
         .with(|s| {
             s.inline_subschemas = true;
@@ -134,8 +133,8 @@ pub(crate) fn create_tool_for_code_tool_call_param() -> Tool {
     };
 
     Tool {
-        name: "codex".to_string(),
-        title: Some("Beacon Code".to_string()),
+        name: name.to_string(),
+        title: Some(title.to_string()),
         input_schema: tool_input_schema,
         output_schema: Some(tool_output_schema),
         description: Some(
@@ -143,6 +142,16 @@ pub(crate) fn create_tool_for_code_tool_call_param() -> Tool {
         ),
         annotations: None,
     }
+}
+
+/// Builds a `Tool` definition (JSON schema etc.) for the Beacon Code tool-call.
+pub(crate) fn create_tool_for_code_tool_call_param() -> Tool {
+    build_code_tool_call_tool("code", "Beacon Code")
+}
+
+/// Legacy `codex` tool-call definition for older MCP clients.
+pub(crate) fn create_tool_for_legacy_codex_tool_call_param() -> Tool {
+    build_code_tool_call_tool("codex", "Beacon Code")
 }
 
 /// Builds a `Tool` definition for the `acp/new_session` tool-call.
@@ -262,7 +271,7 @@ impl CodexToolCallParam {
             include_plan_tool,
         } = self;
 
-        // Build the `ConfigOverrides` recognized by codex-core.
+        // Build the `ConfigOverrides` recognized by code-core.
         let overrides = code_core::config::ConfigOverrides {
             model,
             review_model: None,
@@ -309,8 +318,7 @@ pub struct CodexToolCallReplyParam {
     pub prompt: String,
 }
 
-/// Builds a `Tool` definition for the `codex-reply` tool-call.
-pub(crate) fn create_tool_for_code_tool_call_reply_param() -> Tool {
+fn build_code_tool_call_reply_tool(name: &str, title: &str) -> Tool {
     let schema = SchemaSettings::draft2019_09()
         .with(|s| {
             s.inline_subschemas = true;
@@ -320,8 +328,8 @@ pub(crate) fn create_tool_for_code_tool_call_reply_param() -> Tool {
         .into_root_schema_for::<CodexToolCallReplyParam>();
 
     #[expect(clippy::expect_used)]
-    let schema_value =
-        serde_json::to_value(&schema).expect("Beacon Code reply tool schema should serialise to JSON");
+    let schema_value = serde_json::to_value(&schema)
+        .expect("Beacon Code reply tool schema should serialise to JSON");
 
     let tool_input_schema =
         serde_json::from_value::<ToolInputSchema>(schema_value).unwrap_or_else(|e| {
@@ -329,8 +337,8 @@ pub(crate) fn create_tool_for_code_tool_call_reply_param() -> Tool {
         });
 
     Tool {
-        name: "codex-reply".to_string(),
-        title: Some("Beacon Code Reply".to_string()),
+        name: name.to_string(),
+        title: Some(title.to_string()),
         input_schema: tool_input_schema,
         output_schema: None,
         description: Some(
@@ -338,6 +346,16 @@ pub(crate) fn create_tool_for_code_tool_call_reply_param() -> Tool {
         ),
         annotations: None,
     }
+}
+
+/// Builds a `Tool` definition for the `code-reply` tool-call.
+pub(crate) fn create_tool_for_code_tool_call_reply_param() -> Tool {
+    build_code_tool_call_reply_tool("code-reply", "Beacon Code Reply")
+}
+
+/// Legacy `codex-reply` tool-call definition for older MCP clients.
+pub(crate) fn create_tool_for_legacy_codex_tool_call_reply_param() -> Tool {
+    build_code_tool_call_reply_tool("codex-reply", "Beacon Code Reply")
 }
 
 #[cfg(test)]
@@ -362,7 +380,7 @@ mod tests {
         #[expect(clippy::expect_used)]
         let tool_json = serde_json::to_value(&tool).expect("tool serializes");
         let expected_tool_json = serde_json::json!({
-          "name": "codex",
+          "name": "code",
           "title": "Beacon Code",
           "description": "Run a Beacon Code session. Accepts configuration parameters matching the Beacon Code config struct.",
           "inputSchema": {
@@ -388,7 +406,7 @@ mod tests {
                 "type": "string"
               },
               "config": {
-                "description": "Individual config settings that will override what is in CODEX_HOME/config.toml.",
+                "description": "Individual config settings that will override what is in CODE_HOME/config.toml (legacy CODEX_HOME/config.toml is still read).",
                 "additionalProperties": true,
                 "type": "object"
               },
@@ -472,7 +490,7 @@ mod tests {
             ],
             "type": "object",
           },
-          "name": "codex-reply",
+          "name": "code-reply",
           "title": "Beacon Code Reply",
         });
         assert_eq!(expected_tool_json, tool_json);

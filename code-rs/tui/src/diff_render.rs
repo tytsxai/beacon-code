@@ -28,7 +28,7 @@ fn expand_tabs_to_spaces(input: &str, tabstop: usize) -> String {
         match ch {
             '\t' => {
                 let spaces = ts - (col % ts);
-                out.extend(std::iter::repeat(' ').take(spaces));
+                out.extend(std::iter::repeat_n(' ', spaces));
                 col += spaces;
             }
             _ => {
@@ -248,16 +248,14 @@ pub(super) fn create_diff_summary_with_width(
         }
         let mut metadata_marker = diff_contains_metadata_markers(diff);
         if let Ok(patch) = diffy::Patch::from_str(diff) {
-            let (added, removed) =
-                patch
-                    .hunks()
-                    .iter()
-                    .flat_map(|h| h.lines())
-                    .fold((0, 0), |(a, d), l| match l {
-                        diffy::Line::Insert(_) => (a + 1, d),
-                        diffy::Line::Delete(_) => (a, d + 1),
-                        _ => (a, d),
-                    });
+            let (added, removed) = patch.hunks().iter().flat_map(diffy::Hunk::lines).fold(
+                (0, 0),
+                |(a, d), l| match l {
+                    diffy::Line::Insert(_) => (a + 1, d),
+                    diffy::Line::Delete(_) => (a, d + 1),
+                    _ => (a, d),
+                },
+            );
             DiffTally {
                 added,
                 removed,
@@ -555,7 +553,7 @@ fn render_patch_details_with_width(
     // Subtract a gutter safety margin so our pre-wrapping rarely exceeds the
     // actual chat content width (prevents secondary wrapping that breaks hanging indents).
     let term_cols: usize = if let Some(w) = width_cols {
-        w as usize
+        w
     } else {
         let full = terminal::size().map(|(w, _)| w as usize).unwrap_or(120);
         full.saturating_sub(20).max(40)

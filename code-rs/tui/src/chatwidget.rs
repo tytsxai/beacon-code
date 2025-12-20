@@ -109,10 +109,10 @@ fn agent_summary_counts(config_agents: &[AgentConfig]) -> (usize, usize) {
     for spec in code_core::agent_defaults::agent_model_specs() {
         total += 1;
         let key = spec.slug.to_ascii_lowercase();
-        if let Some(cfg) = config_by_name.get(&key) {
-            if cfg.enabled {
-                enabled += 1;
-            }
+        if let Some(cfg) = config_by_name.get(&key)
+            && cfg.enabled
+        {
+            enabled += 1;
         }
     }
 
@@ -439,7 +439,7 @@ impl MergeRepoState {
                         "rev-parse",
                         "--verify",
                         "--quiet",
-                        &format!("refs/heads/{}", default_branch),
+                        &format!("refs/heads/{default_branch}"),
                     ])
                     .output()
                     .await
@@ -451,8 +451,8 @@ impl MergeRepoState {
                         .args([
                             "merge-base",
                             "--is-ancestor",
-                            &format!("refs/heads/{}", default_branch),
-                            &format!("refs/heads/{}", worktree_branch),
+                            &format!("refs/heads/{default_branch}"),
+                            &format!("refs/heads/{worktree_branch}"),
                         ])
                         .output()
                         .await
@@ -524,7 +524,7 @@ impl MergeRepoState {
                     (trimmed, true, true)
                 }
             }
-            Err(err) => (format!("status unavailable: {}", err), true, false),
+            Err(err) => (format!("status unavailable: {err}"), true, false),
         }
     }
 
@@ -589,10 +589,9 @@ impl MergeRepoState {
         }
         match (&self.repo_head_branch, &self.default_branch) {
             (Some(head), Some(default)) if head == default => {}
-            (Some(head), Some(default)) => reasons.push(format!(
-                "repo root is on '{}' instead of '{}'",
-                head, default
-            )),
+            (Some(head), Some(default)) => {
+                reasons.push(format!("repo root is on '{head}' instead of '{default}'"))
+            }
             (Some(_), None) => reasons
                 .push("repo root branch detected but default branch is still unknown".to_string()),
             (None, _) => reasons
@@ -708,7 +707,7 @@ impl MergeRepoState {
                 if idx == 0 {
                     line.to_string()
                 } else {
-                    format!("  {}", line)
+                    format!("  {line}")
                 }
             })
             .collect::<Vec<_>>()
@@ -724,7 +723,7 @@ async fn run_fast_forward_merge(state: &MergeRepoState) -> Result<(), String> {
         .args(["merge", "--ff-only", &state.worktree_branch])
         .output()
         .await
-        .map_err(|err| format!("failed to run git merge --ff-only: {}", err))?;
+        .map_err(|err| format!("failed to run git merge --ff-only: {err}"))?;
     if !merge.status.success() {
         return Err(format!(
             "fast-forward merge failed: {}",
@@ -739,7 +738,7 @@ async fn run_fast_forward_merge(state: &MergeRepoState) -> Result<(), String> {
         .arg("--force")
         .output()
         .await
-        .map_err(|err| format!("failed to remove worktree: {}", err))?;
+        .map_err(|err| format!("failed to remove worktree: {err}"))?;
     if !worktree_remove.status.success() {
         return Err(format!(
             "failed to remove worktree: {}",
@@ -752,7 +751,7 @@ async fn run_fast_forward_merge(state: &MergeRepoState) -> Result<(), String> {
         .args(["branch", "-D", &state.worktree_branch])
         .output()
         .await
-        .map_err(|err| format!("failed to delete branch: {}", err))?;
+        .map_err(|err| format!("failed to delete branch: {err}"))?;
     if !branch_delete.status.success() {
         return Err(format!(
             "failed to delete branch '{}': {}",
@@ -839,7 +838,7 @@ impl ChatWidget<'_> {
         let total_secs = duration.as_secs();
         let minutes = total_secs / 60;
         let seconds = total_secs % 60;
-        format!("{:02}:{:02}", minutes, seconds)
+        format!("{minutes:02}:{seconds:02}")
     }
 
     fn normalize_action_time_label(&self, label: &str) -> String {
@@ -851,12 +850,12 @@ impl ChatWidget<'_> {
                 .trim_end_matches('s')
                 .parse::<u64>()
                 .unwrap_or(0);
-            return format!("{:02}:{:02}", minutes, seconds);
+            return format!("{minutes:02}:{seconds:02}");
         }
-        if let Some(stripped) = label.strip_suffix('s') {
-            if let Ok(seconds) = stripped.trim().parse::<u64>() {
-                return format!("00:{:02}", seconds.min(59));
-            }
+        if let Some(stripped) = label.strip_suffix('s')
+            && let Ok(seconds) = stripped.trim().parse::<u64>()
+        {
+            return format!("00:{:02}", seconds.min(59));
         }
         label.to_string()
     }
@@ -2106,7 +2105,7 @@ fn worktree_root_hint_for(path: &Path) -> Option<PathBuf> {
 
 fn remember_cwd_history(path: &Path) {
     let mut history = CWD_HISTORY.lock().unwrap();
-    if history.last().map_or(false, |p| p == path) {
+    if history.last().is_some_and(|p| p == path) {
         return;
     }
     history.push(path.to_path_buf());
@@ -2249,20 +2248,20 @@ impl From<&str> for ExecCallId {
 }
 
 fn wait_target_from_params(params: Option<&String>, call_id: &str) -> String {
-    if let Some(raw) = params {
-        if let Ok(json) = serde_json::from_str::<serde_json::Value>(raw) {
-            if let Some(for_value) = json.get("for").and_then(|v| v.as_str()) {
-                let cleaned = clean_wait_command(for_value);
-                if !cleaned.is_empty() {
-                    return cleaned;
-                }
-            }
-            if let Some(cid) = json.get("call_id").and_then(|v| v.as_str()) {
-                return format!("call {}", cid);
+    if let Some(raw) = params
+        && let Ok(json) = serde_json::from_str::<serde_json::Value>(raw)
+    {
+        if let Some(for_value) = json.get("for").and_then(|v| v.as_str()) {
+            let cleaned = clean_wait_command(for_value);
+            if !cleaned.is_empty() {
+                return cleaned;
             }
         }
+        if let Some(cid) = json.get("call_id").and_then(|v| v.as_str()) {
+            return format!("call {cid}");
+        }
     }
-    format!("call {}", call_id)
+    format!("call {call_id}")
 }
 
 fn wait_exec_call_id_from_params(params: Option<&String>) -> Option<ExecCallId> {
@@ -2357,11 +2356,11 @@ impl ChatWidget<'_> {
         let m = (s % 3600) / 60;
         let sec = s % 60;
         if h > 0 {
-            format!("{}h{}m", h, m)
+            format!("{h}h{m}m")
         } else if m > 0 {
-            format!("{}m{}s", m, sec)
+            format!("{m}m{sec}s")
         } else {
-            format!("{}s", sec)
+            format!("{sec}s")
         }
     }
     fn is_branch_worktree_path(path: &std::path::Path) -> bool {
@@ -2418,7 +2417,7 @@ impl ChatWidget<'_> {
                         .code()
                         .map(|c| format!("exit status {c}"))
                         .unwrap_or_else(|| "terminated by signal".to_string());
-                    Err(format!("git status failed: {}", code))
+                    Err(format!("git status failed: {code}"))
                 }
             }
             Err(err) => Err(err.to_string()),
@@ -2507,10 +2506,10 @@ impl ChatWidget<'_> {
             let reference = self
                 .last_assigned_order
                 .or_else(|| self.cell_order_seq.iter().copied().max());
-            if let Some(max_key) = reference {
-                if key <= max_key {
-                    key = Self::order_key_successor(max_key);
-                }
+            if let Some(max_key) = reference
+                && key <= max_key
+            {
+                key = Self::order_key_successor(max_key);
             }
         }
 
@@ -2648,10 +2647,8 @@ impl ChatWidget<'_> {
             kind,
             completion_message,
         );
-        if !had_tracker {
-            if let Some(msg) = message {
-                self.push_background_tail(msg);
-            }
+        if !had_tracker && let Some(msg) = message {
+            self.push_background_tail(msg);
         }
         if matches!(status, AutoDriveStatus::Stopped) {
             self.auto_state.last_completion_explanation = None;
@@ -2694,8 +2691,7 @@ impl ChatWidget<'_> {
                     app_event_tx_clone.send_background_event_with_ticket(
                         &ticket,
                         format!(
-                            "❌ Failed to initialize model session: {}.\n• Ensure an OpenAI API key is set (OPENAI_API_KEY) or run `code login`.\n• Also verify config.cwd is an absolute path.",
-                            e
+                            "❌ Failed to initialize model session: {e}.\n• Ensure an OpenAI API key is set (OPENAI_API_KEY) or run `code login`.\n• Also verify config.cwd is an absolute path."
                         ),
                     );
                     return;
@@ -2721,7 +2717,7 @@ impl ChatWidget<'_> {
                         tracing::error!("failed to submit op: {e}");
                         app_event_tx_submit.send_background_event_with_ticket(
                             &ticket_for_submit,
-                            format!("⚠️ Failed to submit Op to core: {}", e),
+                            format!("⚠️ Failed to submit Op to core: {e}"),
                         );
                     }
                 }
@@ -2780,15 +2776,15 @@ impl ChatWidget<'_> {
         tag: &'static str,
         record: Option<HistoryDomainRecord>,
     ) {
-        if let Some(id) = id_for_replace.as_ref() {
-            if let Some(&idx) = self.system_cell_by_id.get(id) {
-                if let Some(record) = record.clone() {
-                    self.history_replace_with_record(idx, cell, record);
-                } else {
-                    self.history_replace_at(idx, cell);
-                }
-                return;
+        if let Some(id) = id_for_replace.as_ref()
+            && let Some(&idx) = self.system_cell_by_id.get(id)
+        {
+            if let Some(record) = record {
+                self.history_replace_with_record(idx, cell, record);
+            } else {
+                self.history_replace_at(idx, cell);
             }
+            return;
         }
         let key = self.system_order_key(placement, order);
         let pos = self.history_insert_with_key_global_tagged(cell, key, tag, record);
@@ -2834,16 +2830,16 @@ impl ChatWidget<'_> {
     }
 
     fn apply_request_bias(&mut self, provider_req: u64) -> u64 {
-        if self.resume_provider_baseline.is_none() {
-            if let Some(target) = self.resume_expected_next_request {
-                self.resume_provider_baseline = Some(provider_req);
-                if provider_req <= target {
-                    self.order_request_bias = target.saturating_sub(provider_req);
-                } else {
-                    self.order_request_bias = 0;
-                }
-                self.resume_expected_next_request = None;
+        if self.resume_provider_baseline.is_none()
+            && let Some(target) = self.resume_expected_next_request
+        {
+            self.resume_provider_baseline = Some(provider_req);
+            if provider_req <= target {
+                self.order_request_bias = target.saturating_sub(provider_req);
+            } else {
+                self.order_request_bias = 0;
             }
+            self.resume_expected_next_request = None;
         }
         provider_req.saturating_add(self.order_request_bias)
     }
@@ -3018,13 +3014,11 @@ impl ChatWidget<'_> {
             c.as_any()
                 .downcast_ref::<crate::history_cell::CollapsibleReasoningCell>()
                 .is_some()
-        }) {
-            if let Some(rc) = self.history_cells[idx]
-                .as_any()
-                .downcast_ref::<crate::history_cell::CollapsibleReasoningCell>()
-            {
-                rc.set_in_progress(true);
-            }
+        }) && let Some(rc) = self.history_cells[idx]
+            .as_any()
+            .downcast_ref::<crate::history_cell::CollapsibleReasoningCell>()
+        {
+            rc.set_in_progress(true);
         }
     }
 
@@ -3423,7 +3417,7 @@ impl ChatWidget<'_> {
             }
         }
         for key in &ready {
-            if let Some((ev, order, _t0)) = self.exec.pending_exec_ends.remove(&key) {
+            if let Some((ev, order, _t0)) = self.exec.pending_exec_ends.remove(key) {
                 // Regardless of whether a Begin has arrived by now, handle the End;
                 // handle_exec_end_now pairs with a running Exec if present, or falls back.
                 self.handle_exec_end_now(ev, &order);
@@ -3485,7 +3479,7 @@ impl ChatWidget<'_> {
                     ExecStatus::Success => "Success",
                     ExecStatus::Error => "Error",
                 };
-                format!("Exec:{}:{}", k, s)
+                format!("Exec:{k}:{s}")
             }
             HistoryCellType::Tool { status } => {
                 let s = match status {
@@ -3493,7 +3487,7 @@ impl ChatWidget<'_> {
                     ToolCellStatus::Success => "Success",
                     ToolCellStatus::Failed => "Failed",
                 };
-                format!("Tool:{}", s)
+                format!("Tool:{s}")
             }
             HistoryCellType::Patch { kind } => {
                 let k = match kind {
@@ -3502,7 +3496,7 @@ impl ChatWidget<'_> {
                     PatchKind::ApplySuccess => "ApplySuccess",
                     PatchKind::ApplyFailure => "ApplyFailure",
                 };
-                format!("Patch:{}", k)
+                format!("Patch:{k}")
             }
             HistoryCellType::PlanUpdate => "PlanUpdate".to_string(),
             HistoryCellType::BackgroundEvent => "BackgroundEvent".to_string(),
@@ -3553,7 +3547,7 @@ impl ChatWidget<'_> {
                 }
                 Err(err) => {
                     tx.send(AppEvent::ResumePickerLoadFailed {
-                        message: format!("Failed to load past sessions: {}", err),
+                        message: format!("Failed to load past sessions: {err}"),
                     });
                 }
             }
@@ -3578,13 +3572,13 @@ impl ChatWidget<'_> {
                     return local_dt.format("%Y-%m-%d %H:%M").to_string();
                 }
                 if days >= 1 {
-                    return format!("{}d ago", days);
+                    return format!("{days}d ago");
                 }
                 if hours >= 1 {
-                    return format!("{}h ago", hours);
+                    return format!("{hours}h ago");
                 }
                 if mins >= 1 {
-                    return format!("{}m ago", mins);
+                    return format!("{mins}m ago");
                 }
                 return "just now".to_string();
             }
@@ -3633,7 +3627,7 @@ impl ChatWidget<'_> {
         self.bottom_pane
             .show_resume_selection(title, Some(String::new()), rows);
         self.bottom_pane
-            .flash_footer_notice(format!("Loaded {} past sessions.", count));
+            .flash_footer_notice(format!("Loaded {count} past sessions."));
         self.request_redraw();
     }
 
@@ -3669,11 +3663,11 @@ impl ChatWidget<'_> {
                     if text.starts_with("<user_action>") {
                         return;
                     }
-                    if let Some(expected) = self.pending_dispatched_user_messages.front() {
-                        if expected.trim() == text {
-                            self.pending_dispatched_user_messages.pop_front();
-                            return;
-                        }
+                    if let Some(expected) = self.pending_dispatched_user_messages.front()
+                        && expected.trim() == text
+                    {
+                        self.pending_dispatched_user_messages.pop_front();
+                        return;
                     }
                 }
                 if text.starts_with("== System Status ==") {
@@ -3681,16 +3675,16 @@ impl ChatWidget<'_> {
                 }
                 if role == "assistant" {
                     let normalized_new = Self::normalize_text(text);
-                    if let Some(last_cell) = self.history_cells.last() {
-                        if let Some(existing) = last_cell
+                    if let Some(last_cell) = self.history_cells.last()
+                        && let Some(existing) = last_cell
                             .as_any()
                             .downcast_ref::<crate::history_cell::AssistantMarkdownCell>(
-                        ) {
-                            let normalized_existing = Self::normalize_text(existing.markdown());
-                            if normalized_existing == normalized_new {
-                                tracing::debug!("replay: skipping duplicate assistant message");
-                                return;
-                            }
+                        )
+                    {
+                        let normalized_existing = Self::normalize_text(existing.markdown());
+                        if normalized_existing == normalized_new {
+                            tracing::debug!("replay: skipping duplicate assistant message");
+                            return;
                         }
                     }
                     let mut lines: Vec<ratatui::text::Line<'static>> = Vec::new();
@@ -3703,11 +3697,11 @@ impl ChatWidget<'_> {
                     let state = history_cell::new_user_prompt(text.to_string());
                     let _ = self.history_insert_plain_state_with_key(state, key, "epilogue");
 
-                    if let Some(front) = self.queued_user_messages.front() {
-                        if front.display_text.trim() == text.trim() {
-                            self.queued_user_messages.pop_front();
-                            self.refresh_queued_user_messages();
-                        }
+                    if let Some(front) = self.queued_user_messages.front()
+                        && front.display_text.trim() == text.trim()
+                    {
+                        self.queued_user_messages.pop_front();
+                        self.refresh_queued_user_messages();
                     }
                 } else {
                     let mut lines = Vec::new();
@@ -3729,13 +3723,13 @@ impl ChatWidget<'_> {
                 let pretty_args = serde_json::from_str::<JsonValue>(&arguments)
                     .and_then(|v| serde_json::to_string_pretty(&v))
                     .unwrap_or_else(|_| arguments.clone());
-                let mut message = format!("🔧 Tool call: {}", name);
+                let mut message = format!("🔧 Tool call: {name}");
                 if !pretty_args.trim().is_empty() {
-                    message.push_str("\n");
+                    message.push('\n');
                     message.push_str(&pretty_args);
                 }
                 if !call_id.is_empty() {
-                    message.push_str(&format!("\ncall_id: {}", call_id));
+                    message.push_str(&format!("\ncall_id: {call_id}"));
                 }
                 let key = self.next_internal_key();
                 let _ = self.history_insert_with_key_global_tagged(
@@ -3763,7 +3757,7 @@ impl ChatWidget<'_> {
             ResponseItem::FunctionCallOutput {
                 output, call_id, ..
             } => {
-                let mut content = output.content.clone();
+                let mut content = output.content;
                 let mut metadata_summary = String::new();
                 if let Ok(v) = serde_json::from_str::<JsonValue>(&content) {
                     if let Some(s) = v.get("output").and_then(|x| x.as_str()) {
@@ -3771,13 +3765,16 @@ impl ChatWidget<'_> {
                     }
                     if let Some(meta) = v.get("metadata").and_then(|m| m.as_object()) {
                         let mut parts = Vec::new();
-                        if let Some(code) = meta.get("exit_code").and_then(|x| x.as_i64()) {
-                            parts.push(format!("exit_code={}", code));
-                        }
-                        if let Some(duration) =
-                            meta.get("duration_seconds").and_then(|x| x.as_f64())
+                        if let Some(code) =
+                            meta.get("exit_code").and_then(serde_json::Value::as_i64)
                         {
-                            parts.push(format!("duration={:.2}s", duration));
+                            parts.push(format!("exit_code={code}"));
+                        }
+                        if let Some(duration) = meta
+                            .get("duration_seconds")
+                            .and_then(serde_json::Value::as_f64)
+                        {
+                            parts.push(format!("duration={duration:.2}s"));
                         }
                         if !parts.is_empty() {
                             metadata_summary = parts.join(", ");
@@ -3792,13 +3789,13 @@ impl ChatWidget<'_> {
                     if !message.is_empty() {
                         message.push_str("\n\n");
                     }
-                    message.push_str(&format!("({})", metadata_summary));
+                    message.push_str(&format!("({metadata_summary})"));
                 }
                 if !call_id.is_empty() {
                     if !message.is_empty() {
-                        message.push_str("\n");
+                        message.push('\n');
                     }
-                    message.push_str(&format!("call_id: {}", call_id));
+                    message.push_str(&format!("call_id: {call_id}"));
                 }
                 if message.trim().is_empty() {
                     return;
@@ -3858,7 +3855,7 @@ impl ChatWidget<'_> {
             let src_row = layout
                 .rows
                 .get(src_index)
-                .map(|row| row.as_ref())
+                .map(std::convert::AsRef::as_ref)
                 .unwrap_or(&[]);
 
             let dest_y = offset_y + visible_offset;
@@ -3994,10 +3991,9 @@ impl ChatWidget<'_> {
                 if let Some(reasoning_cell) = cell
                     .as_any()
                     .downcast_ref::<history_cell::CollapsibleReasoningCell>()
+                    && reasoning_cell.set_hide_when_collapsed(false)
                 {
-                    if reasoning_cell.set_hide_when_collapsed(false) {
-                        needs_invalidate = true;
-                    }
+                    needs_invalidate = true;
                 }
             }
         } else {
@@ -4334,7 +4330,7 @@ impl ChatWidget<'_> {
             .lines()
             .map(str::trim)
             .find(|line| !line.is_empty())
-            .map(|line| line.to_string())
+            .map(std::string::ToString::to_string)
             .unwrap_or_else(|| "Patch application failed".to_string());
 
         PatchFailureMetadata {
@@ -4361,31 +4357,28 @@ impl ChatWidget<'_> {
                         kind: crate::history_cell::PatchKind::Proposed
                     }
                 )
-            }) {
-                if let Some(record) = self
-                    .history_cells
-                    .get(idx)
-                    .and_then(|existing| history_cell::record_from_cell(existing.as_ref()))
-                {
-                    if let HistoryRecord::Patch(mut patch_record) = record {
-                        patch_record.patch_type = HistoryPatchEventType::ApplySuccess;
-                        let record_index = self
-                            .record_index_for_cell(idx)
-                            .unwrap_or_else(|| self.record_index_for_position(idx));
-                        let mutation =
-                            self.history_state
-                                .apply_domain_event(HistoryDomainEvent::Replace {
-                                    index: record_index,
-                                    record: HistoryDomainRecord::Patch(patch_record.clone()),
-                                });
-                        if let Some(id) = self.apply_mutation_to_cell_index(idx, mutation) {
-                            if idx < self.history_cell_ids.len() {
-                                self.history_cell_ids[idx] = Some(id);
-                            }
-                            self.maybe_hide_spinner();
-                            return;
-                        }
+            }) && let Some(record) = self
+                .history_cells
+                .get(idx)
+                .and_then(|existing| history_cell::record_from_cell(existing.as_ref()))
+                && let HistoryRecord::Patch(mut patch_record) = record
+            {
+                patch_record.patch_type = HistoryPatchEventType::ApplySuccess;
+                let record_index = self
+                    .record_index_for_cell(idx)
+                    .unwrap_or_else(|| self.record_index_for_position(idx));
+                let mutation = self
+                    .history_state
+                    .apply_domain_event(HistoryDomainEvent::Replace {
+                        index: record_index,
+                        record: HistoryDomainRecord::Patch(patch_record),
+                    });
+                if let Some(id) = self.apply_mutation_to_cell_index(idx, mutation) {
+                    if idx < self.history_cell_ids.len() {
+                        self.history_cell_ids[idx] = Some(id);
                     }
+                    self.maybe_hide_spinner();
+                    return;
                 }
             }
             self.maybe_hide_spinner();
@@ -4402,29 +4395,26 @@ impl ChatWidget<'_> {
                     kind: crate::history_cell::PatchKind::Proposed
                 }
             )
-        }) {
-            if let Some(record) = self
-                .history_cells
-                .get(idx)
-                .and_then(|existing| history_cell::record_from_cell(existing.as_ref()))
-            {
-                if let HistoryRecord::Patch(mut patch_record) = record {
-                    patch_record.patch_type = HistoryPatchEventType::ApplyFailure;
-                    patch_record.failure = Some(failure_meta.clone());
-                    let record_index = self
-                        .record_index_for_cell(idx)
-                        .unwrap_or_else(|| self.record_index_for_position(idx));
-                    let mutation =
-                        self.history_state
-                            .apply_domain_event(HistoryDomainEvent::Replace {
-                                index: record_index,
-                                record: HistoryDomainRecord::Patch(patch_record.clone()),
-                            });
-                    if let Some(_id) = self.apply_mutation_to_cell_index(idx, mutation) {
-                        self.maybe_hide_spinner();
-                        return;
-                    }
-                }
+        }) && let Some(record) = self
+            .history_cells
+            .get(idx)
+            .and_then(|existing| history_cell::record_from_cell(existing.as_ref()))
+            && let HistoryRecord::Patch(mut patch_record) = record
+        {
+            patch_record.patch_type = HistoryPatchEventType::ApplyFailure;
+            patch_record.failure = Some(failure_meta.clone());
+            let record_index = self
+                .record_index_for_cell(idx)
+                .unwrap_or_else(|| self.record_index_for_position(idx));
+            let mutation = self
+                .history_state
+                .apply_domain_event(HistoryDomainEvent::Replace {
+                    index: record_index,
+                    record: HistoryDomainRecord::Patch(patch_record),
+                });
+            if let Some(_id) = self.apply_mutation_to_cell_index(idx, mutation) {
+                self.maybe_hide_spinner();
+                return;
             }
         }
 
@@ -4456,10 +4446,10 @@ impl ChatWidget<'_> {
         is_baseline: bool,
     ) {
         if let Some(seq) = sequence {
-            if let Some(prev_seq) = self.context_last_sequence {
-                if seq < prev_seq {
-                    return;
-                }
+            if let Some(prev_seq) = self.context_last_sequence
+                && seq < prev_seq
+            {
+                return;
             }
             self.context_last_sequence = Some(seq);
         }
@@ -4553,50 +4543,46 @@ impl ChatWidget<'_> {
             expanded: summary.expanded,
         };
 
-        if let Some(id) = self.context_cell_id {
-            if let Some(index) = self.history_state.index_of(id) {
-                let mutation = self
-                    .history_state
-                    .apply_domain_event(HistoryDomainEvent::Replace {
-                        index,
-                        record: HistoryDomainRecord::Context(record.clone()),
-                    });
-                if let Some(cell_idx) = self.cell_index_for_history_id(id) {
-                    if let Some(new_id) = self.apply_mutation_to_cell_index(cell_idx, mutation) {
-                        self.context_cell_id = Some(new_id);
-                    }
-                }
-                self.mark_history_dirty();
-                self.request_redraw();
-                return;
+        if let Some(id) = self.context_cell_id
+            && let Some(index) = self.history_state.index_of(id)
+        {
+            let mutation = self
+                .history_state
+                .apply_domain_event(HistoryDomainEvent::Replace {
+                    index,
+                    record: HistoryDomainRecord::Context(record),
+                });
+            if let Some(cell_idx) = self.cell_index_for_history_id(id)
+                && let Some(new_id) = self.apply_mutation_to_cell_index(cell_idx, mutation)
+            {
+                self.context_cell_id = Some(new_id);
             }
+            self.mark_history_dirty();
+            self.request_redraw();
+            return;
         }
 
         let insertion = self
             .history_state
             .apply_domain_event(HistoryDomainEvent::Insert {
                 index: 0,
-                record: HistoryDomainRecord::Context(record.clone()),
+                record: HistoryDomainRecord::Context(record),
             });
 
-        if let HistoryMutation::Inserted { id, record, .. } = insertion {
-            if let Some(mut cell) = self.build_cell_from_record(&record) {
-                self.assign_history_id(&mut cell, id);
-                let idx = self.history_insert_existing_record(
-                    cell,
-                    Self::context_order_key(),
-                    "context",
-                    id,
-                );
-                if idx < self.history_cell_ids.len() {
-                    self.history_cell_ids[idx] = Some(id);
-                } else {
-                    self.history_cell_ids.push(Some(id));
-                }
-                self.context_cell_id = Some(id);
-                self.mark_history_dirty();
-                self.request_redraw();
+        if let HistoryMutation::Inserted { id, record, .. } = insertion
+            && let Some(mut cell) = self.build_cell_from_record(&record)
+        {
+            self.assign_history_id(&mut cell, id);
+            let idx =
+                self.history_insert_existing_record(cell, Self::context_order_key(), "context", id);
+            if idx < self.history_cell_ids.len() {
+                self.history_cell_ids[idx] = Some(id);
+            } else {
+                self.history_cell_ids.push(Some(id));
             }
+            self.context_cell_id = Some(id);
+            self.mark_history_dirty();
+            self.request_redraw();
         }
     }
 
@@ -4659,10 +4645,11 @@ impl ChatWidget<'_> {
             return;
         }
 
-        if let Some(last) = deltas.last() {
-            if last.field == delta.field && last.current == delta.current {
-                return;
-            }
+        if let Some(last) = deltas.last()
+            && last.field == delta.field
+            && last.current == delta.current
+        {
+            return;
         }
 
         if deltas.len() >= CONTEXT_DELTA_HISTORY {
@@ -4719,10 +4706,10 @@ impl ChatWidget<'_> {
         }
 
         let mut summary = self.context_summary.clone().unwrap_or_default();
-        if let Some(obj) = payload.delta.as_object() {
-            if let Some(changes) = obj.get("changes").and_then(|v| v.as_object()) {
-                self.apply_context_changes(&mut summary, changes);
-            }
+        if let Some(obj) = payload.delta.as_object()
+            && let Some(changes) = obj.get("changes").and_then(|v| v.as_object())
+        {
+            self.apply_context_changes(&mut summary, changes);
         }
 
         self.set_context_summary(summary, payload.sequence, false);
@@ -4782,11 +4769,11 @@ impl ChatWidget<'_> {
             if let Some(viewport) = obj.get("viewport").and_then(|v| v.as_object()) {
                 record.width = viewport
                     .get("width")
-                    .and_then(|v| v.as_u64())
+                    .and_then(serde_json::Value::as_u64)
                     .map(|v| v as u32);
                 record.height = viewport
                     .get("height")
-                    .and_then(|v| v.as_u64())
+                    .and_then(serde_json::Value::as_u64)
                     .map(|v| v as u32);
             }
             if let Some(meta) = obj.get("metadata").and_then(|v| v.as_object()) {
@@ -4867,7 +4854,7 @@ impl ChatWidget<'_> {
                 if let Some(path) = self.pending_images.remove(placeholder) {
                     // Emit a small marker followed by the image so the LLM sees placement
                     let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("image");
-                    let marker = format!("[image: {}]", filename);
+                    let marker = format!("[image: {filename}]");
                     ordered_items.push(InputItem::Text { text: marker });
                     ordered_items.push(InputItem::LocalImage { path });
                 } else {
@@ -4914,7 +4901,7 @@ impl ChatWidget<'_> {
                 // Add a marker then the image so the LLM has contextual placement info
                 let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("image");
                 ordered_items.push(InputItem::Text {
-                    text: format!("[image: {}]", filename),
+                    text: format!("[image: {filename}]"),
                 });
                 ordered_items.push(InputItem::LocalImage {
                     path: path.to_path_buf(),
@@ -4933,10 +4920,10 @@ impl ChatWidget<'_> {
             .lines()
             .map(|l| l.trim_end().to_string())
             .collect();
-        while _lines_tmp.first().map_or(false, |s| s.trim().is_empty()) {
+        while _lines_tmp.first().is_some_and(|s| s.trim().is_empty()) {
             _lines_tmp.remove(0);
         }
-        while _lines_tmp.last().map_or(false, |s| s.trim().is_empty()) {
+        while _lines_tmp.last().is_some_and(|s| s.trim().is_empty()) {
             _lines_tmp.pop();
         }
         display_text = _lines_tmp.join("\n");
@@ -4995,7 +4982,7 @@ impl ChatWidget<'_> {
         // Fatal error path: show an error cell and clear running state.
         self.clear_resume_placeholder();
         let key = self.next_internal_key();
-        let state = history_cell::new_error_event(message.clone());
+        let state = history_cell::new_error_event(message);
         let cell = crate::history_cell::PlainHistoryCell::from_state(state.clone());
         let _ = self.history_insert_with_key_global_tagged(
             Box::new(cell),
@@ -5021,7 +5008,7 @@ impl ChatWidget<'_> {
 
         if !self.reconnect_notice_active {
             self.reconnect_notice_active = true;
-            self.push_background_tail(format!("Connection lost. Auto-retrying… ({})", message));
+            self.push_background_tail(format!("Connection lost. Auto-retrying… ({message})"));
         }
 
         // Do NOT clear running state or streams; the retry will resume them.
@@ -5053,16 +5040,15 @@ impl ChatWidget<'_> {
 
         let mut has_wait_running = false;
         for (call_id, entry) in self.tools_state.running_custom_tools.iter() {
-            if let Some(idx) = running_tools::resolve_entry_index(self, entry, &call_id.0) {
-                if let Some(cell) = self.history_cells.get(idx).and_then(|c| {
+            if let Some(idx) = running_tools::resolve_entry_index(self, entry, &call_id.0)
+                && let Some(cell) = self.history_cells.get(idx).and_then(|c| {
                     c.as_any()
                         .downcast_ref::<history_cell::RunningToolCallCell>()
-                }) {
-                    if cell.has_title("Waiting") {
-                        has_wait_running = true;
-                        break;
-                    }
-                }
+                })
+                && cell.has_title("Waiting")
+            {
+                has_wait_running = true;
+                break;
             }
         }
 
@@ -5185,7 +5171,7 @@ impl ChatWidget<'_> {
         });
 
         let mut new_widget = Self {
-            app_event_tx: app_event_tx.clone(),
+            app_event_tx: app_event_tx,
             code_op_tx,
             bottom_pane,
             auth_manager: auth_manager.clone(),
@@ -5200,7 +5186,7 @@ impl ChatWidget<'_> {
             } else {
                 None
             },
-            latest_upgrade_version: latest_upgrade_version.clone(),
+            latest_upgrade_version: latest_upgrade_version,
             reconnect_notice_active: false,
             initial_user_message: create_initial_user_message(
                 initial_prompt.unwrap_or_default(),
@@ -5385,14 +5371,13 @@ impl ChatWidget<'_> {
             resume_placeholder_visible: false,
             resume_picker_loading: false,
         };
-        new_widget.spawn_conversation_runtime(config.clone(), auth_manager.clone(), code_op_rx);
-        if let Ok(Some(active_id)) = auth_accounts::get_active_account_id(&config.code_home) {
-            if let Ok(records) = account_usage::list_rate_limit_snapshots(&config.code_home) {
-                if let Some(record) = records.into_iter().find(|r| r.account_id == active_id) {
-                    new_widget.rate_limit_primary_next_reset_at = record.primary_next_reset_at;
-                    new_widget.rate_limit_secondary_next_reset_at = record.secondary_next_reset_at;
-                }
-            }
+        new_widget.spawn_conversation_runtime(config.clone(), auth_manager, code_op_rx);
+        if let Ok(Some(active_id)) = auth_accounts::get_active_account_id(&config.code_home)
+            && let Ok(records) = account_usage::list_rate_limit_snapshots(&config.code_home)
+            && let Some(record) = records.into_iter().find(|r| r.account_id == active_id)
+        {
+            new_widget.rate_limit_primary_next_reset_at = record.primary_next_reset_at;
+            new_widget.rate_limit_secondary_next_reset_at = record.secondary_next_reset_at;
         }
         // Seed footer access indicator based on current config
         new_widget.apply_access_mode_indicator_from_config();
@@ -5412,12 +5397,11 @@ impl ChatWidget<'_> {
         if config.experimental_resume.is_none() {
             w.history_push_top_next_req(history_cell::new_animated_welcome()); // tag: prelude
             let connecting_mcp = !w.config.mcp_servers.is_empty();
-            if !w.config.auto_upgrade_enabled {
-                if let Some(upgrade_cell) =
+            if !w.config.auto_upgrade_enabled
+                && let Some(upgrade_cell) =
                     history_cell::new_upgrade_prelude(w.latest_upgrade_version.as_deref())
-                {
-                    w.history_push_top_next_req(upgrade_cell);
-                }
+            {
+                w.history_push_top_next_req(upgrade_cell);
             }
             let notice_state = history_cell::new_popular_commands_notice(
                 false,
@@ -5503,10 +5487,10 @@ impl ChatWidget<'_> {
         });
 
         let mut w = Self {
-            app_event_tx: app_event_tx.clone(),
+            app_event_tx: app_event_tx,
             code_op_tx,
             bottom_pane,
-            auth_manager: auth_manager.clone(),
+            auth_manager: auth_manager,
             login_view_state: None,
             login_add_view_state: None,
             active_exec_cell: None,
@@ -5518,7 +5502,7 @@ impl ChatWidget<'_> {
             } else {
                 None
             },
-            latest_upgrade_version: latest_upgrade_version.clone(),
+            latest_upgrade_version: latest_upgrade_version,
             reconnect_notice_active: false,
             initial_user_message: None,
             total_token_usage: TokenUsage::default(),
@@ -5716,13 +5700,12 @@ impl ChatWidget<'_> {
             resume_placeholder_visible: false,
             resume_picker_loading: false,
         };
-        if let Ok(Some(active_id)) = auth_accounts::get_active_account_id(&config.code_home) {
-            if let Ok(records) = account_usage::list_rate_limit_snapshots(&config.code_home) {
-                if let Some(record) = records.into_iter().find(|r| r.account_id == active_id) {
-                    w.rate_limit_primary_next_reset_at = record.primary_next_reset_at;
-                    w.rate_limit_secondary_next_reset_at = record.secondary_next_reset_at;
-                }
-            }
+        if let Ok(Some(active_id)) = auth_accounts::get_active_account_id(&config.code_home)
+            && let Ok(records) = account_usage::list_rate_limit_snapshots(&config.code_home)
+            && let Some(record) = records.into_iter().find(|r| r.account_id == active_id)
+        {
+            w.rate_limit_primary_next_reset_at = record.primary_next_reset_at;
+            w.rate_limit_secondary_next_reset_at = record.secondary_next_reset_at;
         }
         w.set_standard_terminal_mode(!config.tui.alternate_screen);
         if show_welcome {
@@ -5848,7 +5831,7 @@ impl ChatWidget<'_> {
 
         let timestamp_ms = record.timestamp.as_millis();
         let raw_url = record.url.as_deref().unwrap_or("browser");
-        let sanitized = raw_url.replace('\n', " ").replace('\r', " ");
+        let sanitized = raw_url.replace(['\n', '\r'], " ");
         let trimmed = sanitized.trim();
         let mut url_meta = if trimmed.is_empty() {
             "browser".to_string()
@@ -5861,11 +5844,11 @@ impl ChatWidget<'_> {
             url_meta = truncated;
         }
 
-        let metadata = format!("browser-screenshot:{}:{}", timestamp_ms, url_meta);
+        let metadata = format!("browser-screenshot:{timestamp_ms}:{url_meta}");
 
         let mut items = Vec::with_capacity(2);
         items.push(ContentItem::InputText {
-            text: format!("[EPHEMERAL:{}]", metadata),
+            text: format!("[EPHEMERAL:{metadata}]"),
         });
         items.push(ContentItem::InputImage {
             image_url: format!("data:{mime};base64,{encoded}"),
@@ -5919,24 +5902,24 @@ impl ChatWidget<'_> {
                         if let Some(rest) = content.strip_prefix("diff --git ") {
                             let mut parts = rest.split_whitespace();
                             let _old = parts.next();
-                            if let Some(new_path) = parts.next() {
-                                if let Some(path) = Self::auto_drive_normalize_diff_path(new_path) {
-                                    stats.entry(path.clone()).or_insert((0, 0));
-                                    current_file = Some(path);
-                                }
+                            if let Some(new_path) = parts.next()
+                                && let Some(path) = Self::auto_drive_normalize_diff_path(new_path)
+                            {
+                                stats.entry(path.clone()).or_insert((0, 0));
+                                current_file = Some(path);
                             }
                         } else {
-                            if let Some(rest) = content.strip_prefix("--- ") {
-                                if let Some(path) = Self::auto_drive_normalize_diff_path(rest) {
-                                    stats.entry(path.clone()).or_insert((0, 0));
-                                    current_file = Some(path);
-                                }
+                            if let Some(rest) = content.strip_prefix("--- ")
+                                && let Some(path) = Self::auto_drive_normalize_diff_path(rest)
+                            {
+                                stats.entry(path.clone()).or_insert((0, 0));
+                                current_file = Some(path);
                             }
-                            if let Some(rest) = content.strip_prefix("+++ ") {
-                                if let Some(path) = Self::auto_drive_normalize_diff_path(rest) {
-                                    stats.entry(path.clone()).or_insert((0, 0));
-                                    current_file = Some(path);
-                                }
+                            if let Some(rest) = content.strip_prefix("+++ ")
+                                && let Some(path) = Self::auto_drive_normalize_diff_path(rest)
+                            {
+                                stats.entry(path.clone()).or_insert((0, 0));
+                                current_file = Some(path);
                             }
                         }
                     }
@@ -5963,7 +5946,7 @@ impl ChatWidget<'_> {
         let mut lines = Vec::with_capacity(stats.len() + 1);
         lines.push("Files changed".to_string());
         for (path, (added, removed)) in stats {
-            lines.push(format!("- {} (+{} / -{})", path, added, removed));
+            lines.push(format!("- {path} (+{added} / -{removed})"));
         }
         Some(lines.join("\n"))
     }
@@ -6060,12 +6043,12 @@ impl ChatWidget<'_> {
             };
 
             let mut extra_content = None;
-            if !is_reasoning && matches!(role, AutoDriveRole::User) {
-                if let Some(browser_cell) =
+            if !is_reasoning
+                && matches!(role, AutoDriveRole::User)
+                && let Some(browser_cell) =
                     cell.as_ref().as_any().downcast_ref::<BrowserSessionCell>()
-                {
-                    extra_content = Self::auto_drive_browser_screenshot_items(browser_cell);
-                }
+            {
+                extra_content = Self::auto_drive_browser_screenshot_items(browser_cell);
             }
 
             let mut item = if is_reasoning {
@@ -6088,10 +6071,10 @@ impl ChatWidget<'_> {
                 }
             };
 
-            if let Some(extra) = extra_content {
-                if let code_protocol::models::ResponseItem::Message { content, .. } = &mut item {
-                    content.extend(extra);
-                }
+            if let Some(extra) = extra_content
+                && let code_protocol::models::ResponseItem::Message { content, .. } = &mut item
+            {
+                content.extend(extra);
             }
 
             items.push((idx, item));
@@ -6162,7 +6145,7 @@ impl ChatWidget<'_> {
 
     fn rebuild_auto_history(&mut self) -> Vec<code_protocol::models::ResponseItem> {
         let conversation = self.export_auto_drive_items();
-        let tail = self.auto_history.replace_converted(conversation.clone());
+        let tail = self.auto_history.replace_converted(conversation);
         if !tail.is_empty() {
             self.auto_history.append_converted_tail(&tail);
         }
@@ -6277,7 +6260,11 @@ impl ChatWidget<'_> {
 
     /// Check if there are any animations and trigger redraw if needed
     pub fn check_for_initial_animations(&mut self) {
-        if self.history_cells.iter().any(|cell| cell.is_animating()) {
+        if self
+            .history_cells
+            .iter()
+            .any(super::history_cell::HistoryCell::is_animating)
+        {
             if Self::auto_reduced_motion_preference() {
                 return;
             }
@@ -6320,7 +6307,7 @@ impl ChatWidget<'_> {
                 .map(format_segment)
                 .collect::<Vec<_>>()
                 .join("-");
-            format!("GPT-{}", formatted_rest)
+            format!("GPT-{formatted_rest}")
         } else {
             model_name.to_string()
         }
@@ -6539,22 +6526,20 @@ impl ChatWidget<'_> {
             kind: KeyEventKind::Press | KeyEventKind::Repeat,
             ..
         } = key_event
+            && self.composer_is_empty()
         {
-            if self.composer_is_empty() {
-                layout_scroll::to_top(self);
-                return;
-            }
+            layout_scroll::to_top(self);
+            return;
         }
         if let crossterm::event::KeyEvent {
             code: crossterm::event::KeyCode::End,
             kind: KeyEventKind::Press | KeyEventKind::Repeat,
             ..
         } = key_event
+            && self.composer_is_empty()
         {
-            if self.composer_is_empty() {
-                layout_scroll::to_bottom(self);
-                return;
-            }
+            layout_scroll::to_bottom(self);
+            return;
         }
 
         let input_result = self.bottom_pane.handle_key_event(key_event);
@@ -6592,11 +6577,9 @@ impl ChatWidget<'_> {
                 let before = self.layout.scroll_offset;
                 // Only allow Up to navigate command history when the top view
                 // cannot be scrolled at all (no scrollback available).
-                if self.layout.last_max_scroll.get() == 0 {
-                    if self.bottom_pane.try_history_up() {
-                        self.perf_track_scroll_delta(before, self.layout.scroll_offset);
-                        return;
-                    }
+                if self.layout.last_max_scroll.get() == 0 && self.bottom_pane.try_history_up() {
+                    self.perf_track_scroll_delta(before, self.layout.scroll_offset);
+                    return;
                 }
                 // Scroll up in chat history (increase offset, towards older content)
                 // Use last_max_scroll computed during the previous render to avoid overshoot
@@ -6627,12 +6610,12 @@ impl ChatWidget<'_> {
                 let before = self.layout.scroll_offset;
                 // Only allow Down to navigate command history when the top view
                 // cannot be scrolled at all (no scrollback available).
-                if self.layout.last_max_scroll.get() == 0 && self.bottom_pane.history_is_browsing()
+                if self.layout.last_max_scroll.get() == 0
+                    && self.bottom_pane.history_is_browsing()
+                    && self.bottom_pane.try_history_down()
                 {
-                    if self.bottom_pane.try_history_down() {
-                        self.perf_track_scroll_delta(before, self.layout.scroll_offset);
-                        return;
-                    }
+                    self.perf_track_scroll_delta(before, self.layout.scroll_offset);
+                    return;
                 }
                 // Scroll down in chat history (decrease offset, towards bottom)
                 if self.layout.scroll_offset == 0 {
@@ -6693,13 +6676,13 @@ impl ChatWidget<'_> {
                 .or_else(|| self.tools_state.browser_sessions.keys().next().cloned());
             self.browser_overlay_state
                 .set_session_key(session_key.clone());
-            if let Some(key) = session_key {
-                if let Some(tracker) = self.tools_state.browser_sessions.get(&key) {
-                    let history_len = tracker.cell.screenshot_history().len();
-                    if history_len > 0 {
-                        self.browser_overlay_state
-                            .set_screenshot_index(history_len.saturating_sub(1));
-                    }
+            if let Some(key) = session_key
+                && let Some(tracker) = self.tools_state.browser_sessions.get(&key)
+            {
+                let history_len = tracker.cell.screenshot_history().len();
+                if history_len > 0 {
+                    self.browser_overlay_state
+                        .set_screenshot_index(history_len.saturating_sub(1));
                 }
             }
         } else {
@@ -6804,17 +6787,17 @@ impl ChatWidget<'_> {
     }
 
     fn browser_overlay_session_key(&self) -> Option<String> {
-        if let Some(key) = self.browser_overlay_state.session_key() {
-            if self.tools_state.browser_sessions.contains_key(&key) {
-                return Some(key);
-            }
+        if let Some(key) = self.browser_overlay_state.session_key()
+            && self.tools_state.browser_sessions.contains_key(&key)
+        {
+            return Some(key);
         }
-        if let Some(last) = self.tools_state.browser_last_key.clone() {
-            if self.tools_state.browser_sessions.contains_key(&last) {
-                self.browser_overlay_state
-                    .set_session_key(Some(last.clone()));
-                return Some(last);
-            }
+        if let Some(last) = self.tools_state.browser_last_key.clone()
+            && self.tools_state.browser_sessions.contains_key(&last)
+        {
+            self.browser_overlay_state
+                .set_session_key(Some(last.clone()));
+            return Some(last);
         }
         if let Some((key, _)) = self.tools_state.browser_sessions.iter().next() {
             let owned = key.clone();
@@ -6964,13 +6947,11 @@ impl ChatWidget<'_> {
             }
         }
 
-        if let Some(active_id) = active_id.as_ref() {
-            if !usage_summary_map.contains_key(active_id) {
-                if let Ok(Some(summary)) = account_usage::load_account_usage(&code_home, active_id)
-                {
-                    usage_summary_map.insert(active_id.clone(), summary);
-                }
-            }
+        if let Some(active_id) = active_id.as_ref()
+            && !usage_summary_map.contains_key(active_id)
+            && let Ok(Some(summary)) = account_usage::load_account_usage(&code_home, active_id)
+        {
+            usage_summary_map.insert(active_id.clone(), summary);
         }
 
         let mut tabs: Vec<LimitsTab> = Vec::new();
@@ -6993,12 +6974,12 @@ impl ChatWidget<'_> {
             let view = build_limits_view(&snapshot, current_reset, DEFAULT_GRID_CONFIG, display);
             tabs.push(LimitsTab::view(title, header, view, extra));
 
-            if let Some(active_id) = active_id.as_ref() {
-                if account_map.contains_key(active_id) {
-                    seen_ids.insert(active_id.clone());
-                    snapshot_map.remove(active_id);
-                    usage_summary_map.remove(active_id);
-                }
+            if let Some(active_id) = active_id.as_ref()
+                && account_map.contains_key(active_id)
+            {
+                seen_ids.insert(active_id.clone());
+                snapshot_map.remove(active_id);
+                usage_summary_map.remove(active_id);
             }
         }
 
@@ -7206,7 +7187,7 @@ impl ChatWidget<'_> {
             .max()
             .unwrap_or(0);
         for (count, label) in counts.iter() {
-            let number = format!("{count:>width$}", count = count, width = max_width);
+            let number = format!("{count:>max_width$}");
             lines.push(RtLine::from(vec![
                 RtSpan::raw(indent.clone()),
                 RtSpan::styled(number, value_style),
@@ -7579,10 +7560,18 @@ impl ChatWidget<'_> {
     fn bar_segment(value: u64, max: u64, width: usize) -> String {
         const FILL: &str = "▇";
         if max == 0 {
-            return format!("{}{}", FILL.repeat(1), " ".repeat(width.saturating_sub(1)));
+            return format!(
+                "{}{}",
+                FILL.to_string(),
+                " ".repeat(width.saturating_sub(1))
+            );
         }
         if value == 0 {
-            return format!("{}{}", FILL.repeat(1), " ".repeat(width.saturating_sub(1)));
+            return format!(
+                "{}{}",
+                FILL.to_string(),
+                " ".repeat(width.saturating_sub(1))
+            );
         }
         let ratio = value as f64 / max as f64;
         let filled = (ratio * width as f64).ceil().clamp(1.0, width as f64) as usize;
@@ -7755,7 +7744,7 @@ impl ChatWidget<'_> {
                     let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("image");
 
                     // Add a placeholder to the compose field instead of submitting
-                    let placeholder = format!("[image: {}]", filename);
+                    let placeholder = format!("[image: {filename}]");
 
                     // Store the image path for later submission
                     self.pending_images.insert(placeholder.clone(), path);
@@ -7815,8 +7804,7 @@ impl ChatWidget<'_> {
             if cell_kind == HistoryCellType::BackgroundEvent {
                 debug_assert!(
                     tag == "background",
-                    "Background events must use the background helper (tag={})",
-                    tag
+                    "Background events must use the background helper (tag={tag})"
                 );
             }
         }
@@ -7832,23 +7820,22 @@ impl ChatWidget<'_> {
         let is_background_cell = matches!(cell.kind(), HistoryCellType::BackgroundEvent);
         let mut key = key;
         let mut key_bumped = false;
-        if !is_background_cell {
-            if let Some(last) = self.last_assigned_order {
-                if key <= last {
-                    key = Self::order_key_successor(last);
-                    key_bumped = true;
-                }
-            }
+        if !is_background_cell
+            && let Some(last) = self.last_assigned_order
+            && key <= last
+        {
+            key = Self::order_key_successor(last);
+            key_bumped = true;
         }
 
         // Determine insertion position across the entire history
         let mut pos = self.history_cells.len();
         for i in 0..self.history_cells.len() {
-            if let Some(existing) = self.cell_order_seq.get(i) {
-                if *existing > key {
-                    pos = i;
-                    break;
-                }
+            if let Some(existing) = self.cell_order_seq.get(i)
+                && *existing > key
+            {
+                pos = i;
+                break;
             }
         }
 
@@ -7896,7 +7883,7 @@ impl ChatWidget<'_> {
                     let span_lens: Vec<usize> =
                         line.spans.iter().map(|s| s.content.len()).collect();
                     // Truncate preview to avoid overflow in narrow panes
-                    let mut preview = text.clone();
+                    let mut preview = text;
                     // Truncate preview by display width, not bytes, to avoid splitting
                     // a multi-byte character at an invalid boundary.
                     {
@@ -7914,8 +7901,7 @@ impl ChatWidget<'_> {
                         }
                     }
                     Some(format!(
-                        "title='{}' bytes={} chars={} width={} spans={} span_bytes={:?}",
-                        preview, bytes, chars, width, spans, span_lens
+                        "title='{preview}' bytes={bytes} chars={chars} width={width} spans={spans} span_bytes={span_lens:?}"
                     ))
                 } else {
                     None
@@ -7960,7 +7946,7 @@ impl ChatWidget<'_> {
                     started_at: exec_record.started_at,
                     working_dir: exec_record.working_dir.clone(),
                     env: exec_record.env.clone(),
-                    tags: exec_record.tags.clone(),
+                    tags: exec_record.tags,
                 },
                 other => HistoryDomainEvent::Insert {
                     index: record_index,
@@ -7973,10 +7959,10 @@ impl ChatWidget<'_> {
         };
 
         let mut maybe_id = None;
-        if let Some(mutation) = mutation {
-            if let Some(id) = self.apply_mutation_to_cell(&mut cell, mutation) {
-                maybe_id = Some(id);
-            }
+        if let Some(mutation) = mutation
+            && let Some(id) = self.apply_mutation_to_cell(&mut cell, mutation)
+        {
+            maybe_id = Some(id);
         }
 
         self.history_cells.insert(pos, cell);
@@ -7994,14 +7980,13 @@ impl ChatWidget<'_> {
             );
         }
         self.cell_order_seq.insert(pos, key);
-        if key_bumped {
-            if let Some(stream) = self.history_cells[pos]
+        if key_bumped
+            && let Some(stream) = self.history_cells[pos]
                 .as_any()
                 .downcast_ref::<crate::history_cell::StreamingContentCell>()
-            {
-                self.stream_order_seq
-                    .insert((StreamKind::Answer, stream.state().stream_id.clone()), key);
-            }
+        {
+            self.stream_order_seq
+                .insert((StreamKind::Answer, stream.state().stream_id.clone()), key);
         }
         self.last_assigned_order = Some(match self.last_assigned_order {
             Some(prev) => prev.max(key),
@@ -8063,8 +8048,7 @@ impl ChatWidget<'_> {
             if cell_kind == HistoryCellType::BackgroundEvent {
                 debug_assert!(
                     tag == "background",
-                    "Background events must use the background helper (tag={})",
-                    tag
+                    "Background events must use the background helper (tag={tag})"
                 );
             }
         }
@@ -8079,22 +8063,21 @@ impl ChatWidget<'_> {
 
         let is_background_cell = matches!(cell.kind(), HistoryCellType::BackgroundEvent);
         let mut key_bumped = false;
-        if !is_background_cell {
-            if let Some(last) = self.last_assigned_order {
-                if key <= last {
-                    key = Self::order_key_successor(last);
-                    key_bumped = true;
-                }
-            }
+        if !is_background_cell
+            && let Some(last) = self.last_assigned_order
+            && key <= last
+        {
+            key = Self::order_key_successor(last);
+            key_bumped = true;
         }
 
         let mut pos = self.history_cells.len();
         for i in 0..self.history_cells.len() {
-            if let Some(existing) = self.cell_order_seq.get(i) {
-                if *existing > key {
-                    pos = i;
-                    break;
-                }
+            if let Some(existing) = self.cell_order_seq.get(i)
+                && *existing > key
+            {
+                pos = i;
+                break;
             }
         }
 
@@ -8132,7 +8115,7 @@ impl ChatWidget<'_> {
                     let spans = line.spans.len();
                     let span_lens: Vec<usize> =
                         line.spans.iter().map(|s| s.content.len()).collect();
-                    let mut preview = text.clone();
+                    let mut preview = text;
                     {
                         use unicode_width::UnicodeWidthStr as _;
                         let maxw = 120usize;
@@ -8148,8 +8131,7 @@ impl ChatWidget<'_> {
                         }
                     }
                     Some(format!(
-                        "title='{}' bytes={} chars={} width={} spans={} span_bytes={:?}",
-                        preview, bytes, chars, width, spans, span_lens
+                        "title='{preview}' bytes={bytes} chars={chars} width={width} spans={spans} span_bytes={span_lens:?}"
                     ))
                 } else {
                     None
@@ -8176,14 +8158,13 @@ impl ChatWidget<'_> {
             );
         }
         self.cell_order_seq.insert(pos, key);
-        if key_bumped {
-            if let Some(stream) = self.history_cells[pos]
+        if key_bumped
+            && let Some(stream) = self.history_cells[pos]
                 .as_any()
                 .downcast_ref::<crate::history_cell::StreamingContentCell>()
-            {
-                self.stream_order_seq
-                    .insert((StreamKind::Answer, stream.state().stream_id.clone()), key);
-            }
+        {
+            self.stream_order_seq
+                .insert((StreamKind::Answer, stream.state().stream_id.clone()), key);
         }
         self.last_assigned_order = Some(match self.last_assigned_order {
             Some(prev) => prev.max(key),
@@ -8562,10 +8543,10 @@ impl ChatWidget<'_> {
             if let Some(mut rebuilt) = self.build_cell_from_record(&record) {
                 Self::assign_history_id_inner(&mut rebuilt, id);
                 self.history_cells[idx] = rebuilt;
-            } else if let Some(cell_slot) = self.history_cells.get_mut(idx) {
-                if !Self::hydrate_cell_from_record_inner(cell_slot, &record, &self.config) {
-                    Self::assign_history_id_inner(cell_slot, id);
-                }
+            } else if let Some(cell_slot) = self.history_cells.get_mut(idx)
+                && !Self::hydrate_cell_from_record_inner(cell_slot, &record, &self.config)
+            {
+                Self::assign_history_id_inner(cell_slot, id);
             }
 
             if idx < self.history_cell_ids.len() {
@@ -8864,10 +8845,10 @@ impl ChatWidget<'_> {
                 record,
             });
 
-        if let Some(id) = self.apply_mutation_to_cell(&mut cell, mutation) {
-            if idx < self.history_cell_ids.len() {
-                self.history_cell_ids[idx] = Some(id);
-            }
+        if let Some(id) = self.apply_mutation_to_cell(&mut cell, mutation)
+            && idx < self.history_cell_ids.len()
+        {
+            self.history_cell_ids[idx] = Some(id);
         }
 
         self.history_cells[idx] = cell;
@@ -8974,7 +8955,7 @@ impl ChatWidget<'_> {
         let new_lines = self.history_cells[idx].display_lines();
         let new_header = new_lines
             .first()
-            .and_then(|l| l.spans.get(0))
+            .and_then(|l| l.spans.first())
             .map(|s| s.content.clone().to_string())
             .unwrap_or_default();
         if new_header.is_empty() {
@@ -8983,7 +8964,7 @@ impl ChatWidget<'_> {
         let prev_lines = self.history_cells[idx - 1].display_lines();
         let prev_header = prev_lines
             .first()
-            .and_then(|l| l.spans.get(0))
+            .and_then(|l| l.spans.first())
             .map(|s| s.content.clone().to_string())
             .unwrap_or_default();
         if new_header != prev_header {
@@ -9012,12 +8993,11 @@ impl ChatWidget<'_> {
         {
             body.pop();
         }
-        if let Some(first_line) = body.first_mut() {
-            if let Some(first_span) = first_line.spans.get_mut(0) {
-                if first_span.content == "  └ " || first_span.content == "└ " {
-                    first_span.content = "  ".into();
-                }
-            }
+        if let Some(first_line) = body.first_mut()
+            && let Some(first_span) = first_line.spans.get_mut(0)
+            && (first_span.content == "  └ " || first_span.content == "└ ")
+        {
+            first_span.content = "  ".into();
         }
         combined.extend(body);
         let state = history_cell::plain_message_state_from_lines(
@@ -9035,10 +9015,10 @@ impl ChatWidget<'_> {
     }
 
     fn record_index_for_position(&self, ui_index: usize) -> usize {
-        if let Some(Some(id)) = self.history_cell_ids.get(ui_index) {
-            if let Some(idx) = self.history_state.index_of(*id) {
-                return idx;
-            }
+        if let Some(Some(id)) = self.history_cell_ids.get(ui_index)
+            && let Some(idx) = self.history_state.index_of(*id)
+        {
+            return idx;
         }
         self.history_cell_ids
             .iter()
@@ -9112,12 +9092,11 @@ impl ChatWidget<'_> {
             if let Some(explore_cell) = self.history_cells[idx]
                 .as_any_mut()
                 .downcast_mut::<history_cell::ExploreAggregationCell>()
+                && explore_cell.set_force_exploring_header(hold_title)
             {
-                if explore_cell.set_force_exploring_header(hold_title) {
-                    updated = true;
-                    if let Some(Some(id)) = self.history_cell_ids.get(idx) {
-                        self.history_render.invalidate_history_id(*id);
-                    }
+                updated = true;
+                if let Some(Some(id)) = self.history_cell_ids.get(idx) {
+                    self.history_render.invalidate_history_id(*id);
                 }
             }
         }
@@ -9195,15 +9174,16 @@ impl ChatWidget<'_> {
         }
 
         let mut updates = Vec::new();
-        if let Some(summary) = self.auto_state.last_decision_summary.clone() {
-            if !summary.trim().is_empty() {
-                updates.push(summary);
-            }
+        if let Some(summary) = self.auto_state.last_decision_summary.clone()
+            && !summary.trim().is_empty()
+        {
+            updates.push(summary);
         }
-        if let Some(current) = self.auto_state.current_summary.clone() {
-            if !current.trim().is_empty() && updates.iter().all(|existing| existing != &current) {
-                updates.push(current);
-            }
+        if let Some(current) = self.auto_state.current_summary.clone()
+            && !current.trim().is_empty()
+            && updates.iter().all(|existing| existing != &current)
+        {
+            updates.push(current);
         }
 
         let context = CoordinatorContext::new(self.auto_state.pending_agent_actions.len(), updates);
@@ -9234,15 +9214,15 @@ impl ChatWidget<'_> {
             let missing = self.config.cwd.clone();
             let mut fallback: Option<(PathBuf, &'static str)> =
                 worktree_root_hint_for(&missing).map(|p| (p, "recorded repo root"));
-            if fallback.is_none() {
-                if let Some(parent) = missing.parent().and_then(worktree_root_hint_for) {
-                    fallback = Some((parent, "recorded repo root"));
-                }
+            if fallback.is_none()
+                && let Some(parent) = missing.parent().and_then(worktree_root_hint_for)
+            {
+                fallback = Some((parent, "recorded repo root"));
             }
-            if fallback.is_none() {
-                if let Some(prev) = last_existing_cwd(&missing) {
-                    fallback = Some((prev, "last known directory"));
-                }
+            if fallback.is_none()
+                && let Some(prev) = last_existing_cwd(&missing)
+            {
+                fallback = Some((prev, "last known directory"));
             }
             let missing_s = missing.display().to_string();
             if fallback.is_none() && missing_s.contains("/.code/branches/") {
@@ -9263,16 +9243,16 @@ impl ChatWidget<'_> {
                         break;
                     }
                 }
-                if fallback.is_none() {
-                    if let Some(existing) = first_existing {
-                        fallback = Some((existing, "parent directory"));
-                    }
+                if fallback.is_none()
+                    && let Some(existing) = first_existing
+                {
+                    fallback = Some((existing, "parent directory"));
                 }
             }
-            if fallback.is_none() {
-                if let Some(home) = std::env::var_os("HOME").map(PathBuf::from) {
-                    fallback = Some((home, "home directory"));
-                }
+            if fallback.is_none()
+                && let Some(home) = std::env::var_os("HOME").map(PathBuf::from)
+            {
+                fallback = Some((home, "home directory"));
             }
             if let Some((fallback_root, label)) = fallback {
                 let msg = format!(
@@ -9331,72 +9311,68 @@ impl ChatWidget<'_> {
             && self.auto_state.is_active()
             && self.config.auto_drive.coordinator_routing
             && coordinator_routing_allowed
+            && let Some(mut routed) = self.try_coordinator_route(&original_text)
         {
-            if let Some(mut routed) = self.try_coordinator_route(&original_text) {
-                self.finalize_sent_user_message(message);
-                self.consume_pending_prompt_for_ui_only_turn();
+            self.finalize_sent_user_message(message);
+            self.consume_pending_prompt_for_ui_only_turn();
 
-                if let Some(notice_text) = routed.user_response.take() {
-                    if let Some(item) = Self::auto_drive_make_assistant_message(notice_text.clone())
-                    {
-                        self.auto_history.append_raw(std::slice::from_ref(&item));
-                    }
-                    let mut lines = Vec::with_capacity(2);
-                    lines.push("AUTO DRIVE RESPONSE".to_string());
-                    lines.push(notice_text);
-                    self.history_push_plain_paragraphs(PlainMessageKind::Notice, lines);
+            if let Some(notice_text) = routed.user_response.take() {
+                if let Some(item) = Self::auto_drive_make_assistant_message(notice_text.clone()) {
+                    self.auto_history.append_raw(std::slice::from_ref(&item));
                 }
-
-                let _ = self.rebuild_auto_history();
-
-                if let Some(cli_command) = routed.cli_command {
-                    let mut synthetic: UserMessage = cli_command.into();
-                    synthetic.suppress_persistence = true;
-                    self.submit_user_message(synthetic);
-                    submitted_cli = true;
-                }
-
-                if !submitted_cli {
-                    self.auto_send_conversation_force();
-                }
-
-                return;
+                let mut lines = Vec::with_capacity(2);
+                lines.push("AUTO DRIVE RESPONSE".to_string());
+                lines.push(notice_text);
+                self.history_push_plain_paragraphs(PlainMessageKind::Notice, lines);
             }
+
+            let _ = self.rebuild_auto_history();
+
+            if let Some(cli_command) = routed.cli_command {
+                let mut synthetic: UserMessage = cli_command.into();
+                synthetic.suppress_persistence = true;
+                self.submit_user_message(synthetic);
+                submitted_cli = true;
+            }
+
+            if !submitted_cli {
+                self.auto_send_conversation_force();
+            }
+
+            return;
         }
 
         let only_text_items = message
             .ordered_items
             .iter()
             .all(|item| matches!(item, InputItem::Text { .. }));
-        if only_text_items {
-            if let Some((command_line, rest_text)) =
+        if only_text_items
+            && let Some((command_line, rest_text)) =
                 Self::split_leading_slash_command(&original_text)
-            {
-                if Self::multiline_slash_command_requires_split(&command_line) {
-                    let preview =
-                        crate::slash_command::process_slash_command_message(command_line.as_str());
-                    match preview {
-                        ProcessedCommand::RegularCommand(SlashCommand::Auto, canonical_text) => {
-                            let goal = rest_text.trim();
-                            let command_text = if goal.is_empty() {
-                                canonical_text
-                            } else {
-                                format!("{canonical_text} {goal}")
-                            };
-                            self.app_event_tx
-                                .send(AppEvent::DispatchCommand(SlashCommand::Auto, command_text));
-                            return;
-                        }
-                        ProcessedCommand::NotCommand(_) => {}
-                        _ => {
-                            self.submit_user_message(command_line.into());
-                            let trimmed_rest = rest_text.trim();
-                            if !trimmed_rest.is_empty() {
-                                self.submit_user_message(rest_text.into());
-                            }
-                            return;
-                        }
+            && Self::multiline_slash_command_requires_split(&command_line)
+        {
+            let preview =
+                crate::slash_command::process_slash_command_message(command_line.as_str());
+            match preview {
+                ProcessedCommand::RegularCommand(SlashCommand::Auto, canonical_text) => {
+                    let goal = rest_text.trim();
+                    let command_text = if goal.is_empty() {
+                        canonical_text
+                    } else {
+                        format!("{canonical_text} {goal}")
+                    };
+                    self.app_event_tx
+                        .send(AppEvent::DispatchCommand(SlashCommand::Auto, command_text));
+                    return;
+                }
+                ProcessedCommand::NotCommand(_) => {}
+                _ => {
+                    self.submit_user_message(command_line.into());
+                    let trimmed_rest = rest_text.trim();
+                    if !trimmed_rest.is_empty() {
+                        self.submit_user_message(rest_text.into());
                     }
+                    return;
                 }
             }
         }
@@ -9636,12 +9612,12 @@ impl ChatWidget<'_> {
                             );
 
                             // Save the first screenshot path and URL for display in the TUI
-                            if let Some(first_path) = screenshot_paths.first() {
-                                if let Ok(mut latest) = latest_browser_screenshot_clone.lock() {
-                                    let url_string =
-                                        url.clone().unwrap_or_else(|| "Browser".to_string());
-                                    *latest = Some((first_path.clone(), url_string));
-                                }
+                            if let Some(first_path) = screenshot_paths.first()
+                                && let Ok(mut latest) = latest_browser_screenshot_clone.lock()
+                            {
+                                let url_string =
+                                    url.clone().unwrap_or_else(|| "Browser".to_string());
+                                *latest = Some((first_path.clone(), url_string));
                             }
 
                             // Create screenshot items
@@ -9835,8 +9811,8 @@ impl ChatWidget<'_> {
         let started_at = request.started_at;
         let result = create_ghost_commit(&CreateGhostCommitOptions::new(repo_path.as_path()));
         let elapsed = started_at.elapsed();
-        let snapshot = self.finalize_ghost_snapshot(request, result, elapsed);
-        snapshot
+
+        self.finalize_ghost_snapshot(request, result, elapsed)
     }
 
     fn dispatch_pending_snapshot(&mut self, job_id: u64) {
@@ -10071,10 +10047,9 @@ impl ChatWidget<'_> {
                     elapsed,
                 },
                 Err(join_err) => {
-                    let err = GitToolingError::Io(io::Error::new(
-                        io::ErrorKind::Other,
-                        format!("ghost snapshot task failed: {join_err}"),
-                    ));
+                    let err = GitToolingError::Io(io::Error::other(format!(
+                        "ghost snapshot task failed: {join_err}"
+                    )));
                     AppEvent::GhostSnapshotFinished {
                         job_id,
                         result: Err(err),
@@ -10121,18 +10096,18 @@ impl ChatWidget<'_> {
                 Some(snapshot)
             }
             Err(err) => {
-                if let GitToolingError::Io(io_err) = &err {
-                    if io_err.kind() == io::ErrorKind::TimedOut {
-                        self.push_background_tail(format!(
+                if let GitToolingError::Io(io_err) = &err
+                    && io_err.kind() == io::ErrorKind::TimedOut
+                {
+                    self.push_background_tail(format!(
                             "Git snapshot timed out after {}. Try again once the repository is less busy.",
                             format_duration(elapsed)
                         ));
-                        tracing::warn!(
-                            elapsed = %format_duration(elapsed),
-                            "ghost snapshot timed out"
-                        );
-                        return None;
-                    }
+                    tracing::warn!(
+                        elapsed = %format_duration(elapsed),
+                        "ghost snapshot timed out"
+                    );
+                    return None;
                 }
                 self.ghost_snapshots_disabled = true;
                 let (message, hint) = match &err {
@@ -10236,12 +10211,11 @@ impl ChatWidget<'_> {
         if !self.history_snapshot_dirty {
             return;
         }
-        if !force {
-            if let Some(last) = self.history_snapshot_last_flush {
-                if last.elapsed() < Duration::from_millis(400) {
-                    return;
-                }
-            }
+        if !force
+            && let Some(last) = self.history_snapshot_last_flush
+            && last.elapsed() < Duration::from_millis(400)
+        {
+            return;
         }
         let snapshot = self.history_snapshot_for_persistence();
         match serde_json::to_value(&snapshot) {
@@ -11022,7 +10996,7 @@ impl ChatWidget<'_> {
                 snapshot.short_id()
             );
             if let Some(snippet) = snapshot.summary_snippet(60) {
-                message.push_str(&format!(" • {}", snippet));
+                message.push_str(&format!(" • {snippet}"));
             }
             if let Some(age) = snapshot.age_from(Local::now()) {
                 message.push_str(&format!(" • captured {} ago", format_duration(age)));
@@ -11118,13 +11092,13 @@ impl ChatWidget<'_> {
 
         let suppress_history = suppress_persistence;
 
-        if !display_text.is_empty() && !suppress_history {
-            if let Err(e) = self
+        if !display_text.is_empty()
+            && !suppress_history
+            && let Err(e) = self
                 .code_op_tx
                 .send(Op::AddToHistory { text: display_text })
-            {
-                tracing::error!("failed to send AddHistory op: {e}");
-            }
+        {
+            tracing::error!("failed to send AddHistory op: {e}");
         }
 
         if self.auto_state.is_active() && self.auto_state.resume_after_submit() {
@@ -11465,13 +11439,11 @@ impl ChatWidget<'_> {
                     c.as_any()
                         .downcast_ref::<history_cell::CollapsibleReasoningCell>()
                         .is_some()
-                }) {
-                    if let Some(reason) = self.history_cells[last]
-                        .as_any()
-                        .downcast_ref::<history_cell::CollapsibleReasoningCell>()
-                    {
-                        reason.set_in_progress(false);
-                    }
+                }) && let Some(reason) = self.history_cells[last]
+                    .as_any()
+                    .downcast_ref::<history_cell::CollapsibleReasoningCell>(
+                ) {
+                    reason.set_in_progress(false);
                 }
                 self.mark_needs_redraw();
             }
@@ -11702,13 +11674,11 @@ impl ChatWidget<'_> {
                     c.as_any()
                         .downcast_ref::<history_cell::CollapsibleReasoningCell>()
                         .is_some()
-                }) {
-                    if let Some(reason) = self.history_cells[last]
-                        .as_any()
-                        .downcast_ref::<history_cell::CollapsibleReasoningCell>()
-                    {
-                        reason.set_in_progress(false);
-                    }
+                }) && let Some(reason) = self.history_cells[last]
+                    .as_any()
+                    .downcast_ref::<history_cell::CollapsibleReasoningCell>(
+                ) {
+                    reason.set_in_progress(false);
                 }
                 self.mark_needs_redraw();
             }
@@ -11792,7 +11762,7 @@ impl ChatWidget<'_> {
                         .as_ref()
                         .map(|s| s.trim())
                         .filter(|s| !s.is_empty())
-                        .map(|s| s.to_string());
+                        .map(std::string::ToString::to_string);
                     let total = update.plan.len();
                     let completed = update
                         .plan
@@ -11927,23 +11897,23 @@ impl ChatWidget<'_> {
                         running.history_id = mapped;
                         mapped
                     });
-                    if let Some(history_id) = history_id {
-                        if let Some(record_idx) = self.history_state.index_of(history_id) {
-                            let mutation = self.history_state.apply_domain_event(
-                                HistoryDomainEvent::UpdateExecStream {
-                                    index: record_idx,
-                                    stdout_chunk,
-                                    stderr_chunk,
-                                },
-                            );
-                            if let HistoryMutation::Replaced {
-                                id,
-                                record: HistoryRecord::Exec(exec_record),
-                                ..
-                            } = mutation
-                            {
-                                self.update_cell_from_record(id, HistoryRecord::Exec(exec_record));
-                            }
+                    if let Some(history_id) = history_id
+                        && let Some(record_idx) = self.history_state.index_of(history_id)
+                    {
+                        let mutation = self.history_state.apply_domain_event(
+                            HistoryDomainEvent::UpdateExecStream {
+                                index: record_idx,
+                                stdout_chunk,
+                                stderr_chunk,
+                            },
+                        );
+                        if let HistoryMutation::Replaced {
+                            id,
+                            record: HistoryRecord::Exec(exec_record),
+                            ..
+                        } = mutation
+                        {
+                            self.update_cell_from_record(id, HistoryRecord::Exec(exec_record));
                         }
                     }
                     self.invalidate_height_cache();
@@ -11956,7 +11926,7 @@ impl ChatWidget<'_> {
                 auto_approved,
                 changes,
             }) => {
-                let exec_call_id = ExecCallId(call_id.clone());
+                let exec_call_id = ExecCallId(call_id);
                 self.exec.suppress_exec_end(exec_call_id);
                 // Store for session diff popup (clone before moving into history)
                 self.diffs.session_patch_sets.push(changes.clone());
@@ -12060,8 +12030,7 @@ impl ChatWidget<'_> {
                             })
                             .is_none()
                             {
-                                let _ = fallback_tx
-                                    .send(crate::app_event::AppEvent::FlushPendingExecEnds);
+                                fallback_tx.send(crate::app_event::AppEvent::FlushPendingExecEnds);
                             }
                         }
                     },
@@ -12078,7 +12047,7 @@ impl ChatWidget<'_> {
                     }
                 };
                 self.defer_or_handle(
-                    move |interrupts| interrupts.push_mcp_begin(seq, ev, event.order.clone()),
+                    move |interrupts| interrupts.push_mcp_begin(seq, ev, event.order),
                     |this| {
                         this.finalize_active_stream();
                         this.flush_interrupt_queue();
@@ -12102,7 +12071,7 @@ impl ChatWidget<'_> {
                     }
                 };
                 self.defer_or_handle(
-                    move |interrupts| interrupts.push_mcp_end(seq, ev, event.order.clone()),
+                    move |interrupts| interrupts.push_mcp_end(seq, ev, event.order),
                     |this| {
                         tracing::info!(
                             "[order] McpToolCallEnd call_id={} seq={}",
@@ -12126,102 +12095,91 @@ impl ChatWidget<'_> {
                 // Flush any queued interrupts when streaming ends
                 self.flush_interrupt_queue();
                 // Show an active entry immediately for all custom tools so the user sees progress
-                let params_json = parameters.clone();
+                let params_json = parameters;
                 let params_string = params_json.clone().map(|p| p.to_string());
-                if agent_runs::is_agent_tool(&tool_name) {
-                    if agent_runs::handle_custom_tool_begin(
+                if agent_runs::is_agent_tool(&tool_name)
+                    && agent_runs::handle_custom_tool_begin(
                         self,
                         event.order.as_ref(),
                         &call_id,
                         &tool_name,
                         params_json.clone(),
-                    ) {
-                        self.bottom_pane
-                            .update_status_text("agents coordinating".to_string());
-                        return;
-                    }
+                    )
+                {
+                    self.bottom_pane
+                        .update_status_text("agents coordinating".to_string());
+                    return;
                 }
-                if tool_name.starts_with("browser_") {
-                    if browser_sessions::handle_custom_tool_begin(
+                if tool_name.starts_with("browser_")
+                    && browser_sessions::handle_custom_tool_begin(
                         self,
                         event.order.as_ref(),
                         &call_id,
                         &tool_name,
-                        params_json.clone(),
-                    ) {
-                        self.bottom_pane
-                            .update_status_text("using browser".to_string());
-                        return;
-                    }
+                        params_json,
+                    )
+                {
+                    self.bottom_pane
+                        .update_status_text("using browser".to_string());
+                    return;
                 }
-                if tool_name == "wait" {
-                    if let Some(exec_call_id) =
+                if tool_name == "wait"
+                    && let Some(exec_call_id) =
                         wait_exec_call_id_from_params(params_string.as_ref())
-                    {
-                        self.tools_state
-                            .running_wait_tools
-                            .insert(ToolCallId(call_id.clone()), exec_call_id.clone());
+                {
+                    self.tools_state
+                        .running_wait_tools
+                        .insert(ToolCallId(call_id.clone()), exec_call_id.clone());
 
-                        let mut wait_update: Option<(
-                            HistoryId,
-                            Option<Duration>,
-                            Vec<(String, bool)>,
-                        )> = None;
-                        if let Some(running) = self.exec.running_commands.get_mut(&exec_call_id) {
-                            running.wait_active = true;
-                            running.wait_notes.clear();
-                            let history_id = running.history_id.or_else(|| {
-                                running.history_index.and_then(|idx| {
-                                    self.history_cell_ids.get(idx).and_then(|slot| *slot)
-                                })
-                            });
-                            running.history_id = history_id;
-                            if let Some(id) = history_id {
-                                wait_update =
-                                    Some((id, running.wait_total, running.wait_notes.clone()));
-                            }
+                    let mut wait_update: Option<(
+                        HistoryId,
+                        Option<Duration>,
+                        Vec<(String, bool)>,
+                    )> = None;
+                    if let Some(running) = self.exec.running_commands.get_mut(&exec_call_id) {
+                        running.wait_active = true;
+                        running.wait_notes.clear();
+                        let history_id = running.history_id.or_else(|| {
+                            running.history_index.and_then(|idx| {
+                                self.history_cell_ids.get(idx).and_then(|slot| *slot)
+                            })
+                        });
+                        running.history_id = history_id;
+                        if let Some(id) = history_id {
+                            wait_update =
+                                Some((id, running.wait_total, running.wait_notes.clone()));
                         }
-                        if let Some((history_id, total, notes)) = wait_update {
-                            let _ = self
-                                .update_exec_wait_state_with_pairs(history_id, total, true, &notes);
-                        }
-                        self.bottom_pane
-                            .update_status_text("waiting for command".to_string());
-                        self.invalidate_height_cache();
-                        self.request_redraw();
-                        return;
                     }
+                    if let Some((history_id, total, notes)) = wait_update {
+                        let _ =
+                            self.update_exec_wait_state_with_pairs(history_id, total, true, &notes);
+                    }
+                    self.bottom_pane
+                        .update_status_text("waiting for command".to_string());
+                    self.invalidate_height_cache();
+                    self.request_redraw();
+                    return;
                 }
-                if tool_name == "kill" {
-                    if let Some(exec_call_id) =
+                if tool_name == "kill"
+                    && let Some(exec_call_id) =
                         wait_exec_call_id_from_params(params_string.as_ref())
-                    {
-                        self.tools_state
-                            .running_kill_tools
-                            .insert(ToolCallId(call_id.clone()), exec_call_id);
-                        self.bottom_pane
-                            .update_status_text("cancelling command".to_string());
-                        self.invalidate_height_cache();
-                        self.request_redraw();
-                        return;
-                    }
+                {
+                    self.tools_state
+                        .running_kill_tools
+                        .insert(ToolCallId(call_id.clone()), exec_call_id);
+                    self.bottom_pane
+                        .update_status_text("cancelling command".to_string());
+                    self.invalidate_height_cache();
+                    self.request_redraw();
+                    return;
                 }
                 // Animated running cell with live timer and formatted args
                 let mut cell = if tool_name.starts_with("browser_") {
-                    history_cell::new_running_browser_tool_call(
-                        tool_name.clone(),
-                        params_string.clone(),
-                    )
+                    history_cell::new_running_browser_tool_call(tool_name.clone(), params_string)
                 } else if tool_name.starts_with("agent_") {
-                    history_cell::new_running_custom_tool_call(
-                        tool_name.clone(),
-                        params_string.clone(),
-                    )
+                    history_cell::new_running_custom_tool_call(tool_name.clone(), params_string)
                 } else {
-                    history_cell::new_running_custom_tool_call(
-                        tool_name.clone(),
-                        params_string.clone(),
-                    )
+                    history_cell::new_running_custom_tool_call(tool_name.clone(), params_string)
                 };
                 cell.state_mut().call_id = Some(call_id.clone());
                 // Enforce ordering for custom tool begin
@@ -12256,7 +12214,7 @@ impl ChatWidget<'_> {
                         .update_status_text("agents coordinating".to_string());
                 } else {
                     self.bottom_pane
-                        .update_status_text(format!("using tool: {}", tool_name));
+                        .update_status_text(format!("using tool: {tool_name}"));
                 }
             }
             EventMsg::CustomToolCallEnd(CustomToolCallEndEvent {
@@ -12266,9 +12224,9 @@ impl ChatWidget<'_> {
                 duration,
                 result,
             }) => {
-                let params_json = parameters.clone();
-                if agent_runs::is_agent_tool(&tool_name) {
-                    if agent_runs::handle_custom_tool_end(
+                let params_json = parameters;
+                if agent_runs::is_agent_tool(&tool_name)
+                    && agent_runs::handle_custom_tool_end(
                         self,
                         event.order.as_ref(),
                         &call_id,
@@ -12276,31 +12234,31 @@ impl ChatWidget<'_> {
                         params_json.clone(),
                         duration,
                         &result,
-                    ) {
+                    )
+                {
+                    self.bottom_pane
+                        .update_status_text("responding".to_string());
+                    return;
+                }
+                if tool_name.starts_with("browser_")
+                    && browser_sessions::handle_custom_tool_end(
+                        self,
+                        event.order.as_ref(),
+                        &call_id,
+                        &tool_name,
+                        params_json.clone(),
+                        duration,
+                        &result,
+                    )
+                {
+                    if tool_name == "browser_close" {
                         self.bottom_pane
                             .update_status_text("responding".to_string());
-                        return;
+                    } else {
+                        self.bottom_pane
+                            .update_status_text("using browser".to_string());
                     }
-                }
-                if tool_name.starts_with("browser_") {
-                    if browser_sessions::handle_custom_tool_end(
-                        self,
-                        event.order.as_ref(),
-                        &call_id,
-                        &tool_name,
-                        params_json.clone(),
-                        duration,
-                        &result,
-                    ) {
-                        if tool_name == "browser_close" {
-                            self.bottom_pane
-                                .update_status_text("responding".to_string());
-                        } else {
-                            self.bottom_pane
-                                .update_status_text("using browser".to_string());
-                        }
-                        return;
-                    }
+                    return;
                 }
                 let ok = match event.order.as_ref() {
                     Some(om) => self.provider_order_key_from_order_meta(om),
@@ -12324,58 +12282,57 @@ impl ChatWidget<'_> {
                     Ok(content) => (true, content),
                     Err(error) => (false, error),
                 };
-                if tool_name == "wait" {
-                    if let Some(exec_call_id) = self
+                if tool_name == "wait"
+                    && let Some(exec_call_id) = self
                         .tools_state
                         .running_wait_tools
                         .remove(&ToolCallId(call_id.clone()))
-                    {
-                        let trimmed = content.trim();
-                        let wait_still_pending = !success && trimmed != "Cancelled by user.";
-                        let mut note_lines: Vec<(String, bool)> = Vec::new();
-                        let suppress_json_notes =
-                            serde_json::from_str::<serde_json::Value>(trimmed)
-                                .ok()
-                                .and_then(|value| {
-                                    value.as_object().map(|obj| {
-                                        obj.contains_key("output") || obj.contains_key("metadata")
-                                    })
-                                })
-                                .unwrap_or(false);
-                        if !suppress_json_notes {
-                            for line in content.lines() {
-                                let note_text = line.trim();
-                                if note_text.is_empty() {
-                                    continue;
-                                }
-                                let is_error_note = note_text == "Cancelled by user.";
-                                note_lines.push((note_text.to_string(), is_error_note));
+                {
+                    let trimmed = content.trim();
+                    let wait_still_pending = !success && trimmed != "Cancelled by user.";
+                    let mut note_lines: Vec<(String, bool)> = Vec::new();
+                    let suppress_json_notes = serde_json::from_str::<serde_json::Value>(trimmed)
+                        .ok()
+                        .and_then(|value| {
+                            value.as_object().map(|obj| {
+                                obj.contains_key("output") || obj.contains_key("metadata")
+                            })
+                        })
+                        .unwrap_or(false);
+                    if !suppress_json_notes {
+                        for line in content.lines() {
+                            let note_text = line.trim();
+                            if note_text.is_empty() {
+                                continue;
                             }
+                            let is_error_note = note_text == "Cancelled by user.";
+                            note_lines.push((note_text.to_string(), is_error_note));
                         }
-                        let mut history_id: Option<HistoryId> = None;
-                        let mut wait_total: Option<Duration> = None;
-                        let mut wait_notes_snapshot: Vec<(String, bool)> = Vec::new();
-                        if let Some(running) = self.exec.running_commands.get_mut(&exec_call_id) {
-                            let base = running.wait_total.unwrap_or_default();
-                            let total = base.saturating_add(duration);
-                            running.wait_total = Some(total);
-                            running.wait_active = wait_still_pending;
-                            Self::append_wait_pairs(&mut running.wait_notes, &note_lines);
-                            wait_notes_snapshot = running.wait_notes.clone();
-                            wait_total = running.wait_total;
-                            history_id = running.history_id.or_else(|| {
-                                running.history_index.and_then(|idx| {
-                                    self.history_cell_ids.get(idx).and_then(|slot| *slot)
-                                })
-                            });
-                            running.history_id = history_id;
-                        } else {
-                            Self::append_wait_pairs(&mut wait_notes_snapshot, &note_lines);
-                        }
+                    }
+                    let mut history_id: Option<HistoryId> = None;
+                    let mut wait_total: Option<Duration> = None;
+                    let mut wait_notes_snapshot: Vec<(String, bool)> = Vec::new();
+                    if let Some(running) = self.exec.running_commands.get_mut(&exec_call_id) {
+                        let base = running.wait_total.unwrap_or_default();
+                        let total = base.saturating_add(duration);
+                        running.wait_total = Some(total);
+                        running.wait_active = wait_still_pending;
+                        Self::append_wait_pairs(&mut running.wait_notes, &note_lines);
+                        wait_notes_snapshot = running.wait_notes.clone();
+                        wait_total = running.wait_total;
+                        history_id = running.history_id.or_else(|| {
+                            running.history_index.and_then(|idx| {
+                                self.history_cell_ids.get(idx).and_then(|slot| *slot)
+                            })
+                        });
+                        running.history_id = history_id;
+                    } else {
+                        Self::append_wait_pairs(&mut wait_notes_snapshot, &note_lines);
+                    }
 
-                        if history_id.is_none() {
-                            if let Some((idx, _)) = self
-                                .history_cells
+                    if history_id.is_none()
+                        && let Some((idx, _)) =
+                            self.history_cells
                                 .iter()
                                 .enumerate()
                                 .rev()
@@ -12384,68 +12341,61 @@ impl ChatWidget<'_> {
                                         .downcast_ref::<history_cell::ExecCell>()
                                         .is_some()
                                 })
-                            {
-                                if let Some(id) =
-                                    self.history_cell_ids.get(idx).and_then(|slot| *slot)
-                                {
-                                    history_id = Some(id);
-                                    if let Some(running) =
-                                        self.exec.running_commands.get_mut(&exec_call_id)
-                                    {
-                                        running.history_index = Some(idx);
-                                        running.history_id = Some(id);
-                                    }
-                                }
-                            }
+                        && let Some(id) = self.history_cell_ids.get(idx).and_then(|slot| *slot)
+                    {
+                        history_id = Some(id);
+                        if let Some(running) = self.exec.running_commands.get_mut(&exec_call_id) {
+                            running.history_index = Some(idx);
+                            running.history_id = Some(id);
                         }
-
-                        if let Some(id) = history_id {
-                            let exec_record = self
-                                .history_state
-                                .index_of(id)
-                                .and_then(|idx| self.history_state.get(idx).cloned());
-                            if let Some(HistoryRecord::Exec(record)) = exec_record {
-                                if wait_total.is_none() {
-                                    let base = record.wait_total.unwrap_or_default();
-                                    wait_total = Some(base.saturating_add(duration));
-                                }
-                                if wait_notes_snapshot.is_empty() {
-                                    wait_notes_snapshot =
-                                        Self::wait_pairs_from_exec_notes(&record.wait_notes);
-                                    Self::append_wait_pairs(&mut wait_notes_snapshot, &note_lines);
-                                }
-                            } else {
-                                if wait_total.is_none() {
-                                    wait_total = Some(duration);
-                                }
-                                if wait_notes_snapshot.is_empty() {
-                                    Self::append_wait_pairs(&mut wait_notes_snapshot, &note_lines);
-                                }
-                            }
-                            let _ = self.update_exec_wait_state_with_pairs(
-                                id,
-                                wait_total,
-                                wait_still_pending,
-                                &wait_notes_snapshot,
-                            );
-                        }
-
-                        if success {
-                            self.remove_background_completion_message(&call_id);
-                            self.bottom_pane
-                                .update_status_text("responding".to_string());
-                            self.maybe_hide_spinner();
-                        } else if trimmed == "Cancelled by user." {
-                            self.bottom_pane
-                                .update_status_text("wait cancelled".to_string());
-                        } else {
-                            self.bottom_pane
-                                .update_status_text("waiting for command".to_string());
-                        }
-                        self.invalidate_height_cache();
-                        self.request_redraw();
-                        return;
                     }
+
+                    if let Some(id) = history_id {
+                        let exec_record = self
+                            .history_state
+                            .index_of(id)
+                            .and_then(|idx| self.history_state.get(idx).cloned());
+                        if let Some(HistoryRecord::Exec(record)) = exec_record {
+                            if wait_total.is_none() {
+                                let base = record.wait_total.unwrap_or_default();
+                                wait_total = Some(base.saturating_add(duration));
+                            }
+                            if wait_notes_snapshot.is_empty() {
+                                wait_notes_snapshot =
+                                    Self::wait_pairs_from_exec_notes(&record.wait_notes);
+                                Self::append_wait_pairs(&mut wait_notes_snapshot, &note_lines);
+                            }
+                        } else {
+                            if wait_total.is_none() {
+                                wait_total = Some(duration);
+                            }
+                            if wait_notes_snapshot.is_empty() {
+                                Self::append_wait_pairs(&mut wait_notes_snapshot, &note_lines);
+                            }
+                        }
+                        let _ = self.update_exec_wait_state_with_pairs(
+                            id,
+                            wait_total,
+                            wait_still_pending,
+                            &wait_notes_snapshot,
+                        );
+                    }
+
+                    if success {
+                        self.remove_background_completion_message(&call_id);
+                        self.bottom_pane
+                            .update_status_text("responding".to_string());
+                        self.maybe_hide_spinner();
+                    } else if trimmed == "Cancelled by user." {
+                        self.bottom_pane
+                            .update_status_text("wait cancelled".to_string());
+                    } else {
+                        self.bottom_pane
+                            .update_status_text("waiting for command".to_string());
+                    }
+                    self.invalidate_height_cache();
+                    self.request_redraw();
+                    return;
                 }
                 let running_entry = self
                     .tools_state
@@ -12457,15 +12407,15 @@ impl ChatWidget<'_> {
                     .or_else(|| running_tools::find_by_call_id(self, &call_id));
 
                 if tool_name == "apply_patch" && success {
-                    if let Some(idx) = resolved_idx {
-                        if idx < self.history_cells.len() {
-                            let is_running_tool = self.history_cells[idx]
-                                .as_any()
-                                .downcast_ref::<history_cell::RunningToolCallCell>()
-                                .is_some();
-                            if is_running_tool {
-                                self.history_remove_at(idx);
-                            }
+                    if let Some(idx) = resolved_idx
+                        && idx < self.history_cells.len()
+                    {
+                        let is_running_tool = self.history_cells[idx]
+                            .as_any()
+                            .downcast_ref::<history_cell::RunningToolCallCell>()
+                            .is_some();
+                        if is_running_tool {
+                            self.history_remove_at(idx);
                         }
                     }
                     self.bottom_pane
@@ -12524,7 +12474,7 @@ impl ChatWidget<'_> {
                             Box::new(history_cell::PlainHistoryCell::from_state(
                                 wait_state.clone(),
                             )),
-                            HistoryDomainRecord::Plain(wait_state.clone()),
+                            HistoryDomainRecord::Plain(wait_state),
                         );
                     } else {
                         let _ =
@@ -12694,10 +12644,7 @@ impl ChatWidget<'_> {
                 for agent in agents.iter() {
                     let parsed_status = agent_status_from_str(agent.status.as_str());
                     // Update runtime map
-                    let entry = self
-                        .agent_runtime
-                        .entry(agent.id.clone())
-                        .or_insert_with(AgentRuntime::default);
+                    let entry = self.agent_runtime.entry(agent.id.clone()).or_default();
                     entry.last_update = Some(now);
                     match parsed_status {
                         AgentStatus::Running => {
@@ -12779,9 +12726,9 @@ impl ChatWidget<'_> {
                 // Reflect concise agent status in the input border
                 let count = self.active_agents.len();
                 let msg = match status {
-                    "preparing" => format!("agents: preparing ({} ready)", count),
-                    "running" => format!("agents: running ({})", count),
-                    "complete" => format!("agents: complete ({} ok)", count),
+                    "preparing" => format!("agents: preparing ({count} ready)"),
+                    "running" => format!("agents: running ({count})"),
+                    "complete" => format!("agents: complete ({count} ok)"),
                     "failed" => "agents: failed".to_string(),
                     "cancelled" => "agents: cancelled".to_string(),
                     _ => "agents: planning".to_string(),
@@ -13146,7 +13093,7 @@ impl ChatWidget<'_> {
                 .map(|(title, body)| {
                     Line::from(vec![
                         Span::styled(
-                            format!("{}:", title),
+                            format!("{title}:"),
                             RtStyle::default().add_modifier(RtModifier::BOLD),
                         ),
                         Span::raw(format!(" {body}")),
@@ -13154,12 +13101,12 @@ impl ChatWidget<'_> {
                 })
                 .collect();
             reasoning_lines.push(
-                Line::from(format!("Scenario summary: {}", label))
+                Line::from(format!("Scenario summary: {label}"))
                     .style(RtStyle::default().fg(crate::colors::text_dim())),
             );
             let reasoning_cell = history_cell::CollapsibleReasoningCell::new_with_id(
                 reasoning_lines,
-                Some(format!("demo-reasoning-{}", idx)),
+                Some(format!("demo-reasoning-{idx}")),
             );
             reasoning_cell.set_collapsed(false);
             reasoning_cell.set_in_progress(false);
@@ -13187,7 +13134,10 @@ impl ChatWidget<'_> {
             self.history_push(assistant_cell);
 
             for (command_tokens, stdout) in execs {
-                let cmd_vec: Vec<String> = command_tokens.iter().map(|s| s.to_string()).collect();
+                let cmd_vec: Vec<String> = command_tokens
+                    .iter()
+                    .map(std::string::ToString::to_string)
+                    .collect();
                 let parsed = code_core::parse_command::parse_command(&cmd_vec);
                 self.history_push(history_cell::new_active_exec_command(
                     cmd_vec.clone(),
@@ -13219,7 +13169,7 @@ impl ChatWidget<'_> {
                                 content: (*content).to_string(),
                             },
                         );
-                        format!("patch: simulated failure while applying {}", path)
+                        format!("patch: simulated failure while applying {path}")
                     }
                     DemoPatch::Update {
                         path,
@@ -13236,7 +13186,7 @@ impl ChatWidget<'_> {
                                 new_content: (*new_content).to_string(),
                             },
                         );
-                        format!("patch: simulated failure while applying {}", path)
+                        format!("patch: simulated failure while applying {path}")
                     }
                 };
                 self.history_push(history_cell::new_patch_event(
@@ -13288,7 +13238,7 @@ impl ChatWidget<'_> {
         let mut agent_card = history_cell::AgentRunCell::new("Demo Agent Batch".to_string());
         agent_card.set_batch_label(Some("Demo Agents".to_string()));
         agent_card.set_task(Some("Draft a release checklist".to_string()));
-        agent_card.set_context(Some("Context: codex workspace demo run".to_string()));
+        agent_card.set_context(Some("Context: Beacon Code workspace demo run".to_string()));
         agent_card.set_plan(vec![
             "Collect recent commits".to_string(),
             "Summarize blockers".to_string(),
@@ -13677,8 +13627,7 @@ impl ChatWidget<'_> {
                         entries.join(", ")
                     };
                     self.push_background_tail(format!(
-                        "🔔 TUI notifications use custom filters: [{}]",
-                        filters
+                        "🔔 TUI notifications use custom filters: [{filters}]"
                     ));
                 }
             },
@@ -13703,8 +13652,7 @@ impl ChatWidget<'_> {
                             entries.join(", ")
                         };
                         self.push_background_tail(format!(
-                            "TUI notifications use custom filters ([{}]); edit ~/.code/config.toml to change them.",
-                            filters
+                            "TUI notifications use custom filters ([{filters}]); edit ~/.code/config.toml to change them."
                         ));
                     }
                 }
@@ -13869,18 +13817,15 @@ impl ChatWidget<'_> {
                     .map(|p| p.display().to_string())
                     .unwrap_or_else(|| "(unknown)".to_string());
                 lines.push(Line::from(format!(
-                    "  • {} — available (built-in, exe: {})",
-                    name, exe
+                    "  • {name} — available (built-in, exe: {exe})"
                 )));
             } else if let Some(path) = resolve_cmd(&cmd) {
                 lines.push(Line::from(format!(
-                    "  • {} — available ({} at {})",
-                    name, cmd, path
+                    "  • {name} — available ({cmd} at {path})"
                 )));
             } else {
                 lines.push(Line::from(format!(
-                    "  • {} — not found (command: {})",
-                    name, cmd
+                    "  • {name} — not found (command: {cmd})"
                 )));
                 // Short cross-platform hint
                 lines.push(Line::from(
@@ -13960,36 +13905,30 @@ impl ChatWidget<'_> {
     where
         F: FnOnce(&mut LoginAddAccountState),
     {
-        if let Some(weak) = &self.login_add_view_state {
-            if let Some(state_rc) = weak.upgrade() {
-                f(&mut state_rc.borrow_mut());
-                self.request_redraw();
-                return true;
-            }
+        if let Some(weak) = &self.login_add_view_state
+            && let Some(state_rc) = weak.upgrade()
+        {
+            f(&mut state_rc.borrow_mut());
+            self.request_redraw();
+            return true;
         }
         false
     }
 
     pub(crate) fn notify_login_chatgpt_started(&mut self, auth_url: String) {
-        if self.with_login_add_view(|state| state.acknowledge_chatgpt_started(auth_url.clone())) {
-            return;
-        }
+        if self.with_login_add_view(|state| state.acknowledge_chatgpt_started(auth_url.clone())) {}
     }
 
     pub(crate) fn notify_login_chatgpt_failed(&mut self, error: String) {
-        if self.with_login_add_view(|state| state.acknowledge_chatgpt_failed(error.clone())) {
-            return;
-        }
+        if self.with_login_add_view(|state| state.acknowledge_chatgpt_failed(error.clone())) {}
     }
 
     pub(crate) fn notify_login_chatgpt_complete(&mut self, result: Result<(), String>) {
-        if self.with_login_add_view(|state| state.on_chatgpt_complete(result.clone())) {
-            return;
-        }
+        if self.with_login_add_view(|state| state.on_chatgpt_complete(result.clone())) {}
     }
 
     pub(crate) fn notify_login_device_code_pending(&mut self) {
-        let _ = self.with_login_add_view(|state| state.begin_device_code_flow());
+        let _ = self.with_login_add_view(LoginAddAccountState::begin_device_code_flow);
     }
 
     pub(crate) fn notify_login_device_code_ready(
@@ -14007,19 +13946,17 @@ impl ChatWidget<'_> {
     }
 
     pub(crate) fn notify_login_device_code_complete(&mut self, result: Result<(), String>) {
-        if self.with_login_add_view(|state| state.on_chatgpt_complete(result.clone())) {
-            return;
-        }
+        if self.with_login_add_view(|state| state.on_chatgpt_complete(result.clone())) {}
     }
 
     pub(crate) fn notify_login_flow_cancelled(&mut self) {
-        let _ = self.with_login_add_view(|state| state.cancel_active_flow());
+        let _ = self.with_login_add_view(LoginAddAccountState::cancel_active_flow);
     }
 
     pub(crate) fn login_add_view_active(&self) -> bool {
         self.login_add_view_state
             .as_ref()
-            .and_then(|weak| weak.upgrade())
+            .and_then(std::rc::Weak::upgrade)
             .is_some()
     }
 
@@ -14050,7 +13987,7 @@ impl ChatWidget<'_> {
                 }
             }
             drop(state);
-            let _ = tx.send(AppEvent::RequestRedraw);
+            tx.send(AppEvent::RequestRedraw);
         });
     }
 
@@ -14186,10 +14123,10 @@ impl ChatWidget<'_> {
             self.show_settings_overlay(Some(SettingsSection::Updates));
             return;
         }
-        if let Some(content) = self.build_updates_settings_content() {
-            if let Some(overlay) = self.settings.overlay.as_mut() {
-                overlay.set_updates_content(content);
-            }
+        if let Some(content) = self.build_updates_settings_content()
+            && let Some(overlay) = self.settings.overlay.as_mut()
+        {
+            overlay.set_updates_content(content);
         }
         self.ensure_settings_overlay_section(SettingsSection::Updates);
         self.request_redraw();
@@ -14240,16 +14177,14 @@ impl ChatWidget<'_> {
         let updated =
             self.try_update_agents_settings_overview(rows.clone(), commands.clone(), selected);
 
-        if !updated {
-            if let Some(overlay) = self.settings.overlay.as_mut() {
-                let content = AgentsSettingsContent::new_overview(
-                    rows,
-                    commands,
-                    selected,
-                    self.app_event_tx.clone(),
-                );
-                overlay.set_agents_content(content);
-            }
+        if !updated && let Some(overlay) = self.settings.overlay.as_mut() {
+            let content = AgentsSettingsContent::new_overview(
+                rows,
+                commands,
+                selected,
+                self.app_event_tx.clone(),
+            );
+            overlay.set_agents_content(content);
         }
 
         self.request_redraw();
@@ -14261,20 +14196,20 @@ impl ChatWidget<'_> {
         commands: Vec<String>,
         selected: usize,
     ) -> bool {
-        if let Some(overlay) = self.settings.overlay.as_mut() {
-            if overlay.active_section() == SettingsSection::Agents {
-                if let Some(content) = overlay.agents_content_mut() {
-                    content.set_overview(rows, commands, selected);
-                } else {
-                    overlay.set_agents_content(AgentsSettingsContent::new_overview(
-                        rows,
-                        commands,
-                        selected,
-                        self.app_event_tx.clone(),
-                    ));
-                }
-                return true;
+        if let Some(overlay) = self.settings.overlay.as_mut()
+            && overlay.active_section() == SettingsSection::Agents
+        {
+            if let Some(content) = overlay.agents_content_mut() {
+                content.set_overview(rows, commands, selected);
+            } else {
+                overlay.set_agents_content(AgentsSettingsContent::new_overview(
+                    rows,
+                    commands,
+                    selected,
+                    self.app_event_tx.clone(),
+                ));
             }
+            return true;
         }
         false
     }
@@ -14283,15 +14218,15 @@ impl ChatWidget<'_> {
         let mut editor = Some(editor);
         let mut needs_content = false;
 
-        if let Some(overlay) = self.settings.overlay.as_mut() {
-            if overlay.active_section() == SettingsSection::Agents {
-                if let Some(content) = overlay.agents_content_mut() {
-                    content.set_editor(editor.take().expect("editor set once"));
-                    self.request_redraw();
-                    return true;
-                } else {
-                    needs_content = true;
-                }
+        if let Some(overlay) = self.settings.overlay.as_mut()
+            && overlay.active_section() == SettingsSection::Agents
+        {
+            if let Some(content) = overlay.agents_content_mut() {
+                content.set_editor(editor.take().expect("editor set once"));
+                self.request_redraw();
+                return true;
+            } else {
+                needs_content = true;
             }
         }
 
@@ -14309,19 +14244,19 @@ impl ChatWidget<'_> {
             };
             self.agents_overview_selected_index = selected;
 
-            if let Some(overlay) = self.settings.overlay.as_mut() {
-                if overlay.active_section() == SettingsSection::Agents {
-                    let mut content = AgentsSettingsContent::new_overview(
-                        rows,
-                        commands,
-                        selected,
-                        self.app_event_tx.clone(),
-                    );
-                    content.set_editor(editor.take().expect("editor set once"));
-                    overlay.set_agents_content(content);
-                    self.request_redraw();
-                    return true;
-                }
+            if let Some(overlay) = self.settings.overlay.as_mut()
+                && overlay.active_section() == SettingsSection::Agents
+            {
+                let mut content = AgentsSettingsContent::new_overview(
+                    rows,
+                    commands,
+                    selected,
+                    self.app_event_tx.clone(),
+                );
+                content.set_editor(editor.take().expect("editor set once"));
+                overlay.set_agents_content(content);
+                self.request_redraw();
+                return true;
             }
         }
 
@@ -14332,15 +14267,15 @@ impl ChatWidget<'_> {
         let mut editor = Some(editor);
         let mut needs_content = false;
 
-        if let Some(overlay) = self.settings.overlay.as_mut() {
-            if overlay.active_section() == SettingsSection::Agents {
-                if let Some(content) = overlay.agents_content_mut() {
-                    content.set_agent_editor(editor.take().expect("editor set once"));
-                    self.request_redraw();
-                    return true;
-                } else {
-                    needs_content = true;
-                }
+        if let Some(overlay) = self.settings.overlay.as_mut()
+            && overlay.active_section() == SettingsSection::Agents
+        {
+            if let Some(content) = overlay.agents_content_mut() {
+                content.set_agent_editor(editor.take().expect("editor set once"));
+                self.request_redraw();
+                return true;
+            } else {
+                needs_content = true;
             }
         }
 
@@ -14358,19 +14293,19 @@ impl ChatWidget<'_> {
             };
             self.agents_overview_selected_index = selected;
 
-            if let Some(overlay) = self.settings.overlay.as_mut() {
-                if overlay.active_section() == SettingsSection::Agents {
-                    let mut content = AgentsSettingsContent::new_overview(
-                        rows,
-                        commands,
-                        selected,
-                        self.app_event_tx.clone(),
-                    );
-                    content.set_agent_editor(editor.take().expect("editor set once"));
-                    overlay.set_agents_content(content);
-                    self.request_redraw();
-                    return true;
-                }
+            if let Some(overlay) = self.settings.overlay.as_mut()
+                && overlay.active_section() == SettingsSection::Agents
+            {
+                let mut content = AgentsSettingsContent::new_overview(
+                    rows,
+                    commands,
+                    selected,
+                    self.app_event_tx.clone(),
+                );
+                content.set_agent_editor(editor.take().expect("editor set once"));
+                overlay.set_agents_content(content);
+                self.request_redraw();
+                return true;
             }
         }
 
@@ -14379,24 +14314,23 @@ impl ChatWidget<'_> {
 
     pub(crate) fn set_agents_overview_selection(&mut self, index: usize) {
         self.agents_overview_selected_index = index;
-        if let Some(overlay) = self.settings.overlay.as_mut() {
-            if overlay.active_section() == SettingsSection::Agents {
-                if let Some(content) = overlay.agents_content_mut() {
-                    content.set_overview_selection(index);
-                }
-            }
+        if let Some(overlay) = self.settings.overlay.as_mut()
+            && overlay.active_section() == SettingsSection::Agents
+            && let Some(content) = overlay.agents_content_mut()
+        {
+            content.set_overview_selection(index);
         }
     }
 
     fn agent_batch_metadata(&self, batch_id: &str) -> AgentBatchMetadata {
-        if let Some(key) = self.tools_state.agent_run_by_batch.get(batch_id) {
-            if let Some(tracker) = self.tools_state.agent_runs.get(key) {
-                return AgentBatchMetadata {
-                    label: tracker.overlay_display_label(),
-                    prompt: tracker.overlay_task(),
-                    context: tracker.overlay_context(),
-                };
-            }
+        if let Some(key) = self.tools_state.agent_run_by_batch.get(batch_id)
+            && let Some(tracker) = self.tools_state.agent_runs.get(key)
+        {
+            return AgentBatchMetadata {
+                label: tracker.overlay_display_label(),
+                prompt: tracker.overlay_task(),
+                context: tracker.overlay_context(),
+            };
         }
         AgentBatchMetadata::default()
     }
@@ -14467,12 +14401,12 @@ impl ChatWidget<'_> {
 
         let mut prefix_spans = vec![
             Span::raw(" "),
-            Span::styled(timestamp_text.clone(), timestamp_style),
+            Span::styled(timestamp_text, timestamp_style),
         ];
         if let Some(agent_text) = agent_label_string.as_ref() {
             prefix_spans.push(Span::styled(agent_text.clone(), agent_style));
         }
-        prefix_spans.push(Span::styled(label_prefix.clone(), label_style));
+        prefix_spans.push(Span::styled(label_prefix, label_style));
 
         match kind {
             AgentLogKind::Result => {
@@ -14491,7 +14425,7 @@ impl ChatWidget<'_> {
                 let mut markdown_iter = markdown_lines.into_iter();
                 if let Some(mut first) = markdown_iter.next() {
                     let mut spans = prefix_spans.clone();
-                    spans.extend(first.spans.drain(..));
+                    spans.append(&mut first.spans);
                     lines.push(Line::from(spans));
                 }
                 for md_line in markdown_iter {
@@ -14604,25 +14538,25 @@ impl ChatWidget<'_> {
                 );
             }
 
-            if let Some(progress) = info.last_progress.as_ref() {
-                if entry.last_progress.as_ref() != Some(progress) {
-                    entry.last_progress = Some(progress.clone());
-                    entry.push_log(AgentLogKind::Progress, progress.clone());
-                }
+            if let Some(progress) = info.last_progress.as_ref()
+                && entry.last_progress.as_ref() != Some(progress)
+            {
+                entry.last_progress = Some(progress.clone());
+                entry.push_log(AgentLogKind::Progress, progress.clone());
             }
 
-            if let Some(result) = info.result.as_ref() {
-                if entry.result.as_ref() != Some(result) {
-                    entry.result = Some(result.clone());
-                    entry.push_log(AgentLogKind::Result, result.clone());
-                }
+            if let Some(result) = info.result.as_ref()
+                && entry.result.as_ref() != Some(result)
+            {
+                entry.result = Some(result.clone());
+                entry.push_log(AgentLogKind::Result, result.clone());
             }
 
-            if let Some(error) = info.error.as_ref() {
-                if entry.error.as_ref() != Some(error) {
-                    entry.error = Some(error.clone());
-                    entry.push_log(AgentLogKind::Error, error.clone());
-                }
+            if let Some(error) = info.error.as_ref()
+                && entry.error.as_ref() != Some(error)
+            {
+                entry.error = Some(error.clone());
+                entry.push_log(AgentLogKind::Error, error.clone());
             }
         }
 
@@ -14891,7 +14825,7 @@ fi\n\
             self.app_event_tx.clone(),
             id,
             name.clone(),
-            default_command.clone(),
+            default_command,
             Some(cwd),
             controller.clone(),
             controller_rx,
@@ -15039,7 +14973,7 @@ fi\n\
             id,
             title,
             command: Vec::new(),
-            command_display: display.clone(),
+            command_display: display,
             controller: Some(controller.clone()),
             auto_close_on_success: false,
             start_running: true,
@@ -15338,15 +15272,13 @@ fi\n\
             Ok(handle) => {
                 self.auto_handle = Some(handle);
                 let placeholder = auto_drive_strings::next_auto_drive_phrase().to_string();
-                let effects = self.auto_state.launch_succeeded(
-                    goal.clone(),
-                    Some(placeholder),
-                    Instant::now(),
-                );
+                let effects =
+                    self.auto_state
+                        .launch_succeeded(goal, Some(placeholder), Instant::now());
                 self.auto_apply_controller_effects(effects);
             }
             Err(err) => {
-                let effects = self.auto_state.launch_failed(goal.clone(), err.to_string());
+                let effects = self.auto_state.launch_failed(goal, err.to_string());
                 self.auto_apply_controller_effects(effects);
             }
         }
@@ -15418,7 +15350,7 @@ fi\n\
             self.settings
                 .overlay
                 .as_ref()
-                .map(|overlay| overlay.active_section()),
+                .map(settings_overlay::SettingsOverlayView::active_section),
             Some(SettingsSection::AutoDrive)
         ) {
             self.close_settings_overlay();
@@ -15704,7 +15636,7 @@ fi\n\
         let cli_context = Self::normalize_status_field(cli_context_raw);
         let cli_prompt = cli.as_ref().map(|action| action.prompt.clone());
 
-        self.auto_state.current_cli_context = cli_context.clone();
+        self.auto_state.current_cli_context = cli_context;
         self.auto_state.hide_cli_context_in_ui = planning_turn;
         self.auto_state.suppress_next_cli_display = planning_turn;
         if let Some(ref prompt_text) = cli_prompt {
@@ -15865,7 +15797,6 @@ Have we met every part of this goal and is there no further work to do?"#
                 );
                 self.schedule_auto_cli_prompt(seq, prompt_text);
                 self.auto_submit_prompt();
-                return;
             }
             AutoCoordinatorStatus::Failed => {
                 let normalized = summary_text.trim();
@@ -15884,7 +15815,6 @@ Have we met every part of this goal and is there no further work to do?"#
                 } else {
                     self.auto_stop(Some(message));
                 }
-                return;
             }
         }
     }
@@ -15894,7 +15824,7 @@ Have we met every part of this goal and is there no further work to do?"#
         user_response: Option<String>,
         cli_command: Option<String>,
     ) {
-        if let Some(text) = user_response.clone() {
+        if let Some(text) = user_response {
             if let Some(item) = Self::auto_drive_make_assistant_message(text.clone()) {
                 self.auto_history.append_raw(std::slice::from_ref(&item));
             }
@@ -16052,7 +15982,7 @@ Have we met every part of this goal and is there no further work to do?"#
                     seconds,
                 } => {
                     if seconds == 0 {
-                        let _ = self.app_event_tx.send(AppEvent::AutoCoordinatorCountdown {
+                        self.app_event_tx.send(AppEvent::AutoCoordinatorCountdown {
                             countdown_id,
                             seconds_left: 0,
                         });
@@ -16217,7 +16147,7 @@ Have we met every part of this goal and is there no further work to do?"#
         })
         .is_none()
         {
-            let _ = fallback_tx.send(AppEvent::AutoCoordinatorCountdown {
+            fallback_tx.send(AppEvent::AutoCoordinatorCountdown {
                 countdown_id,
                 seconds_left: 0,
             });
@@ -16409,14 +16339,11 @@ Have we met every part of this goal and is there no further work to do?"#
             .auto_turn_review_state
             .as_ref()
             .and_then(|state| state.base_commit.as_ref())
+            && let Some(head) = self.current_head_commit_sha()
+            && let Ok(paths) = self.git_diff_name_only_between(base_commit.id(), &head)
+            && !paths.is_empty()
         {
-            if let Some(head) = self.current_head_commit_sha() {
-                if let Ok(paths) = self.git_diff_name_only_between(base_commit.id(), &head) {
-                    if !paths.is_empty() {
-                        return true;
-                    }
-                }
-            }
+            return true;
         }
 
         false
@@ -16503,7 +16430,7 @@ Have we met every part of this goal and is there no further work to do?"#
                     .lines()
                     .map(str::trim)
                     .filter(|line| !line.is_empty())
-                    .map(|line| line.to_string())
+                    .map(std::string::ToString::to_string)
                     .collect();
                 Ok(changes)
             },
@@ -16859,11 +16786,10 @@ Have we met every part of this goal and is there no further work to do?"#
                         format!("{} files", scope.file_count)
                     };
                     let prompt = format!(
-                        "Review commit {} generated during the latest Auto Drive turn. Highlight bugs, regressions, risky patterns, and missing tests before merge.",
-                        commit_for_prompt
+                        "Review commit {commit_for_prompt} generated during the latest Auto Drive turn. Highlight bugs, regressions, risky patterns, and missing tests before merge."
                     );
-                    let hint = format!("auto turn changes — {} ({})", short_sha, file_label);
-                    let preparation = format!("Preparing code review for commit {}", short_sha);
+                    let hint = format!("auto turn changes — {short_sha} ({file_label})");
+                    let preparation = format!("Preparing code review for commit {short_sha}");
                     let review_metadata = Some(ReviewContextMetadata {
                         scope: Some("commit".to_string()),
                         commit: Some(commit_id),
@@ -17060,21 +16986,18 @@ Have we met every part of this goal and is there no further work to do?"#
                     self.auto_state.last_decision_status_title.as_ref(),
                     self.auto_state.last_decision_status_sent_to_user.as_ref(),
                 );
-                if !appended {
-                    if let Some(summary) = self.auto_state.last_decision_summary.as_ref() {
-                        let trimmed = summary.trim();
-                        if !trimmed.is_empty() {
-                            let collapsed =
-                                trimmed.split_whitespace().collect::<Vec<_>>().join(" ");
-                            if !collapsed.is_empty() {
-                                let current_line = status_lines
-                                    .first()
-                                    .map(|line| line.trim_end_matches('…').trim())
-                                    .unwrap_or("");
-                                if collapsed != current_line {
-                                    let display = Self::truncate_with_ellipsis(&collapsed, 160);
-                                    status_lines.push(display);
-                                }
+                if !appended && let Some(summary) = self.auto_state.last_decision_summary.as_ref() {
+                    let trimmed = summary.trim();
+                    if !trimmed.is_empty() {
+                        let collapsed = trimmed.split_whitespace().collect::<Vec<_>>().join(" ");
+                        if !collapsed.is_empty() {
+                            let current_line = status_lines
+                                .first()
+                                .map(|line| line.trim_end_matches('…').trim())
+                                .unwrap_or("");
+                            if collapsed != current_line {
+                                let display = Self::truncate_with_ellipsis(&collapsed, 160);
+                                status_lines.push(display);
                             }
                         }
                     }
@@ -17297,9 +17220,9 @@ Have we met every part of this goal and is there no further work to do?"#
             "Diagnostics Disabled"
         };
 
-        let left = format!("{}  •  {}", agents_label, diagnostics_label);
+        let left = format!("{agents_label}  •  {diagnostics_label}");
 
-        let hint = left.to_string();
+        let hint = left;
         self.bottom_pane.set_standard_terminal_hint(Some(hint));
     }
 
@@ -17372,18 +17295,18 @@ Have we met every part of this goal and is there no further work to do?"#
 
         let mut needs_refresh = false;
 
-        if let Some(idx) = summary_index {
-            if self.auto_state.current_summary_index != Some(idx) {
-                self.auto_state.current_summary_index = Some(idx);
-                self.auto_state.current_summary = Some(String::new());
-                self.auto_state.thinking_prefix_stripped = false;
-                self.auto_state.current_reasoning_title = None;
-                self.auto_state.current_display_line = None;
-                self.auto_state.current_display_is_summary = false;
-                self.auto_state.placeholder_phrase =
-                    Some(auto_drive_strings::next_auto_drive_phrase().to_string());
-                needs_refresh = true;
-            }
+        if let Some(idx) = summary_index
+            && self.auto_state.current_summary_index != Some(idx)
+        {
+            self.auto_state.current_summary_index = Some(idx);
+            self.auto_state.current_summary = Some(String::new());
+            self.auto_state.thinking_prefix_stripped = false;
+            self.auto_state.current_reasoning_title = None;
+            self.auto_state.current_display_line = None;
+            self.auto_state.current_display_is_summary = false;
+            self.auto_state.placeholder_phrase =
+                Some(auto_drive_strings::next_auto_drive_phrase().to_string());
+            needs_refresh = true;
         }
 
         let cleaned_delta = if !self.auto_state.thinking_prefix_stripped {
@@ -17515,13 +17438,11 @@ Have we met every part of this goal and is there no further work to do?"#
             .as_ref()
             .map(|value| value.trim())
             .filter(|value| !value.is_empty())
-        {
-            if !parts
+            && !parts
                 .iter()
                 .any(|existing| existing.eq_ignore_ascii_case(sent))
-            {
-                parts.push(sent.to_string());
-            }
+        {
+            parts.push(sent.to_string());
         }
 
         match parts.len() {
@@ -17578,7 +17499,7 @@ Have we met every part of this goal and is there no further work to do?"#
         let command_text = if display.trim().is_empty() {
             strip_bash_lc_and_escape(&command)
         } else {
-            display.clone()
+            display
         };
 
         if command_text.trim().is_empty() {
@@ -17646,21 +17567,21 @@ Have we met every part of this goal and is there no further work to do?"#
         let mut needs_redraw = false;
         let visible = self.terminal.last_visible_rows.get();
         let visible_cols = self.terminal.last_visible_cols.get();
-        if let Some(overlay) = self.terminal.overlay_mut() {
-            if overlay.id == id {
-                if visible > 0 {
-                    overlay.pty_rows = visible;
-                }
-                if visible_cols > 0 {
-                    overlay.pty_cols = visible_cols;
-                }
-                if visible != overlay.visible_rows {
-                    overlay.visible_rows = visible;
-                    overlay.clamp_scroll();
-                }
-                overlay.append_chunk(chunk, is_stderr);
-                needs_redraw = true;
+        if let Some(overlay) = self.terminal.overlay_mut()
+            && overlay.id == id
+        {
+            if visible > 0 {
+                overlay.pty_rows = visible;
             }
+            if visible_cols > 0 {
+                overlay.pty_cols = visible_cols;
+            }
+            if visible != overlay.visible_rows {
+                overlay.visible_rows = visible;
+                overlay.clamp_scroll();
+            }
+            overlay.append_chunk(chunk, is_stderr);
+            needs_redraw = true;
         }
         if needs_redraw {
             self.request_redraw();
@@ -17678,22 +17599,23 @@ Have we met every part of this goal and is there no further work to do?"#
     }
 
     pub(crate) fn terminal_apply_resize(&mut self, id: u64, rows: u16, cols: u16) {
-        if let Some(overlay) = self.terminal.overlay_mut() {
-            if overlay.id == id && overlay.update_pty_dimensions(rows, cols) {
-                self.request_redraw();
-            }
+        if let Some(overlay) = self.terminal.overlay_mut()
+            && overlay.id == id
+            && overlay.update_pty_dimensions(rows, cols)
+        {
+            self.request_redraw();
         }
     }
 
     pub(crate) fn request_terminal_cancel(&mut self, id: u64) {
         let mut needs_redraw = false;
-        if let Some(overlay) = self.terminal.overlay_mut() {
-            if overlay.id == id {
-                overlay.push_info_message("Cancel requested…");
-                if overlay.running {
-                    overlay.running = false;
-                    needs_redraw = true;
-                }
+        if let Some(overlay) = self.terminal.overlay_mut()
+            && overlay.id == id
+        {
+            overlay.push_info_message("Cancel requested…");
+            if overlay.running {
+                overlay.running = false;
+                needs_redraw = true;
             }
         }
         if needs_redraw {
@@ -17703,29 +17625,29 @@ Have we met every part of this goal and is there no further work to do?"#
     }
 
     pub(crate) fn terminal_update_message(&mut self, id: u64, message: String) {
-        if let Some(overlay) = self.terminal.overlay_mut() {
-            if overlay.id == id {
-                overlay.push_info_message(&message);
-                self.request_redraw();
-            }
+        if let Some(overlay) = self.terminal.overlay_mut()
+            && overlay.id == id
+        {
+            overlay.push_info_message(&message);
+            self.request_redraw();
         }
     }
 
     pub(crate) fn terminal_set_assistant_message(&mut self, id: u64, message: String) {
-        if let Some(overlay) = self.terminal.overlay_mut() {
-            if overlay.id == id {
-                overlay.push_assistant_message(&message);
-                self.request_redraw();
-            }
+        if let Some(overlay) = self.terminal.overlay_mut()
+            && overlay.id == id
+        {
+            overlay.push_assistant_message(&message);
+            self.request_redraw();
         }
     }
 
     pub(crate) fn terminal_set_command_display(&mut self, id: u64, command: String) {
-        if let Some(overlay) = self.terminal.overlay_mut() {
-            if overlay.id == id {
-                overlay.command_display = command;
-                self.request_redraw();
-            }
+        if let Some(overlay) = self.terminal.overlay_mut()
+            && overlay.id == id
+        {
+            overlay.command_display = command;
+            self.request_redraw();
         }
     }
 
@@ -17736,11 +17658,11 @@ Have we met every part of this goal and is there no further work to do?"#
         ack: Sender<TerminalCommandGate>,
     ) {
         let mut updated = false;
-        if let Some(overlay) = self.terminal.overlay_mut() {
-            if overlay.id == id {
-                overlay.set_pending_command(suggestion, ack);
-                updated = true;
-            }
+        if let Some(overlay) = self.terminal.overlay_mut()
+            && overlay.id == id
+        {
+            overlay.set_pending_command(suggestion, ack);
+            updated = true;
         }
         if updated {
             self.request_redraw();
@@ -17923,14 +17845,14 @@ Have we met every part of this goal and is there no further work to do?"#
     }
 
     pub(crate) fn terminal_mark_running(&mut self, id: u64) {
-        if let Some(overlay) = self.terminal.overlay_mut() {
-            if overlay.id == id {
-                overlay.running = true;
-                overlay.exit_code = None;
-                overlay.duration = None;
-                overlay.start_time = Some(Instant::now());
-                self.request_redraw();
-            }
+        if let Some(overlay) = self.terminal.overlay_mut()
+            && overlay.id == id
+        {
+            overlay.running = true;
+            overlay.exit_code = None;
+            overlay.duration = None;
+            overlay.start_time = Some(Instant::now());
+            self.request_redraw();
         }
     }
 
@@ -17946,26 +17868,26 @@ Have we met every part of this goal and is there no further work to do?"#
         let mut should_close = false;
         let mut take_after = false;
         let visible = self.terminal.last_visible_rows.get();
-        if let Some(overlay) = self.terminal.overlay_mut() {
-            if overlay.id == id {
-                overlay.cancel_pending_command();
-                if visible != overlay.visible_rows {
-                    overlay.visible_rows = visible;
-                    overlay.clamp_scroll();
-                }
-                let was_following = overlay.is_following();
-                overlay.finalize(exit_code, duration);
-                overlay.auto_follow(was_following);
-                needs_redraw = true;
-                if exit_code == Some(0) {
-                    success = true;
-                    take_after = true;
-                    if overlay.auto_close_on_success {
-                        should_close = true;
-                    }
-                }
-                overlay.ensure_pending_command();
+        if let Some(overlay) = self.terminal.overlay_mut()
+            && overlay.id == id
+        {
+            overlay.cancel_pending_command();
+            if visible != overlay.visible_rows {
+                overlay.visible_rows = visible;
+                overlay.clamp_scroll();
             }
+            let was_following = overlay.is_following();
+            overlay.finalize(exit_code, duration);
+            overlay.auto_follow(was_following);
+            needs_redraw = true;
+            if exit_code == Some(0) {
+                success = true;
+                take_after = true;
+                if overlay.auto_close_on_success {
+                    should_close = true;
+                }
+            }
+            overlay.ensure_pending_command();
         }
         if take_after {
             after = self.terminal.after.take();
@@ -17977,15 +17899,15 @@ Have we met every part of this goal and is there no further work to do?"#
             self.request_redraw();
         }
         if success {
-            if crate::updates::upgrade_ui_enabled() {
-                if let Some((pending_id, version)) = self.pending_upgrade_notice.take() {
-                    if pending_id == id {
-                        self.bottom_pane
-                            .flash_footer_notice(format!("Upgraded to {version}"));
-                        self.latest_upgrade_version = None;
-                    } else {
-                        self.pending_upgrade_notice = Some((pending_id, version));
-                    }
+            if crate::updates::upgrade_ui_enabled()
+                && let Some((pending_id, version)) = self.pending_upgrade_notice.take()
+            {
+                if pending_id == id {
+                    self.bottom_pane
+                        .flash_footer_notice(format!("Upgraded to {version}"));
+                    self.latest_upgrade_version = None;
+                } else {
+                    self.pending_upgrade_notice = Some((pending_id, version));
                 }
             }
             after
@@ -17997,14 +17919,15 @@ Have we met every part of this goal and is there no further work to do?"#
     pub(crate) fn terminal_prepare_rerun(&mut self, id: u64) -> bool {
         let mut reset = false;
         let visible = self.terminal.last_visible_rows.get();
-        if let Some(overlay) = self.terminal.overlay_mut() {
-            if overlay.id == id && !overlay.running {
-                overlay.reset_for_rerun();
-                overlay.visible_rows = visible;
-                overlay.clamp_scroll();
-                overlay.ensure_pending_command();
-                reset = true;
-            }
+        if let Some(overlay) = self.terminal.overlay_mut()
+            && overlay.id == id
+            && !overlay.running
+        {
+            overlay.reset_for_rerun();
+            overlay.visible_rows = visible;
+            overlay.clamp_scroll();
+            overlay.ensure_pending_command();
+            reset = true;
         }
         if reset {
             self.request_redraw();
@@ -18015,24 +17938,23 @@ Have we met every part of this goal and is there no further work to do?"#
     pub(crate) fn handle_terminal_approval_decision(&mut self, id: u64, approved: bool) {
         let pending = self.pending_manual_terminal.remove(&id);
         if approved {
-            if let Some(entry) = pending {
-                if self
+            if let Some(entry) = pending
+                && self
                     .terminal
                     .overlay()
                     .map(|overlay| overlay.id == id)
                     .unwrap_or(false)
-                {
-                    if let Some(overlay) = self.terminal.overlay_mut() {
-                        overlay.push_assistant_message("Approval granted. Running command…");
-                    }
-                    if entry.run_direct && self.terminal_dimensions_hint().is_some() {
-                        let command_vec = wrap_command(&entry.command);
-                        self.start_direct_terminal_command(id, entry.command, command_vec);
-                    } else {
-                        self.start_manual_terminal_session(id, entry.command);
-                    }
-                    self.request_redraw();
+            {
+                if let Some(overlay) = self.terminal.overlay_mut() {
+                    overlay.push_assistant_message("Approval granted. Running command…");
                 }
+                if entry.run_direct && self.terminal_dimensions_hint().is_some() {
+                    let command_vec = wrap_command(&entry.command);
+                    self.start_direct_terminal_command(id, entry.command, command_vec);
+                } else {
+                    self.start_manual_terminal_session(id, entry.command);
+                }
+                self.request_redraw();
             }
             return;
         }
@@ -18112,62 +18034,63 @@ Have we met every part of this goal and is there no further work to do?"#
         let mut needs_redraw = false;
         let mut handled = false;
 
-        if let Some(overlay) = self.terminal.overlay_mut() {
-            if let Some(pending) = overlay.pending_command.as_mut() {
-                match key_event.code {
-                    KeyCode::Char(ch) => {
-                        if key_event.modifiers.intersects(
-                            KeyModifiers::CONTROL | KeyModifiers::ALT | KeyModifiers::SUPER,
-                        ) {
-                            handled = true;
-                        } else if pending.insert_char(ch) {
-                            needs_redraw = true;
-                            handled = true;
-                        } else {
-                            handled = true;
-                        }
-                    }
-                    KeyCode::Backspace => {
+        if let Some(overlay) = self.terminal.overlay_mut()
+            && let Some(pending) = overlay.pending_command.as_mut()
+        {
+            match key_event.code {
+                KeyCode::Char(ch) => {
+                    if key_event
+                        .modifiers
+                        .intersects(KeyModifiers::CONTROL | KeyModifiers::ALT | KeyModifiers::SUPER)
+                    {
                         handled = true;
-                        if pending.backspace() {
-                            needs_redraw = true;
-                        }
-                    }
-                    KeyCode::Delete => {
+                    } else if pending.insert_char(ch) {
+                        needs_redraw = true;
                         handled = true;
-                        if pending.delete() {
-                            needs_redraw = true;
-                        }
-                    }
-                    KeyCode::Left => {
-                        handled = true;
-                        if pending.move_left() {
-                            needs_redraw = true;
-                        }
-                    }
-                    KeyCode::Right => {
-                        handled = true;
-                        if pending.move_right() {
-                            needs_redraw = true;
-                        }
-                    }
-                    KeyCode::Home => {
-                        handled = true;
-                        if pending.move_home() {
-                            needs_redraw = true;
-                        }
-                    }
-                    KeyCode::End => {
-                        handled = true;
-                        if pending.move_end() {
-                            needs_redraw = true;
-                        }
-                    }
-                    KeyCode::Tab => {
+                    } else {
                         handled = true;
                     }
-                    _ => {}
                 }
+                KeyCode::Backspace => {
+                    handled = true;
+                    if pending.backspace() {
+                        needs_redraw = true;
+                    }
+                }
+                KeyCode::Delete => {
+                    handled = true;
+                    if pending.delete() {
+                        needs_redraw = true;
+                    }
+                }
+                KeyCode::Left => {
+                    handled = true;
+                    if pending.move_left() {
+                        needs_redraw = true;
+                    }
+                }
+                KeyCode::Right => {
+                    handled = true;
+                    if pending.move_right() {
+                        needs_redraw = true;
+                    }
+                }
+                KeyCode::Home => {
+                    handled = true;
+                    if pending.move_home() {
+                        needs_redraw = true;
+                    }
+                }
+                KeyCode::End => {
+                    handled = true;
+                    if pending.move_end() {
+                        needs_redraw = true;
+                    }
+                }
+                KeyCode::Tab => {
+                    handled = true;
+                }
+                _ => {}
             }
         }
 
@@ -18219,11 +18142,11 @@ Have we met every part of this goal and is there no further work to do?"#
 
     pub(crate) fn terminal_scroll_to_top(&mut self) {
         let mut updated = false;
-        if let Some(overlay) = self.terminal.overlay_mut() {
-            if overlay.scroll != 0 {
-                overlay.scroll = 0;
-                updated = true;
-            }
+        if let Some(overlay) = self.terminal.overlay_mut()
+            && overlay.scroll != 0
+        {
+            overlay.scroll = 0;
+            updated = true;
         }
         if updated {
             self.request_redraw();
@@ -18551,12 +18474,12 @@ Have we met every part of this goal and is there no further work to do?"#
             }
         };
 
-        candidate_cfg.command = resolved.clone();
+        candidate_cfg.command = resolved;
         candidate_cfg.enabled = enabled;
-        candidate_cfg.description = description.clone();
-        candidate_cfg.args_read_only = args_ro.clone();
-        candidate_cfg.args_write = args_wr.clone();
-        candidate_cfg.instructions = instr.clone();
+        candidate_cfg.description = description;
+        candidate_cfg.args_read_only = args_ro;
+        candidate_cfg.args_write = args_wr;
+        candidate_cfg.instructions = instr;
 
         let pending = PendingAgentUpdate {
             id: Uuid::new_v4(),
@@ -18573,7 +18496,7 @@ Have we met every part of this goal and is there no further work to do?"#
 
     fn start_agent_validation(&mut self, pending: PendingAgentUpdate) {
         let name = pending.cfg.name.clone();
-        self.push_background_tail(format!("🧪 Testing agent `{}` (expecting \"ok\")…", name));
+        self.push_background_tail(format!("🧪 Testing agent `{name}` (expecting \"ok\")…"));
         self.pending_agent_updates
             .retain(|_, existing| !existing.cfg.name.eq_ignore_ascii_case(&name));
         let key = pending.key();
@@ -18610,13 +18533,12 @@ Have we met every part of this goal and is there no further work to do?"#
 
         match result {
             Ok(()) => {
-                self.push_background_tail(format!("✅ Agent `{}` responded with \"ok\".", name));
+                self.push_background_tail(format!("✅ Agent `{name}` responded with \"ok\"."));
                 self.commit_agent_update(pending);
             }
             Err(err) => {
                 self.history_push_plain_state(history_cell::new_error_event(format!(
-                    "❌ Agent `{}` validation failed: {}",
-                    name, err
+                    "❌ Agent `{name}` validation failed: {err}"
                 )));
                 self.show_agent_editor_for_pending(&pending);
             }
@@ -18704,15 +18626,15 @@ Have we met every part of this goal and is there no further work to do?"#
 
     fn resolve_agent_command(name: &str, provided: Option<&str>, existing: Option<&str>) -> String {
         let spec = agent_model_spec(name);
-        if let Some(cmd) = provided {
-            if let Some(resolved) = Self::normalize_agent_command(cmd, name, spec) {
-                return resolved;
-            }
+        if let Some(cmd) = provided
+            && let Some(resolved) = Self::normalize_agent_command(cmd, name, spec)
+        {
+            return resolved;
         }
-        if let Some(cmd) = existing {
-            if let Some(resolved) = Self::normalize_agent_command(cmd, name, spec) {
-                return resolved;
-            }
+        if let Some(cmd) = existing
+            && let Some(resolved) = Self::normalize_agent_command(cmd, name, spec)
+        {
+            return resolved;
         }
         if let Some(spec) = spec {
             return spec.cli.to_string();
@@ -18830,12 +18752,12 @@ Have we met every part of this goal and is there no further work to do?"#
                 ));
                 spans.push(RtSpan::raw(" "));
                 spans.push(RtSpan::styled(
-                    format!("+{}", total_added),
+                    format!("+{total_added}"),
                     Style::default().fg(crate::colors::success()),
                 ));
                 spans.push(RtSpan::raw(" "));
                 spans.push(RtSpan::styled(
-                    format!("-{}", total_removed),
+                    format!("-{total_removed}"),
                     Style::default().fg(crate::colors::error()),
                 ));
                 RtLine::from(spans)
@@ -18851,7 +18773,7 @@ Have we met every part of this goal and is there no further work to do?"#
             let title = path
                 .file_name()
                 .and_then(|s| s.to_str())
-                .map(|s| s.to_string())
+                .map(std::string::ToString::to_string)
                 .unwrap_or_else(|| path.display().to_string());
             tabs.push((title, blocks));
         }
@@ -19102,8 +19024,7 @@ Have we met every part of this goal and is there no further work to do?"#
                 self.apply_model_selection(preset.model.to_string(), Some(effort));
             } else {
                 let message = format!(
-                    "Unknown model preset: '{}'. Use /model with no arguments to open the selector.",
-                    trimmed
+                    "Unknown model preset: '{trimmed}'. Use /model with no arguments to open the selector."
                 );
                 self.history_push_plain_state(history_cell::new_error_event(message));
             }
@@ -19223,7 +19144,7 @@ Have we met every part of this goal and is there no further work to do?"#
                 model_text_verbosity: self.config.model_text_verbosity,
                 user_instructions: self.config.user_instructions.clone(),
                 base_instructions: self.config.base_instructions.clone(),
-                approval_policy: self.config.approval_policy.clone(),
+                approval_policy: self.config.approval_policy,
                 sandbox_policy: self.config.sandbox_policy.clone(),
                 disable_response_storage: self.config.disable_response_storage,
                 notify: self.config.notify.clone(),
@@ -19343,15 +19264,15 @@ Have we met every part of this goal and is there no further work to do?"#
             self.config.review_model_reasoning_effort = self.config.model_reasoning_effort;
         }
 
-        if let Ok(home) = code_core::config::find_code_home() {
-            if let Err(err) = code_core::config::set_review_model(
+        if let Ok(home) = code_core::config::find_code_home()
+            && let Err(err) = code_core::config::set_review_model(
                 &home,
                 &self.config.review_model,
                 self.config.review_model_reasoning_effort,
                 use_chat,
-            ) {
-                tracing::warn!("Failed to persist review use-chat toggle: {err}");
-            }
+            )
+        {
+            tracing::warn!("Failed to persist review use-chat toggle: {err}");
         }
 
         let notice = if use_chat {
@@ -19379,12 +19300,11 @@ Have we met every part of this goal and is there no further work to do?"#
             self.config.auto_drive.model_reasoning_effort = self.config.model_reasoning_effort;
         }
 
-        if let Ok(home) = code_core::config::find_code_home() {
-            if let Err(err) =
+        if let Ok(home) = code_core::config::find_code_home()
+            && let Err(err) =
                 code_core::config::set_auto_drive_settings(&home, &self.config.auto_drive, use_chat)
-            {
-                tracing::warn!("Failed to persist Auto Drive use-chat toggle: {err}");
-            }
+        {
+            tracing::warn!("Failed to persist Auto Drive use-chat toggle: {err}");
         }
 
         let notice = if use_chat {
@@ -19455,15 +19375,15 @@ Have we met every part of this goal and is there no further work to do?"#
             return;
         }
 
-        if let Ok(home) = code_core::config::find_code_home() {
-            if let Err(err) = code_core::config::set_planning_model(
+        if let Ok(home) = code_core::config::find_code_home()
+            && let Err(err) = code_core::config::set_planning_model(
                 &home,
                 &self.config.planning_model,
                 self.config.planning_model_reasoning_effort,
                 false,
-            ) {
-                tracing::warn!("Failed to persist planning model: {err}");
-            }
+            )
+        {
+            tracing::warn!("Failed to persist planning model: {err}");
         }
 
         self.bottom_pane.flash_footer_notice(format!(
@@ -19516,7 +19436,7 @@ Have we met every part of this goal and is there no further work to do?"#
             model_text_verbosity: self.config.model_text_verbosity,
             user_instructions: self.config.user_instructions.clone(),
             base_instructions: self.config.base_instructions.clone(),
-            approval_policy: self.config.approval_policy.clone(),
+            approval_policy: self.config.approval_policy,
             sandbox_policy: self.config.sandbox_policy.clone(),
             disable_response_storage: self.config.disable_response_storage,
             notify: self.config.notify.clone(),
@@ -19539,7 +19459,7 @@ Have we met every part of this goal and is there no further work to do?"#
                 model_text_verbosity: self.config.model_text_verbosity,
                 user_instructions: self.config.user_instructions.clone(),
                 base_instructions: self.config.base_instructions.clone(),
-                approval_policy: self.config.approval_policy.clone(),
+                approval_policy: self.config.approval_policy,
                 sandbox_policy: self.config.sandbox_policy.clone(),
                 disable_response_storage: self.config.disable_response_storage,
                 notify: self.config.notify.clone(),
@@ -19556,15 +19476,15 @@ Have we met every part of this goal and is there no further work to do?"#
         }
         self.config.planning_use_chat_model = use_chat;
 
-        if let Ok(home) = code_core::config::find_code_home() {
-            if let Err(err) = code_core::config::set_planning_model(
+        if let Ok(home) = code_core::config::find_code_home()
+            && let Err(err) = code_core::config::set_planning_model(
                 &home,
                 &self.config.planning_model,
                 self.config.planning_model_reasoning_effort,
                 use_chat,
-            ) {
-                tracing::warn!("Failed to persist planning use-chat toggle: {err}");
-            }
+            )
+        {
+            tracing::warn!("Failed to persist planning use-chat toggle: {err}");
         }
 
         if use_chat {
@@ -19671,8 +19591,7 @@ Have we met every part of this goal and is there no further work to do?"#
                 _ => {
                     // Invalid parameter, show error and return
                     let message = format!(
-                        "Invalid reasoning level: '{}'. Use: minimal, low, medium, or high",
-                        trimmed
+                        "Invalid reasoning level: '{trimmed}'. Use: minimal, low, medium, or high"
                     );
                     self.history_push_plain_state(history_cell::new_error_event(message));
                     return;
@@ -19696,7 +19615,6 @@ Have we met every part of this goal and is there no further work to do?"#
                 false,
                 ModelSelectionTarget::Session,
             );
-            return;
         }
     }
 
@@ -19720,10 +19638,8 @@ Have we met every part of this goal and is there no further work to do?"#
                 "high" => TextVerbosity::High,
                 _ => {
                     // Invalid parameter, show error and return
-                    let message = format!(
-                        "Invalid verbosity level: '{}'. Use: low, medium, or high",
-                        trimmed
-                    );
+                    let message =
+                        format!("Invalid verbosity level: '{trimmed}'. Use: low, medium, or high");
                     self.history_push_plain_state(history_cell::new_error_event(message));
                     return;
                 }
@@ -19733,7 +19649,7 @@ Have we met every part of this goal and is there no further work to do?"#
             self.config.model_text_verbosity = new_verbosity;
 
             // Display success message
-            let message = format!("Text verbosity set to: {}", new_verbosity);
+            let message = format!("Text verbosity set to: {new_verbosity}");
             self.push_background_tail(message);
 
             // Send the update to the backend
@@ -19757,7 +19673,6 @@ Have we met every part of this goal and is there no further work to do?"#
             // No parameter specified, show interactive UI
             self.bottom_pane
                 .show_verbosity_selection(self.config.model_text_verbosity);
-            return;
         }
     }
 
@@ -19842,10 +19757,9 @@ Have we met every part of this goal and is there no further work to do?"#
         };
 
         let variation_range = variation_percent * 2; // e.g., 100 for +/- 50%
-        let variation = ((random_seed % variation_range) as i32 - variation_percent as i32)
-            * base_height as i32
-            / 100;
-        let height = ((base_height as i32 + variation).max(1) as u64).min(20);
+        let variation =
+            ((random_seed % variation_range) as i32 - variation_percent as i32) * base_height / 100;
+        let height = ((base_height + variation).max(1) as u64).min(20);
 
         // Check if any agents are completed
         let has_completed = self
@@ -19885,7 +19799,7 @@ Have we met every part of this goal and is there no further work to do?"#
             model_text_verbosity: self.config.model_text_verbosity,
             user_instructions: self.config.user_instructions.clone(),
             base_instructions: self.config.base_instructions.clone(),
-            approval_policy: self.config.approval_policy.clone(),
+            approval_policy: self.config.approval_policy,
             sandbox_policy: self.config.sandbox_policy.clone(),
             disable_response_storage: self.config.disable_response_storage,
             notify: self.config.notify.clone(),
@@ -19923,7 +19837,7 @@ Have we met every part of this goal and is there no further work to do?"#
             model_text_verbosity: new_verbosity,
             user_instructions: self.config.user_instructions.clone(),
             base_instructions: self.config.base_instructions.clone(),
-            approval_policy: self.config.approval_policy.clone(),
+            approval_policy: self.config.approval_policy,
             sandbox_policy: self.config.sandbox_policy.clone(),
             disable_response_storage: self.config.disable_response_storage,
             notify: self.config.notify.clone(),
@@ -19934,7 +19848,7 @@ Have we met every part of this goal and is there no further work to do?"#
         self.submit_op(op);
 
         // Add status message to history
-        let message = format!("Text verbosity set to: {}", new_verbosity);
+        let message = format!("Text verbosity set to: {new_verbosity}");
         self.push_background_tail(message);
     }
 
@@ -19972,16 +19886,15 @@ Have we met every part of this goal and is there no further work to do?"#
             self.settings
                 .overlay
                 .as_ref()
-                .map(|overlay| overlay.active_section()),
+                .map(settings_overlay::SettingsOverlayView::active_section),
             Some(SettingsSection::Updates)
         );
 
-        if should_refresh_updates {
-            if let Some(content) = self.build_updates_settings_content() {
-                if let Some(overlay) = self.settings.overlay.as_mut() {
-                    overlay.set_updates_content(content);
-                }
-            }
+        if should_refresh_updates
+            && let Some(content) = self.build_updates_settings_content()
+            && let Some(overlay) = self.settings.overlay.as_mut()
+        {
+            overlay.set_updates_content(content);
         }
         self.refresh_settings_overview_rows();
         self.request_redraw();
@@ -20009,7 +19922,7 @@ Have we met every part of this goal and is there no further work to do?"#
                 self.settings
                     .overlay
                     .as_ref()
-                    .map(|overlay| overlay.active_section())
+                    .map(settings_overlay::SettingsOverlayView::active_section)
             })
             .unwrap_or(SettingsSection::Model);
 
@@ -20115,7 +20028,7 @@ Have we met every part of this goal and is there no further work to do?"#
         let home = match code_core::config::find_code_home() {
             Ok(home) => home,
             Err(e) => {
-                let msg = format!("Failed to locate CODE_HOME: {}", e);
+                let msg = format!("Failed to locate CODE_HOME: {e}");
                 self.history_push_plain_state(history_cell::new_error_event(msg));
                 return None;
             }
@@ -20124,7 +20037,7 @@ Have we met every part of this goal and is there no further work to do?"#
         let (enabled, disabled) = match code_core::config::list_mcp_servers(&home) {
             Ok(result) => result,
             Err(e) => {
-                let msg = format!("Failed to read MCP config: {}", e);
+                let msg = format!("Failed to read MCP config: {e}");
                 self.history_push_plain_state(history_cell::new_error_event(msg));
                 return None;
             }
@@ -20190,10 +20103,11 @@ Have we met every part of this goal and is there no further work to do?"#
                         continue;
                     }
                     let candidate = dir.join(cmd);
-                    if let Ok(meta) = std::fs::metadata(&candidate) {
-                        if meta.is_file() && (meta.permissions().mode() & 0o111 != 0) {
-                            return true;
-                        }
+                    if let Ok(meta) = std::fs::metadata(&candidate)
+                        && meta.is_file()
+                        && (meta.permissions().mode() & 0o111 != 0)
+                    {
+                        return true;
                     }
                 }
                 false
@@ -20344,7 +20258,7 @@ Have we met every part of this goal and is there no further work to do?"#
             }
         }
         agent_model_spec(name)
-            .or_else(|| command.and_then(|cmd| agent_model_spec(cmd)))
+            .or_else(|| command.and_then(agent_model_spec))
             .map(|spec| spec.description.trim().to_string())
             .filter(|desc| !desc.is_empty())
     }
@@ -20431,7 +20345,7 @@ Have we met every part of this goal and is there no further work to do?"#
             .map(str::trim)
             .filter(|value| !value.is_empty())
         {
-            parts.push(format!("Profile: {}", profile));
+            parts.push(format!("Profile: {profile}"));
         }
         Some(parts.join(" · "))
     }
@@ -20449,17 +20363,14 @@ Have we met every part of this goal and is there no further work to do?"#
             &model_display_storage
         };
         let effort = Self::format_reasoning_effort(self.config.planning_model_reasoning_effort);
-        Some(format!("Model: {} ({})", model_display, effort))
+        Some(format!("Model: {model_display} ({effort})"))
     }
 
     fn settings_summary_theme(&self) -> Option<String> {
         let theme_label = Self::theme_display_name(self.config.tui.theme.name);
         let spinner_name = &self.config.tui.spinner.name;
         let spinner_label = spinner::spinner_label_for(spinner_name);
-        Some(format!(
-            "Theme: {} · Spinner: {}",
-            theme_label, spinner_label
-        ))
+        Some(format!("Theme: {theme_label} · Spinner: {spinner_label}"))
     }
 
     fn settings_summary_updates(&self) -> Option<String> {
@@ -20478,7 +20389,7 @@ Have we met every part of this goal and is there no further work to do?"#
             .map(str::trim)
             .filter(|value| !value.is_empty())
         {
-            parts.push(format!("Latest available: {}", latest));
+            parts.push(format!("Latest available: {latest}"));
         }
         Some(parts.join(" · "))
     }
@@ -20488,7 +20399,7 @@ Have we met every part of this goal and is there no further work to do?"#
         let commands = self.config.subagent_commands.len();
         let mut parts = vec![format!("Enabled: {}/{}", enabled, total)];
         if commands > 0 {
-            parts.push(format!("Custom commands: {}", commands));
+            parts.push(format!("Custom commands: {commands}"));
         }
         Some(parts.join(" · "))
     }
@@ -20509,9 +20420,9 @@ Have we met every part of this goal and is there no further work to do?"#
             (model_label, Some(effort))
         };
         let model_segment = if let Some(effort) = effort_text {
-            format!("Model: {} ({})", model_text, effort)
+            format!("Model: {model_text} ({effort})")
         } else {
-            format!("Model: {}", model_text)
+            format!("Model: {model_text}")
         };
         Some(format!(
             "{} · Agents: {} · Diagnostics: {} · Continue: {}",
@@ -20540,7 +20451,7 @@ Have we met every part of this goal and is there no further work to do?"#
         } else if attempts == 1 {
             "Auto Resolve: On (max 1 re-review)".to_string()
         } else {
-            format!("Auto Resolve: On (max {} re-reviews)", attempts)
+            format!("Auto Resolve: On (max {attempts} re-reviews)")
         };
         let model_part = if self.config.review_use_chat_model {
             "Model: Follow Chat Mode".to_string()
@@ -20557,14 +20468,14 @@ Have we met every part of this goal and is there no further work to do?"#
                 Self::format_reasoning_effort(self.config.review_model_reasoning_effort)
             )
         };
-        Some(format!("{} · {}", model_part, auto_label))
+        Some(format!("{model_part} · {auto_label}"))
     }
 
     fn settings_summary_limits(&self) -> Option<String> {
         if let Some(snapshot) = &self.rate_limit_snapshot {
             let primary = snapshot.primary_used_percent.clamp(0.0, 100.0).round() as i64;
             let secondary = snapshot.secondary_used_percent.clamp(0.0, 100.0).round() as i64;
-            Some(format!("Primary: {}% · Secondary: {}%", primary, secondary))
+            Some(format!("Primary: {primary}% · Secondary: {secondary}%"))
         } else if self.rate_limit_fetch_inflight {
             Some("Refreshing usage...".to_string())
         } else {
@@ -20598,7 +20509,7 @@ Have we met every part of this goal and is there no further work to do?"#
 
     fn settings_summary_prompts(&self) -> Option<String> {
         let count = self.bottom_pane.custom_prompts().len();
-        Some(format!("Prompts enabled: {}", count))
+        Some(format!("Prompts enabled: {count}"))
     }
 
     fn refresh_settings_overview_rows(&mut self) {
@@ -20702,9 +20613,9 @@ Have we met every part of this goal and is there no further work to do?"#
                     }
                 }
                 if crate::theme::custom_theme_is_dark().unwrap_or(false) {
-                    format!("Dark - {}", label)
+                    format!("Dark - {label}")
                 } else {
-                    format!("Light - {}", label)
+                    format!("Light - {label}")
                 }
             }
         }
@@ -20723,7 +20634,7 @@ Have we met every part of this goal and is there no further work to do?"#
             .settings
             .overlay
             .as_ref()
-            .map(|overlay| overlay.active_section())
+            .map(settings_overlay::SettingsOverlayView::active_section)
         {
             Some(section) => section,
             None => return false,
@@ -20808,7 +20719,7 @@ Have we met every part of this goal and is there no further work to do?"#
                 .tui
                 .theme
                 .is_dark
-                .or_else(|| crate::theme::custom_theme_is_dark())
+                .or_else(crate::theme::custom_theme_is_dark)
         } else {
             None
         };
@@ -20830,7 +20741,7 @@ Have we met every part of this goal and is there no further work to do?"#
 
         // Add confirmation message to history (replaceable system notice)
         let theme_name = Self::theme_display_name(mapped_theme);
-        let message = format!("Theme changed to {}", theme_name);
+        let message = format!("Theme changed to {theme_name}");
         let placement = self.ui_placement_for_now();
         let cell = history_cell::new_background_event(message);
         let record = HistoryDomainRecord::BackgroundEvent(cell.state().clone());
@@ -20860,7 +20771,7 @@ Have we met every part of this goal and is there no further work to do?"#
         }
 
         // Confirmation message (replaceable system notice)
-        let message = format!("Spinner changed to {}", spinner_name);
+        let message = format!("Spinner changed to {spinner_name}");
         let placement = self.ui_placement_for_now();
         let cell = history_cell::new_background_event(message);
         let record = HistoryDomainRecord::BackgroundEvent(cell.state().clone());
@@ -20954,7 +20865,7 @@ Have we met every part of this goal and is there no further work to do?"#
             model_text_verbosity: self.config.model_text_verbosity,
             user_instructions: self.config.user_instructions.clone(),
             base_instructions: self.config.base_instructions.clone(),
-            approval_policy: self.config.approval_policy.clone(),
+            approval_policy: self.config.approval_policy,
             sandbox_policy: self.config.sandbox_policy.clone(),
             disable_response_storage: self.config.disable_response_storage,
             notify: self.config.notify.clone(),
@@ -20997,7 +20908,7 @@ Have we met every part of this goal and is there no further work to do?"#
 
         // Announce in history: replace the last access-mode status, inserting early
         // in the current request so it appears above upcoming commands.
-        let msg = format!("Mode changed: {}", label);
+        let msg = format!("Mode changed: {label}");
         self.set_access_status_message(msg);
         // No footer notice: the indicator covers this; avoid duplicate texts.
 
@@ -21027,17 +20938,16 @@ Have we met every part of this goal and is there no further work to do?"#
     /// key so it appears above any imminent Exec/Tool cells in this request.
     fn set_access_status_message(&mut self, message: String) {
         let cell = crate::history_cell::new_background_event(message);
-        if let Some(idx) = self.access_status_idx {
-            if idx < self.history_cells.len()
-                && matches!(
-                    self.history_cells[idx].kind(),
-                    crate::history_cell::HistoryCellType::BackgroundEvent
-                )
-            {
-                self.history_replace_at(idx, Box::new(cell));
-                self.request_redraw();
-                return;
-            }
+        if let Some(idx) = self.access_status_idx
+            && idx < self.history_cells.len()
+            && matches!(
+                self.history_cells[idx].kind(),
+                crate::history_cell::HistoryCellType::BackgroundEvent
+            )
+        {
+            self.history_replace_at(idx, Box::new(cell));
+            self.request_redraw();
+            return;
         }
         // Insert new status near the top of this request window
         let key = self.near_time_key(None);
@@ -21223,11 +21133,9 @@ Have we met every part of this goal and is there no further work to do?"#
 
     pub(crate) fn start_auto_drive_card_celebration(&mut self, message: Option<String>) {
         let mut started = auto_drive_cards::start_celebration(self, message.clone());
-        if !started {
-            if let Some(card) = self.latest_auto_drive_card_mut() {
-                card.start_celebration(message.clone());
-                started = true;
-            }
+        if !started && let Some(card) = self.latest_auto_drive_card_mut() {
+            card.start_celebration(message.clone());
+            started = true;
         }
         if !started {
             return;
@@ -21238,12 +21146,11 @@ Have we met every part of this goal and is there no further work to do?"#
             AppEvent::StopAutoDriveCelebration,
         );
 
-        if let Some(msg) = message.clone() {
-            if !auto_drive_cards::update_completion_message(self, Some(msg.clone())) {
-                if let Some(card) = self.latest_auto_drive_card_mut() {
-                    card.set_completion_message(Some(msg));
-                }
-            }
+        if let Some(msg) = message
+            && !auto_drive_cards::update_completion_message(self, Some(msg.clone()))
+            && let Some(card) = self.latest_auto_drive_card_mut()
+        {
+            card.set_completion_message(Some(msg));
         }
 
         self.mark_history_dirty();
@@ -21252,11 +21159,9 @@ Have we met every part of this goal and is there no further work to do?"#
 
     pub(crate) fn stop_auto_drive_card_celebration(&mut self) {
         let mut stopped = auto_drive_cards::stop_celebration(self);
-        if !stopped {
-            if let Some(card) = self.latest_auto_drive_card_mut() {
-                card.stop_celebration();
-                stopped = true;
-            }
+        if !stopped && let Some(card) = self.latest_auto_drive_card_mut() {
+            card.stop_celebration();
+            stopped = true;
         }
         if stopped {
             self.mark_history_dirty();
@@ -21539,7 +21444,7 @@ Have we met every part of this goal and is there no further work to do?"#
             || self.terminal.overlay.is_some()
     }
 
-    /// Forward an `Op` directly to codex.
+    /// Forward an `Op` directly to the core engine.
     pub(crate) fn submit_op(&self, op: Op) {
         if let Err(e) = self.code_op_tx.send(op) {
             tracing::error!("failed to submit op: {e}");
@@ -21646,57 +21551,53 @@ Have we met every part of this goal and is there no further work to do?"#
                     .set_reasoning_state(self.is_reasoning_shown());
                 // Route by id when provided to avoid splitting reasoning across cells.
                 // Be defensive: the cached index may be stale after inserts/removals; validate it.
-                if let Some(ref rid) = id {
-                    if let Some(&idx) = self.reasoning_index.get(rid) {
-                        if idx < self.history_cells.len() {
-                            if let Some(reasoning_cell) = self.history_cells[idx]
-                                .as_any_mut()
-                                .downcast_mut::<history_cell::CollapsibleReasoningCell>(
-                            ) {
-                                tracing::debug!(
-                                    "Appending {} lines to Reasoning(id={})",
-                                    lines.len(),
-                                    rid
-                                );
-                                reasoning_cell.append_lines_dedup(lines);
-                                reasoning_cell.set_in_progress(true);
-                                self.invalidate_height_cache();
-                                self.autoscroll_if_near_bottom();
-                                self.request_redraw();
-                                self.refresh_reasoning_collapsed_visibility();
-                                return;
-                            }
+                if let Some(ref rid) = id
+                    && let Some(&idx) = self.reasoning_index.get(rid)
+                {
+                    if idx < self.history_cells.len()
+                        && let Some(reasoning_cell) = self.history_cells[idx]
+                            .as_any_mut()
+                            .downcast_mut::<history_cell::CollapsibleReasoningCell>(
+                        )
+                    {
+                        tracing::debug!("Appending {} lines to Reasoning(id={})", lines.len(), rid);
+                        reasoning_cell.append_lines_dedup(lines);
+                        reasoning_cell.set_in_progress(true);
+                        self.invalidate_height_cache();
+                        self.autoscroll_if_near_bottom();
+                        self.request_redraw();
+                        self.refresh_reasoning_collapsed_visibility();
+                        return;
+                    }
+                    // Cached index was stale or wrong type — try to locate by scanning.
+                    if let Some(found_idx) = self.history_cells.iter().rposition(|c| {
+                        c.as_any()
+                            .downcast_ref::<history_cell::CollapsibleReasoningCell>()
+                            .map(|rc| rc.matches_id(rid))
+                            .unwrap_or(false)
+                    }) {
+                        if let Some(reasoning_cell) = self.history_cells[found_idx]
+                            .as_any_mut()
+                            .downcast_mut::<history_cell::CollapsibleReasoningCell>(
+                        ) {
+                            // Refresh the cache with the corrected index
+                            self.reasoning_index.insert(rid.clone(), found_idx);
+                            tracing::debug!(
+                                "Recovered stale reasoning index; appending at {} for id={}",
+                                found_idx,
+                                rid
+                            );
+                            reasoning_cell.append_lines_dedup(lines);
+                            reasoning_cell.set_in_progress(true);
+                            self.invalidate_height_cache();
+                            self.autoscroll_if_near_bottom();
+                            self.request_redraw();
+                            self.refresh_reasoning_collapsed_visibility();
+                            return;
                         }
-                        // Cached index was stale or wrong type — try to locate by scanning.
-                        if let Some(found_idx) = self.history_cells.iter().rposition(|c| {
-                            c.as_any()
-                                .downcast_ref::<history_cell::CollapsibleReasoningCell>()
-                                .map(|rc| rc.matches_id(rid))
-                                .unwrap_or(false)
-                        }) {
-                            if let Some(reasoning_cell) = self.history_cells[found_idx]
-                                .as_any_mut()
-                                .downcast_mut::<history_cell::CollapsibleReasoningCell>()
-                            {
-                                // Refresh the cache with the corrected index
-                                self.reasoning_index.insert(rid.clone(), found_idx);
-                                tracing::debug!(
-                                    "Recovered stale reasoning index; appending at {} for id={}",
-                                    found_idx,
-                                    rid
-                                );
-                                reasoning_cell.append_lines_dedup(lines);
-                                reasoning_cell.set_in_progress(true);
-                                self.invalidate_height_cache();
-                                self.autoscroll_if_near_bottom();
-                                self.request_redraw();
-                                self.refresh_reasoning_collapsed_visibility();
-                                return;
-                            }
-                        } else {
-                            // No matching cell remains; drop the stale cache entry.
-                            self.reasoning_index.remove(rid);
-                        }
+                    } else {
+                        // No matching cell remains; drop the stale cache entry.
+                        self.reasoning_index.remove(rid);
                     }
                 }
 
@@ -21746,7 +21647,7 @@ Have we met every part of this goal and is there no further work to do?"#
                 let stream_identifier = explicit_id.clone().unwrap_or_else(|| {
                     self.stream
                         .current_stream_id()
-                        .map(|s| s.to_string())
+                        .map(std::string::ToString::to_string)
                         .unwrap_or_else(|| "stream-preview".to_string())
                 });
 
@@ -21760,7 +21661,7 @@ Have we met every part of this goal and is there no further work to do?"#
 
                 let mutation = self.history_state.apply_domain_event(
                     HistoryDomainEvent::UpsertAssistantStream {
-                        stream_id: stream_identifier.clone(),
+                        stream_id: stream_identifier,
                         preview_markdown,
                         delta: None,
                         metadata: None,
@@ -21838,7 +21739,7 @@ Have we met every part of this goal and is there no further work to do?"#
         let mut preview = String::new();
         for (idx, line) in lines.iter().enumerate() {
             let flat: String = line.spans.iter().map(|s| s.content.as_ref()).collect();
-            if idx == 0 && flat.trim().eq_ignore_ascii_case("codex") {
+            if idx == 0 && flat.trim().eq_ignore_ascii_case("beacon") {
                 continue;
             }
             if !preview.is_empty() {
@@ -21874,7 +21775,7 @@ Have we met every part of this goal and is there no further work to do?"#
         state: AssistantStreamState,
     ) {
         if state.id != HistoryId::ZERO {
-            self.update_cell_from_record(state.id, HistoryRecord::AssistantStream(state.clone()));
+            self.update_cell_from_record(state.id, HistoryRecord::AssistantStream(state));
             self.autoscroll_if_near_bottom();
             return;
         }
@@ -21883,11 +21784,10 @@ Have we met every part of this goal and is there no further work to do?"#
             .history_state
             .assistant_stream_state(stream_id)
             .cloned()
+            && existing.id != HistoryId::ZERO
         {
-            if existing.id != HistoryId::ZERO {
-                self.update_cell_from_record(existing.id, HistoryRecord::AssistantStream(existing));
-                self.autoscroll_if_near_bottom();
-            }
+            self.update_cell_from_record(existing.id, HistoryRecord::AssistantStream(existing));
+            self.autoscroll_if_near_bottom();
         }
     }
 
@@ -21988,13 +21888,12 @@ Have we met every part of this goal and is there no further work to do?"#
             None
         };
 
-        let state = self.history_state.finalize_assistant_stream_state(
+        self.history_state.finalize_assistant_stream_state(
             stream_id,
             source.to_string(),
             metadata.as_ref(),
             token_usage.as_ref(),
-        );
-        state
+        )
     }
 
     /// Replace the in-progress streaming assistant cell with a final markdown cell that
@@ -22063,9 +21962,7 @@ Have we met every part of this goal and is there no further work to do?"#
                             explanation = check.explanation
                         );
                         let mut conversation = self.rebuild_auto_history();
-                        if let Some(user_item) =
-                            Self::auto_drive_make_user_message(follow_up.clone())
-                        {
+                        if let Some(user_item) = Self::auto_drive_make_user_message(follow_up) {
                             conversation.push(user_item.clone());
                             self.auto_history
                                 .append_raw(std::slice::from_ref(&user_item));
@@ -22138,13 +22035,13 @@ Have we met every part of this goal and is there no further work to do?"#
                 }
             };
 
-            if let Some(last) = self.last_assigned_order {
-                if key <= last {
-                    key = Self::order_key_successor(last);
-                    if let Some(ref want) = id {
-                        self.stream_order_seq
-                            .insert((StreamKind::Answer, want.clone()), key);
-                    }
+            if let Some(last) = self.last_assigned_order
+                && key <= last
+            {
+                key = Self::order_key_successor(last);
+                if let Some(ref want) = id {
+                    self.stream_order_seq
+                        .insert((StreamKind::Answer, want.clone()), key);
                 }
             }
 
@@ -22196,44 +22093,40 @@ Have we met every part of this goal and is there no further work to do?"#
                 .filter_map(|(i, c)| {
                     c.as_any()
                         .downcast_ref::<history_cell::StreamingContentCell>()
-                        .and_then(|sc| sc.id.as_ref().map(|s| format!("{}:{}", i, s)))
+                        .and_then(|sc| sc.id.as_ref().map(|s| format!("{i}:{s}")))
                 })
                 .collect();
             tracing::debug!("history.streaming ids={}", ids.join(" | "));
         }
         // If we already finalized this id in the current turn with identical content,
         // drop this event to avoid duplicates (belt-and-suspenders against upstream repeats).
-        if let Some(ref want) = id {
-            if self
+        if let Some(ref want) = id
+            && self
                 .stream_state
                 .closed_answer_ids
                 .contains(&StreamId(want.clone()))
-            {
-                if let Some(existing_idx) = self.history_cells.iter().rposition(|c| {
-                    c.as_any()
-                        .downcast_ref::<history_cell::AssistantMarkdownCell>()
-                        .map(|amc| amc.stream_id() == Some(want.as_str()))
-                        .unwrap_or(false)
-                }) {
-                    if let Some(amc) = self.history_cells[existing_idx]
-                        .as_any()
-                        .downcast_ref::<history_cell::AssistantMarkdownCell>()
-                    {
-                        let prev = Self::normalize_text(amc.markdown());
-                        let newn = Self::normalize_text(&source);
-                        if prev == newn {
-                            tracing::debug!(
-                                "InsertFinalAnswer: dropping duplicate final for id={}",
-                                want
-                            );
-                            self.stop_spinner();
-                            return;
-                        }
-                    }
-                }
+            && let Some(existing_idx) = self.history_cells.iter().rposition(|c| {
+                c.as_any()
+                    .downcast_ref::<history_cell::AssistantMarkdownCell>()
+                    .map(|amc| amc.stream_id() == Some(want.as_str()))
+                    .unwrap_or(false)
+            })
+            && let Some(amc) = self.history_cells[existing_idx]
+                .as_any()
+                .downcast_ref::<history_cell::AssistantMarkdownCell>()
+        {
+            let prev = Self::normalize_text(amc.markdown());
+            let newn = Self::normalize_text(&source);
+            if prev == newn {
+                tracing::debug!(
+                    "InsertFinalAnswer: dropping duplicate final for id={}",
+                    want
+                );
+                self.stop_spinner();
+                return;
             }
         }
-        // Ensure a hidden 'codex' header is present
+        // Ensure a hidden 'beacon' header is present
         let has_header = lines
             .first()
             .map(|l| {
@@ -22242,7 +22135,7 @@ Have we met every part of this goal and is there no further work to do?"#
                     .map(|s| s.content.as_ref())
                     .collect::<String>()
                     .trim()
-                    .eq_ignore_ascii_case("codex")
+                    .eq_ignore_ascii_case("beacon")
             })
             .unwrap_or(false);
         if !has_header {
@@ -22291,8 +22184,8 @@ Have we met every part of this goal and is there no further work to do?"#
         // No streaming cell found. First, try to replace a finalized assistant cell
         // that was created for the same stream id (e.g., we already finalized due to
         // a lifecycle event and this InsertFinalAnswer arrived slightly later).
-        if let Some(ref want) = id {
-            if let Some(idx) = self.history_cells.iter().rposition(|c| {
+        if let Some(ref want) = id
+            && let Some(idx) = self.history_cells.iter().rposition(|c| {
                 if let Some(amc) = c
                     .as_any()
                     .downcast_ref::<history_cell::AssistantMarkdownCell>()
@@ -22301,23 +22194,23 @@ Have we met every part of this goal and is there no further work to do?"#
                 } else {
                     false
                 }
-            }) {
-                tracing::debug!(
-                    "final-answer: replacing existing AssistantMarkdownCell at idx={} by id match",
-                    idx
-                );
-                let state = self.finalize_answer_stream_state(id.as_deref(), &final_source);
-                let cell = history_cell::AssistantMarkdownCell::from_state(state, &self.config);
-                self.history_replace_at(idx, Box::new(cell));
-                self.stream_state
-                    .closed_answer_ids
-                    .insert(StreamId(want.clone()));
-                self.autoscroll_if_near_bottom();
-                // Final cell replaced in-place; advance Auto Drive now.
-                self.auto_on_assistant_final();
-                self.stop_spinner();
-                return;
-            }
+            })
+        {
+            tracing::debug!(
+                "final-answer: replacing existing AssistantMarkdownCell at idx={} by id match",
+                idx
+            );
+            let state = self.finalize_answer_stream_state(id.as_deref(), &final_source);
+            let cell = history_cell::AssistantMarkdownCell::from_state(state, &self.config);
+            self.history_replace_at(idx, Box::new(cell));
+            self.stream_state
+                .closed_answer_ids
+                .insert(StreamId(want.clone()));
+            self.autoscroll_if_near_bottom();
+            // Final cell replaced in-place; advance Auto Drive now.
+            self.auto_on_assistant_final();
+            self.stop_spinner();
+            return;
         }
 
         // Otherwise, if a finalized assistant cell exists at the tail,
@@ -22383,16 +22276,16 @@ Have we met every part of this goal and is there no further work to do?"#
                 self.next_internal_key()
             }
         };
-        if let Some(last) = self.last_assigned_order {
-            if key <= last {
-                // Background notices anchor themselves at out = i32::MAX. If a final answer arrives
-                // after those notices we still want it to appear at the bottom, so bump the key
-                // just past the most-recently assigned slot.
-                key = Self::order_key_successor(last);
-                if let Some(ref want) = id {
-                    self.stream_order_seq
-                        .insert((StreamKind::Answer, want.clone()), key);
-                }
+        if let Some(last) = self.last_assigned_order
+            && key <= last
+        {
+            // Background notices anchor themselves at out = i32::MAX. If a final answer arrives
+            // after those notices we still want it to appear at the bottom, so bump the key
+            // just past the most-recently assigned slot.
+            key = Self::order_key_successor(last);
+            if let Some(ref want) = id {
+                self.stream_order_seq
+                    .insert((StreamKind::Answer, want.clone()), key);
             }
         }
         tracing::info!(
@@ -22426,12 +22319,9 @@ Have we met every part of this goal and is there no further work to do?"#
         let mut saw_blank = false;
         for line in s.lines() {
             // Replace common Unicode bullets with ASCII to stabilize equality checks
-            let line = line
-                .replace('\u{2022}', "-") // •
-                .replace('\u{25E6}', "-") // ◦
-                .replace('\u{2219}', "-"); // ∙
+            let line = line.replace(['\u{2022}', '\u{25E6}', '\u{2219}'], "-"); // ∙
             let trimmed = line.trim_end();
-            if trimmed.chars().all(|c| c.is_whitespace()) {
+            if trimmed.chars().all(char::is_whitespace) {
                 if !saw_blank {
                     out.push(String::new());
                 }
@@ -22442,7 +22332,7 @@ Have we met every part of this goal and is there no further work to do?"#
             }
         }
         // 3) Remove trailing blank lines
-        while out.last().is_some_and(|l| l.is_empty()) {
+        while out.last().is_some_and(std::string::String::is_empty) {
             out.pop();
         }
         out.join("\n")
@@ -22576,13 +22466,13 @@ Have we met every part of this goal and is there no further work to do?"#
                 }
                 self.launch_chrome_with_profile(launch_port);
                 // Connect to Chrome after launching
-                self.connect_to_chrome_after_launch(launch_port, ticket.clone());
+                self.connect_to_chrome_after_launch(launch_port, ticket);
             }
             ChromeLaunchOption::UseTempProfile => {
                 // Launch with temporary profile
                 self.launch_chrome_with_temp_profile(launch_port);
                 // Connect to Chrome after launching
-                self.connect_to_chrome_after_launch(launch_port, ticket.clone());
+                self.connect_to_chrome_after_launch(launch_port, ticket);
             }
             ChromeLaunchOption::UseInternalBrowser => {
                 // Redirect to internal browser command
@@ -22603,7 +22493,7 @@ Have we met every part of this goal and is there no further work to do?"#
             let mut cmd = std::process::Command::new(
                 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
             );
-            cmd.arg(format!("--remote-debugging-port={}", port))
+            cmd.arg(format!("--remote-debugging-port={port}"))
                 .arg("--no-first-run")
                 .arg("--no-default-browser-check")
                 .arg("--disable-component-extensions-with-background-pages")
@@ -22615,7 +22505,7 @@ Have we met every part of this goal and is there no further work to do?"#
                 .arg("--disable-background-timer-throttling")
                 .arg("--enable-logging")
                 .arg("--log-level=1")
-                .arg(format!("--log-file={}", log_path))
+                .arg(format!("--log-file={log_path}"))
                 .stdout(Stdio::null())
                 .stderr(Stdio::null())
                 .stdin(Stdio::null());
@@ -22788,7 +22678,6 @@ Have we met every part of this goal and is there no further work to do?"#
                 );
                 // Offer launch options popup to help recover quickly
                 app_event_tx.send(AppEvent::ShowChromeOptions(port));
-                return;
             }
             Ok(result) => match result {
                 Ok(_) => {
@@ -22799,18 +22688,16 @@ Have we met every part of this goal and is there no further work to do?"#
                         code_browser::global::get_last_connection().await;
                     // Prefer explicit port; otherwise try to parse from ws URL
                     let mut port_num: Option<u16> = detected_port;
-                    if port_num.is_none() {
-                        if let Some(ws) = &detected_ws {
-                            // crude parse: ws://host:port/...
-                            if let Some(after_scheme) = ws.split("//").nth(1) {
-                                if let Some(hostport) = after_scheme.split('/').next() {
-                                    if let Some(pstr) = hostport.split(':').nth(1) {
-                                        if let Ok(p) = pstr.parse::<u16>() {
-                                            port_num = Some(p);
-                                        }
-                                    }
-                                }
-                            }
+                    if port_num.is_none()
+                        && let Some(ws) = &detected_ws
+                    {
+                        // crude parse: ws://host:port/...
+                        if let Some(after_scheme) = ws.split("//").nth(1)
+                            && let Some(hostport) = after_scheme.split('/').next()
+                            && let Some(pstr) = hostport.split(':').nth(1)
+                            && let Ok(p) = pstr.parse::<u16>()
+                        {
+                            port_num = Some(p);
                         }
                     }
 
@@ -22819,11 +22706,11 @@ Have we met every part of this goal and is there no further work to do?"#
 
                     let success_msg = match (port_num, current_url) {
                         (Some(p), Some(url)) if !url.is_empty() => {
-                            format!("✅ Connected to Chrome via CDP (port {}) to {}", p, url)
+                            format!("✅ Connected to Chrome via CDP (port {p}) to {url}")
                         }
-                        (Some(p), _) => format!("✅ Connected to Chrome via CDP (port {})", p),
+                        (Some(p), _) => format!("✅ Connected to Chrome via CDP (port {p})"),
                         (None, Some(url)) if !url.is_empty() => {
-                            format!("✅ Connected to Chrome via CDP to {}", url)
+                            format!("✅ Connected to Chrome via CDP to {url}")
                         }
                         _ => "✅ Connected to Chrome via CDP".to_string(),
                     };
@@ -22846,7 +22733,7 @@ Have we met every part of this goal and is there no further work to do?"#
                             tracing::info!("CDP Navigation callback triggered for URL: {}", url);
                             let latest_screenshot_inner = latest_screenshot_callback.clone();
                             let app_event_tx_inner = app_event_tx_callback.clone();
-                            let url_inner = url.clone();
+                            let url_inner = url;
 
                             tokio::spawn(async move {
                                 tokio::time::sleep(tokio::time::Duration::from_millis(250)).await;
@@ -22876,8 +22763,8 @@ Have we met every part of this goal and is there no further work to do?"#
                                                 use code_core::protocol::{
                                                     BrowserScreenshotUpdateEvent, Event, EventMsg,
                                                 };
-                                                let _ = app_event_tx_inner.send(
-                                                    AppEvent::CodexEvent(Event {
+                                                app_event_tx_inner.send(AppEvent::CodexEvent(
+                                                    Event {
                                                         id: uuid::Uuid::new_v4().to_string(),
                                                         event_seq: 0,
                                                         msg: EventMsg::BrowserScreenshotUpdate(
@@ -22887,8 +22774,8 @@ Have we met every part of this goal and is there no further work to do?"#
                                                             },
                                                         ),
                                                         order: None,
-                                                    }),
-                                                );
+                                                    },
+                                                ));
                                                 break;
                                             }
                                         }
@@ -22946,20 +22833,19 @@ Have we met every part of this goal and is there no further work to do?"#
                                             use code_core::protocol::BrowserScreenshotUpdateEvent;
                                             use code_core::protocol::Event;
                                             use code_core::protocol::EventMsg;
-                                            let _ =
-                                                app_event_tx_bg.send(AppEvent::CodexEvent(Event {
-                                                    id: uuid::Uuid::new_v4().to_string(),
-                                                    event_seq: 0,
-                                                    msg: EventMsg::BrowserScreenshotUpdate(
-                                                        BrowserScreenshotUpdateEvent {
-                                                            screenshot_path: first_path.clone(),
-                                                            url: url.unwrap_or_else(|| {
-                                                                "Chrome".to_string()
-                                                            }),
-                                                        },
-                                                    ),
-                                                    order: None,
-                                                }));
+                                            app_event_tx_bg.send(AppEvent::CodexEvent(Event {
+                                                id: uuid::Uuid::new_v4().to_string(),
+                                                event_seq: 0,
+                                                msg: EventMsg::BrowserScreenshotUpdate(
+                                                    BrowserScreenshotUpdateEvent {
+                                                        screenshot_path: first_path.clone(),
+                                                        url: url.unwrap_or_else(|| {
+                                                            "Chrome".to_string()
+                                                        }),
+                                                    },
+                                                ),
+                                                order: None,
+                                            }));
                                             break;
                                         }
                                     }
@@ -22981,7 +22867,7 @@ Have we met every part of this goal and is there no further work to do?"#
                     }
                 }
                 Err(e) => {
-                    let err_msg = format!("{}", e);
+                    let err_msg = format!("{e}");
                     // If we attempted via a cached WS, clear it and fallback to port-based discovery once.
                     if attempted_via_cached_ws {
                         tracing::warn!(
@@ -23018,32 +22904,27 @@ Have we met every part of this goal and is there no further work to do?"#
                                 let (detected_port, detected_ws) =
                                     code_browser::global::get_last_connection().await;
                                 let mut port_num: Option<u16> = detected_port;
-                                if port_num.is_none() {
-                                    if let Some(ws) = &detected_ws {
-                                        if let Some(after_scheme) = ws.split("//").nth(1) {
-                                            if let Some(hostport) = after_scheme.split('/').next() {
-                                                if let Some(pstr) = hostport.split(':').nth(1) {
-                                                    if let Ok(p) = pstr.parse::<u16>() {
-                                                        port_num = Some(p);
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
+                                if port_num.is_none()
+                                    && let Some(ws) = &detected_ws
+                                    && let Some(after_scheme) = ws.split("//").nth(1)
+                                    && let Some(hostport) = after_scheme.split('/').next()
+                                    && let Some(pstr) = hostport.split(':').nth(1)
+                                    && let Ok(p) = pstr.parse::<u16>()
+                                {
+                                    port_num = Some(p);
                                 }
                                 let current_url = browser_manager.get_current_url().await;
                                 let success_msg = match (port_num, current_url) {
                                     (Some(p), Some(url)) if !url.is_empty() => {
                                         format!(
-                                            "✅ Connected to Chrome via CDP (port {}) to {}",
-                                            p, url
+                                            "✅ Connected to Chrome via CDP (port {p}) to {url}"
                                         )
                                     }
                                     (Some(p), _) => {
-                                        format!("✅ Connected to Chrome via CDP (port {})", p)
+                                        format!("✅ Connected to Chrome via CDP (port {p})")
                                     }
                                     (None, Some(url)) if !url.is_empty() => {
-                                        format!("✅ Connected to Chrome via CDP to {}", url)
+                                        format!("✅ Connected to Chrome via CDP to {url}")
                                     }
                                     _ => "✅ Connected to Chrome via CDP".to_string(),
                                 };
@@ -23064,7 +22945,7 @@ Have we met every part of this goal and is there no further work to do?"#
                                         tracing::info!("CDP Navigation callback triggered for URL: {}", url);
                                         let latest_screenshot_inner = latest_screenshot_callback.clone();
                                         let app_event_tx_inner = app_event_tx_callback.clone();
-                                        let url_inner = url.clone();
+                                        let url_inner = url;
                                         tokio::spawn(async move {
                                             tokio::time::sleep(tokio::time::Duration::from_millis(250)).await;
                                             let browser_manager_inner = ChatWidget::get_browser_manager().await;
@@ -23080,7 +22961,7 @@ Have we met every part of this goal and is there no further work to do?"#
                                                                 *latest = Some((first_path.clone(), url_inner.clone()));
                                                             }
                                                             use code_core::protocol::{BrowserScreenshotUpdateEvent, Event, EventMsg};
-                                                            let _ = app_event_tx_inner.send(AppEvent::CodexEvent(Event {
+                                                            app_event_tx_inner.send(AppEvent::CodexEvent(Event {
                                                                 id: uuid::Uuid::new_v4().to_string(),
                                                                 event_seq: 0,
                                                                 msg: EventMsg::BrowserScreenshotUpdate(BrowserScreenshotUpdateEvent {
@@ -23144,13 +23025,19 @@ Have we met every part of this goal and is there no further work to do?"#
                                                         use code_core::protocol::BrowserScreenshotUpdateEvent;
                                                         use code_core::protocol::Event;
                                                         use code_core::protocol::EventMsg;
-                                                        let _ = app_event_tx_bg.send(AppEvent::CodexEvent(Event {
+                                                        app_event_tx_bg
+                                                            .send(AppEvent::CodexEvent(Event {
                                                             id: uuid::Uuid::new_v4().to_string(),
                                                             event_seq: 0,
-                                                            msg: EventMsg::BrowserScreenshotUpdate(BrowserScreenshotUpdateEvent {
-                                                                screenshot_path: first_path.clone(),
-                                                                url: url.unwrap_or_else(|| "Chrome".to_string()),
-                                                            }),
+                                                            msg: EventMsg::BrowserScreenshotUpdate(
+                                                                BrowserScreenshotUpdateEvent {
+                                                                    screenshot_path: first_path
+                                                                        .clone(),
+                                                                    url: url.unwrap_or_else(|| {
+                                                                        "Chrome".to_string()
+                                                                    }),
+                                                                },
+                                                            ),
                                                             order: None,
                                                         }));
                                                         break;
@@ -23174,20 +23061,17 @@ Have we met every part of this goal and is there no further work to do?"#
                                         }
                                     });
                                 }
-                                return;
                             }
                             Ok(Err(e2)) => {
                                 tracing::error!("[cdp] Fallback connect failed: {}", e2);
                                 app_event_tx.send_background_event_with_ticket(
                                     &ticket,
                                     format!(
-                                        "❌ Failed to connect to Chrome after WS fallback: {} (original: {})",
-                                        e2, err_msg
+                                        "❌ Failed to connect to Chrome after WS fallback: {e2} (original: {err_msg})"
                                     ),
                                 );
                                 // Also surface the Chrome launch options UI to assist the user
                                 app_event_tx.send(AppEvent::ShowChromeOptions(port));
-                                return;
                             }
                             Err(_) => {
                                 tracing::error!(
@@ -23203,7 +23087,6 @@ Have we met every part of this goal and is there no further work to do?"#
                                 );
                                 // Also surface the Chrome launch options UI to assist the user
                                 app_event_tx.send(AppEvent::ShowChromeOptions(port));
-                                return;
                             }
                         }
                     } else {
@@ -23213,11 +23096,10 @@ Have we met every part of this goal and is there no further work to do?"#
                         );
                         app_event_tx.send_background_event_with_ticket(
                             &ticket,
-                            format!("❌ Failed to connect to Chrome: {}", err_msg),
+                            format!("❌ Failed to connect to Chrome: {err_msg}"),
                         );
                         // Offer launch options popup to help recover quickly
                         app_event_tx.send(AppEvent::ShowChromeOptions(port));
-                        return;
                     }
                 }
             },
@@ -23228,7 +23110,7 @@ Have we met every part of this goal and is there no further work to do?"#
         use std::process::Stdio;
 
         let temp_dir = std::env::temp_dir();
-        let profile_dir = temp_dir.join(format!("code-chrome-temp-{}", port));
+        let profile_dir = temp_dir.join(format!("code-chrome-temp-{port}"));
 
         #[cfg(target_os = "macos")]
         {
@@ -23236,7 +23118,7 @@ Have we met every part of this goal and is there no further work to do?"#
             let mut cmd = std::process::Command::new(
                 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
             );
-            cmd.arg(format!("--remote-debugging-port={}", port))
+            cmd.arg(format!("--remote-debugging-port={port}"))
                 .arg(format!("--user-data-dir={}", profile_dir.display()))
                 .arg("--no-first-run")
                 .arg("--no-default-browser-check")
@@ -23249,7 +23131,7 @@ Have we met every part of this goal and is there no further work to do?"#
                 .arg("--disable-background-timer-throttling")
                 .arg("--enable-logging")
                 .arg("--log-level=1")
-                .arg(format!("--log-file={}", log_path))
+                .arg(format!("--log-file={log_path}"))
                 .stdout(Stdio::null())
                 .stderr(Stdio::null())
                 .stdin(Stdio::null());
@@ -23342,7 +23224,7 @@ Have we met every part of this goal and is there no further work to do?"#
             return;
         }
 
-        let sanitized = raw_error.replace('\n', " ").replace('\r', " ");
+        let sanitized = raw_error.replace(['\n', '\r'], " ");
         let trimmed = sanitized.trim();
         let truncated = if trimmed.len() > 220 {
             let mut shortened = trimmed.chars().take(220).collect::<String>();
@@ -23358,16 +23240,12 @@ Have we met every part of this goal and is there no further work to do?"#
             truncated
         );
 
-        let visible_message = format!(
-            "🤖 Handing /browser failure ({}) to Code. Error: {}",
-            failure_context, truncated
-        );
+        let visible_message =
+            format!("🤖 Handing /browser failure ({failure_context}) to Code. Error: {truncated}");
         app_event_tx.send_background_event_with_ticket(&ticket, visible_message);
 
         let command_text = format!(
-            "/code The /browser command failed to {context}. Recent error: {error}. Please diagnose and fix the environment (for example, install or configure Chrome) so /browser works in this workspace.",
-            context = failure_context,
-            error = truncated
+            "/code The /browser command failed to {failure_context}. Recent error: {truncated}. Please diagnose and fix the environment (for example, install or configure Chrome) so /browser works in this workspace."
         );
         app_event_tx.send(AppEvent::DispatchCommand(SlashCommand::Code, command_text));
     }
@@ -23390,7 +23268,7 @@ Have we met every part of this goal and is there no further work to do?"#
             // Toggle asynchronously: if internal browser is active, disable it; otherwise enable and open about:blank
             let app_event_tx = self.app_event_tx.clone();
             let browser_autofix_flag = self.browser_autofix_requested.clone();
-            let ticket = browser_ticket.clone();
+            let ticket = browser_ticket;
             tokio::spawn(async move {
                 let browser_manager = ChatWidget::get_browser_manager().await;
                 // Determine if internal browser is currently active
@@ -23433,7 +23311,7 @@ Have we met every part of this goal and is there no further work to do?"#
                         );
                         app_event_tx.send_background_event_with_ticket(
                             &ticket,
-                            format!("❌ Failed to start internal browser: {}", error_text),
+                            format!("❌ Failed to start internal browser: {error_text}"),
                         );
                         ChatWidget::schedule_browser_autofix(
                             app_event_tx.clone(),
@@ -23478,9 +23356,9 @@ Have we met every part of this goal and is there no further work to do?"#
 
                 // Ensure URL has protocol
                 let full_url = if !url.contains("://") {
-                    format!("https://{}", url)
+                    format!("https://{url}")
                 } else {
-                    url.clone()
+                    url
                 };
 
                 // We are navigating with the internal browser
@@ -23494,7 +23372,7 @@ Have we met every part of this goal and is there no further work to do?"#
                 let ticket = browser_ticket.clone();
 
                 // Add status message
-                let status_msg = format!("🌐 Opening internal browser: {}", full_url);
+                let status_msg = format!("🌐 Opening internal browser: {full_url}");
                 self.push_background_tail(status_msg);
                 // Also reflect browsing activity in the input border
                 self.bottom_pane
@@ -23520,7 +23398,7 @@ Have we met every part of this goal and is there no further work to do?"#
                         tracing::error!("Failed to start TUI browser manager: {}", error_text);
                         app_event_tx.send_background_event_with_ticket(
                             &ticket,
-                            format!("❌ Failed to start internal browser: {}", error_text),
+                            format!("❌ Failed to start internal browser: {error_text}"),
                         );
                         ChatWidget::schedule_browser_autofix(
                             app_event_tx.clone(),
@@ -23544,7 +23422,7 @@ Have we met every part of this goal and is there no further work to do?"#
                                 tracing::info!("Navigation callback triggered for URL: {}", url);
                                 let latest_screenshot_inner = latest_screenshot_callback.clone();
                                 let app_event_tx_inner = app_event_tx_callback.clone();
-                                let url_inner = url.clone();
+                                let url_inner = url;
 
                                 tokio::spawn(async move {
                                     // Get browser manager in the inner async block
@@ -23574,8 +23452,8 @@ Have we met every part of this goal and is there no further work to do?"#
                                                 use code_core::protocol::{
                                                     BrowserScreenshotUpdateEvent, EventMsg,
                                                 };
-                                                let _ = app_event_tx_inner.send(
-                                                    AppEvent::CodexEvent(Event {
+                                                app_event_tx_inner.send(AppEvent::CodexEvent(
+                                                    Event {
                                                         id: uuid::Uuid::new_v4().to_string(),
                                                         event_seq: 0,
                                                         msg: EventMsg::BrowserScreenshotUpdate(
@@ -23585,8 +23463,8 @@ Have we met every part of this goal and is there no further work to do?"#
                                                             },
                                                         ),
                                                         order: None,
-                                                    }),
-                                                );
+                                                    },
+                                                ));
                                             }
                                         }
                                         Err(e) => {
@@ -23614,7 +23492,7 @@ Have we met every part of this goal and is there no further work to do?"#
                             tracing::info!("Global manager navigation callback triggered for URL: {}", url);
                             let latest_screenshot_inner = latest_screenshot_global.clone();
                             let app_event_tx_inner = app_event_tx_global.clone();
-                            let url_inner = url.clone();
+                            let url_inner = url;
 
                             tokio::spawn(async move {
                                 // Wait a moment for the navigation to complete
@@ -23635,7 +23513,7 @@ Have we met every part of this goal and is there no further work to do?"#
 
                                                 // Send update event
                                                 use code_core::protocol::{BrowserScreenshotUpdateEvent, EventMsg};
-                                                let _ = app_event_tx_inner.send(AppEvent::CodexEvent(Event { id: uuid::Uuid::new_v4().to_string(), event_seq: 0, msg: EventMsg::BrowserScreenshotUpdate(BrowserScreenshotUpdateEvent {
+                                                app_event_tx_inner.send(AppEvent::CodexEvent(Event { id: uuid::Uuid::new_v4().to_string(), event_seq: 0, msg: EventMsg::BrowserScreenshotUpdate(BrowserScreenshotUpdateEvent {
                                                         screenshot_path: first_path.clone(),
                                                         url: url_inner,
                                                     }), order: None }));
@@ -23686,7 +23564,7 @@ Have we met every part of this goal and is there no further work to do?"#
                                         // Send update event
                                         use code_core::protocol::BrowserScreenshotUpdateEvent;
                                         use code_core::protocol::EventMsg;
-                                        let _ = app_event_tx.send(AppEvent::CodexEvent(Event {
+                                        app_event_tx.send(AppEvent::CodexEvent(Event {
                                             id: uuid::Uuid::new_v4().to_string(),
                                             event_seq: 0,
                                             msg: EventMsg::BrowserScreenshotUpdate(
@@ -23710,7 +23588,7 @@ Have we met every part of this goal and is there no further work to do?"#
                     }
                 });
 
-                format!("Browser mode enabled: {}\n", full_url)
+                format!("Browser mode enabled: {full_url}\n")
             } else {
                 // It's a subcommand
                 match first_arg {
@@ -23789,10 +23667,7 @@ Have we met every part of this goal and is there no further work to do?"#
                                                     ChatWidget::get_browser_manager().await;
                                                 browser_manager.set_viewport_sync(width, height);
                                             });
-                                            format!(
-                                                "Browser viewport updated: {}x{}",
-                                                width, height
-                                            )
+                                            format!("Browser viewport updated: {width}x{height}")
                                         } else {
                                             "Invalid viewport format. Use: /browser config viewport 1920x1080".to_string()
                                         }
@@ -23807,14 +23682,13 @@ Have we met every part of this goal and is there no further work to do?"#
                                                 ChatWidget::get_browser_manager().await;
                                             browser_manager.set_segments_max_sync(max);
                                         });
-                                        format!("Browser segments_max updated: {}", max)
+                                        format!("Browser segments_max updated: {max}")
                                     } else {
                                         "Invalid segments_max value. Use a number.".to_string()
                                     }
                                 }
                                 _ => format!(
-                                    "Unknown config key: {}. Available: viewport, segments_max",
-                                    key
+                                    "Unknown config key: {key}. Available: viewport, segments_max"
                                 ),
                             }
                         } else {
@@ -23823,8 +23697,7 @@ Have we met every part of this goal and is there no further work to do?"#
                     }
                     _ => {
                         format!(
-                            "Unknown browser command: '{}'\nUsage: /browser <url> | off | status | fullpage | config",
-                            first_arg
+                            "Unknown browser command: '{first_arg}'\nUsage: /browser <url> | off | status | fullpage | config"
                         )
                     }
                 }
@@ -24086,8 +23959,7 @@ Have we met every part of this goal and is there no further work to do?"#
                     "on" | "enable" => self.apply_validation_group_toggle(group, true),
                     "off" | "disable" => self.apply_validation_group_toggle(group, false),
                     _ => self.push_background_tail(format!(
-                        "⚠️ Unknown validation command '{}'. Use on|off.",
-                        state
+                        "⚠️ Unknown validation command '{state}'. Use on|off."
                     )),
                 }
             }
@@ -24100,8 +23972,7 @@ Have we met every part of this goal and is there no further work to do?"#
                     "on" | "enable" => self.apply_validation_tool_toggle(tool, true),
                     "off" | "disable" => self.apply_validation_tool_toggle(tool, false),
                     _ => self.push_background_tail(format!(
-                        "⚠️ Unknown validation command '{}'. Use on|off.",
-                        state
+                        "⚠️ Unknown validation command '{state}'. Use on|off."
                     )),
                 }
             }
@@ -24121,7 +23992,7 @@ Have we met every part of this goal and is there no further work to do?"#
                     format!("{} {}", command, args.join(" "))
                 }
             }
-            McpServerTransportConfig::StreamableHttp { url, .. } => format!("HTTP {}", url),
+            McpServerTransportConfig::StreamableHttp { url, .. } => format!("HTTP {url}"),
         }
     }
 
@@ -24164,19 +24035,19 @@ Have we met every part of this goal and is there no further work to do?"#
                         self.push_background_tail(lines);
                     }
                     Err(e) => {
-                        let msg = format!("Failed to read MCP config: {}", e);
+                        let msg = format!("Failed to read MCP config: {e}");
                         self.history_push_plain_state(history_cell::new_error_event(msg));
                     }
                 },
                 Err(e) => {
-                    let msg = format!("Failed to locate CODEX_HOME: {}", e);
+                    let msg = format!("Failed to locate CODEX_HOME: {e}");
                     self.history_push_plain_state(history_cell::new_error_event(msg));
                 }
             },
             "on" | "off" => {
                 let name = parts.next().unwrap_or("");
                 if name.is_empty() {
-                    let msg = format!("Usage: /mcp {} <name>", sub);
+                    let msg = format!("Usage: /mcp {sub} <name>");
                     self.history_push_plain_state(history_cell::new_error_event(msg));
                     return;
                 }
@@ -24193,14 +24064,10 @@ Have we met every part of this goal and is there no further work to do?"#
                                         // If enabling, try to load its config from disk and add to in-memory map.
                                         if let Ok((enabled, _)) =
                                             code_core::config::list_mcp_servers(&home)
-                                        {
-                                            if let Some((_, cfg)) =
+                                            && let Some((_, cfg)) =
                                                 enabled.into_iter().find(|(n, _)| n == name)
-                                            {
-                                                self.config
-                                                    .mcp_servers
-                                                    .insert(name.to_string(), cfg);
-                                            }
+                                        {
+                                            self.config.mcp_servers.insert(name.to_string(), cfg);
                                         }
                                     }
                                     let msg = format!(
@@ -24219,13 +24086,13 @@ Have we met every part of this goal and is there no further work to do?"#
                                 }
                             }
                             Err(e) => {
-                                let msg = format!("Failed to update MCP server '{}': {}", name, e);
+                                let msg = format!("Failed to update MCP server '{name}': {e}");
                                 self.history_push_plain_state(history_cell::new_error_event(msg));
                             }
                         }
                     }
                     Err(e) => {
-                        let msg = format!("Failed to locate CODEX_HOME: {}", e);
+                        let msg = format!("Failed to locate CODEX_HOME: {e}");
                         self.history_push_plain_state(history_cell::new_error_event(msg));
                     }
                 }
@@ -24234,7 +24101,8 @@ Have we met every part of this goal and is there no further work to do?"#
                 // Support two forms:
                 //   1) /mcp add <name> <command> [args…] [ENV=VAL…]
                 //   2) /mcp add <command> [args…] [ENV=VAL…]   (name derived)
-                let tail_tokens: Vec<String> = parts.map(|s| s.to_string()).collect();
+                let tail_tokens: Vec<String> =
+                    parts.map(std::string::ToString::to_string).collect();
                 if tail_tokens.is_empty() {
                     let msg = "Usage: /mcp add <name> <command> [args…] [ENV=VAL…]\n       or: /mcp add <command> [args…] [ENV=VAL…]".to_string();
                     self.history_push_plain_state(history_cell::new_error_event(msg));
@@ -24302,7 +24170,7 @@ Have we met every part of this goal and is there no further work to do?"#
                     // If the presumed command looks like a flag, assume name was omitted.
                     if second.starts_with('-') {
                         let cmd = first.clone();
-                        let name = derive_server_name(&cmd, &tail_tokens[1..].to_vec());
+                        let name = derive_server_name(&cmd, &tail_tokens[1..]);
                         (name, cmd, tail_tokens[1..].to_vec())
                     } else {
                         (first.clone(), second.clone(), tail_tokens[2..].to_vec())
@@ -24336,7 +24204,7 @@ Have we met every part of this goal and is there no further work to do?"#
                 match find_code_home() {
                     Ok(home) => {
                         let transport = code_core::config_types::McpServerTransportConfig::Stdio {
-                            command: command.to_string(),
+                            command: command,
                             args: args.clone(),
                             env: if env.is_empty() {
                                 None
@@ -24354,25 +24222,24 @@ Have we met every part of this goal and is there no further work to do?"#
                                 let summary = Self::format_mcp_summary(&cfg);
                                 // Update in-memory config for future sessions
                                 self.config.mcp_servers.insert(name.clone(), cfg);
-                                let msg = format!("Added MCP server '{}': {}", name, summary);
+                                let msg = format!("Added MCP server '{name}': {summary}");
                                 self.push_background_tail(msg);
                             }
                             Err(e) => {
-                                let msg = format!("Failed to add MCP server '{}': {}", name, e);
+                                let msg = format!("Failed to add MCP server '{name}': {e}");
                                 self.history_push_plain_state(history_cell::new_error_event(msg));
                             }
                         }
                     }
                     Err(e) => {
-                        let msg = format!("Failed to locate CODEX_HOME: {}", e);
+                        let msg = format!("Failed to locate CODEX_HOME: {e}");
                         self.history_push_plain_state(history_cell::new_error_event(msg));
                     }
                 }
             }
             _ => {
                 let msg = format!(
-                    "Unknown MCP command: '{}'\nUsage:\n  /mcp status\n  /mcp on <name>\n  /mcp off <name>\n  /mcp add <name> <command> [args…] [ENV=VAL…]",
-                    sub
+                    "Unknown MCP command: '{sub}'\nUsage:\n  /mcp status\n  /mcp on <name>\n  /mcp off <name>\n  /mcp add <name> <command> [args…] [ENV=VAL…]"
                 );
                 self.history_push_plain_state(history_cell::new_error_event(msg));
             }
@@ -24414,7 +24281,7 @@ Have we met every part of this goal and is there no further work to do?"#
                 tracing::error!("Failed to start internal browser: {}", e);
                 app_event_tx.send_background_event_with_ticket(
                     &ticket,
-                    format!("❌ Failed to start internal browser: {}", e),
+                    format!("❌ Failed to start internal browser: {e}"),
                 );
                 return;
             }
@@ -24448,7 +24315,7 @@ Have we met every part of this goal and is there no further work to do?"#
                         }
                         use code_core::protocol::BrowserScreenshotUpdateEvent;
                         use code_core::protocol::EventMsg;
-                        let _ = app_event_tx.send(AppEvent::CodexEvent(Event {
+                        app_event_tx.send(AppEvent::CodexEvent(Event {
                             id: uuid::Uuid::new_v4().to_string(),
                             event_seq: 0,
                             msg: EventMsg::BrowserScreenshotUpdate(BrowserScreenshotUpdateEvent {
@@ -24487,10 +24354,8 @@ Have we met every part of this goal and is there no further work to do?"#
         let host_display = host.clone().unwrap_or_else(|| "127.0.0.1".to_string());
 
         // Add status message to chat (use BackgroundEvent with header so it renders reliably)
-        let status_msg = format!(
-            "🔗 Connecting to Chrome DevTools Protocol ({}:{})...",
-            host_display, port_display
-        );
+        let status_msg =
+            format!("🔗 Connecting to Chrome DevTools Protocol ({host_display}:{port_display})...");
         self.push_background_before_next_output(status_msg);
 
         // Connect in background with a single, unified flow (no double-connect)
@@ -24515,7 +24380,7 @@ Have we met every part of this goal and is there no further work to do?"#
     pub(crate) fn handle_chrome_command(&mut self, command_text: String) {
         tracing::info!("[cdp] handle_chrome_command start: '{}'", command_text);
         // Parse the chrome command arguments
-        let parts: Vec<&str> = command_text.trim().split_whitespace().collect();
+        let parts: Vec<&str> = command_text.split_whitespace().collect();
         let chrome_ticket = self.make_background_tail_ticket();
         self.consume_pending_prompt_for_ui_only_turn();
 
@@ -24560,7 +24425,7 @@ Have we met every part of this goal and is there no further work to do?"#
             let handled_disconnect = rx.recv().unwrap_or(false);
             if !handled_disconnect {
                 // Switch to external Chrome mode with default/auto-detected port
-                self.handle_chrome_connection(None, None, chrome_ticket.clone());
+                self.handle_chrome_connection(None, None, chrome_ticket);
             } else {
                 // We just disconnected; reflect in title immediately
                 self.browser_is_external = false;
@@ -24583,7 +24448,10 @@ Have we met every part of this goal and is there no further work to do?"#
                 .unwrap_or_else(|_| "Failed to get browser status.".to_string());
 
             // Add the response to the UI
-            let lines: Vec<String> = status.lines().map(|line| line.to_string()).collect();
+            let lines: Vec<String> = status
+                .lines()
+                .map(std::string::ToString::to_string)
+                .collect();
             self.push_background_tail(lines.join("\n"));
             return;
         }
@@ -24605,7 +24473,7 @@ Have we met every part of this goal and is there no further work to do?"#
             let ws_url = if first.starts_with("ws") {
                 first.to_string()
             } else {
-                format!("wss://{}", ws)
+                format!("wss://{ws}")
             };
             tracing::info!("[cdp] /chrome provided WS endpoint: {}", ws_url);
             // Configure and connect using WS
@@ -24637,7 +24505,7 @@ Have we met every part of this goal and is there no further work to do?"#
                             }
                             use code_core::protocol::BrowserScreenshotUpdateEvent;
                             use code_core::protocol::EventMsg;
-                            let _ = app_event_tx.send(AppEvent::CodexEvent(Event {
+                            app_event_tx.send(AppEvent::CodexEvent(Event {
                                 id: uuid::Uuid::new_v4().to_string(),
                                 event_seq: 0,
                                 msg: EventMsg::BrowserScreenshotUpdate(
@@ -24661,20 +24529,20 @@ Have we met every part of this goal and is there no further work to do?"#
             return;
         }
 
-        if let Some((h, p)) = first.rsplit_once(':') {
-            if let Ok(pn) = p.parse::<u16>() {
-                host = Some(h.to_string());
-                port = Some(pn);
-            }
+        if let Some((h, p)) = first.rsplit_once(':')
+            && let Ok(pn) = p.parse::<u16>()
+        {
+            host = Some(h.to_string());
+            port = Some(pn);
         }
         if host.is_none() && port.is_none() {
             if let Ok(pn) = first.parse::<u16>() {
                 port = Some(pn);
-            } else if parts.len() >= 2 {
-                if let Ok(pn) = parts[1].parse::<u16>() {
-                    host = Some(first.to_string());
-                    port = Some(pn);
-                }
+            } else if parts.len() >= 2
+                && let Ok(pn) = parts[1].parse::<u16>()
+            {
+                host = Some(first.to_string());
+                port = Some(pn);
             }
         }
         tracing::info!("[cdp] parsed host={:?}, port={:?}", host, port);
@@ -24850,7 +24718,7 @@ Have we met every part of this goal and is there no further work to do?"#
                 Ok(records) => records
                     .into_iter()
                     .find(|record| record.account_id == account_id)
-                    .and_then(|record| record.plan.clone()),
+                    .and_then(|record| record.plan),
                 Err(err) => {
                     tracing::warn!(
                         ?err,
@@ -24917,7 +24785,7 @@ Have we met every part of this goal and is there no further work to do?"#
         let mut lines = cell.display_lines();
         let _has_icon = cell.gutter_symbol().is_some();
         let first_prefix = if let Some(sym) = cell.gutter_symbol() {
-            format!(" {} ", sym) // one space, icon, one space
+            format!(" {sym} ") // one space, icon, one space
         } else {
             "   ".to_string() // three spaces when no icon
         };
@@ -25025,12 +24893,10 @@ Have we met every part of this goal and is there no further work to do?"#
                                 .file_name()
                                 .and_then(|s| s.to_str())
                                 .filter(|s| !s.is_empty())
-                                .map(|name| name.to_string());
+                                .map(std::string::ToString::to_string);
                         }
 
-                        if head.len() >= 7
-                            && head.as_bytes().iter().all(|byte| byte.is_ascii_hexdigit())
-                        {
+                        if head.len() >= 7 && head.as_bytes().iter().all(u8::is_ascii_hexdigit) {
                             return Some(format!("detached: {}", &head[..7]));
                         }
 
@@ -25139,21 +25005,19 @@ Have we met every part of this goal and is there no further work to do?"#
                 ));
             }
 
-            if include_branch {
-                if let Some(branch) = &branch_opt {
-                    spans.push(Span::styled(
-                        "  •  ",
-                        Style::default().fg(crate::colors::text_dim()),
-                    ));
-                    spans.push(Span::styled(
-                        "Branch: ",
-                        Style::default().fg(crate::colors::text_dim()),
-                    ));
-                    spans.push(Span::styled(
-                        branch.clone(),
-                        Style::default().fg(crate::colors::success_green()),
-                    ));
-                }
+            if include_branch && let Some(branch) = &branch_opt {
+                spans.push(Span::styled(
+                    "  •  ",
+                    Style::default().fg(crate::colors::text_dim()),
+                ));
+                spans.push(Span::styled(
+                    "Branch: ",
+                    Style::default().fg(crate::colors::text_dim()),
+                ));
+                spans.push(Span::styled(
+                    branch.clone(),
+                    Style::default().fg(crate::colors::success_green()),
+                ));
             }
 
             // Footer already shows the Ctrl+R hint; avoid duplicating it here.
@@ -25401,7 +25265,7 @@ Have we met every part of this goal and is there no further work to do?"#
             .and_then(|n| n.to_str())
             .unwrap_or("screenshot");
 
-        let placeholder_text = format!("[Screenshot]\n{}", filename);
+        let placeholder_text = format!("[Screenshot]\n{filename}");
         let placeholder_widget = Paragraph::new(placeholder_text)
             .block(
                 Block::default()
@@ -26334,7 +26198,7 @@ mod tests {
         chat.auto_state.set_phase(AutoRunPhase::Active);
         let call_id = ExecCallId("exec-1".to_string());
         chat.exec.running_commands.insert(
-            call_id.clone(),
+            call_id,
             RunningCommand {
                 command: vec!["echo".to_string()],
                 parsed: Vec::new(),
@@ -26591,8 +26455,8 @@ mod tests {
             Ok(GhostCommit::new(final_for_capture.clone(), parent))
         });
 
-        let base_for_diff = base_id.clone();
-        let final_for_diff = final_id.clone();
+        let base_for_diff = base_id;
+        let final_for_diff = final_id;
         let _diff_guard = GitDiffStubGuard::install(move |base, head| {
             assert_eq!(base, base_for_diff);
             assert_eq!(head, final_for_diff);
@@ -26608,7 +26472,7 @@ mod tests {
         );
 
         let descriptor_snapshot = chat.pending_turn_descriptor.clone();
-        chat.auto_handle_post_turn_review(turn_config.clone(), descriptor_snapshot.as_ref());
+        chat.auto_handle_post_turn_review(turn_config, descriptor_snapshot.as_ref());
 
         assert!(
             !chat.auto_state.awaiting_review(),
@@ -26677,8 +26541,8 @@ mod tests {
             Ok(GhostCommit::new(final_for_capture.clone(), parent))
         });
 
-        let base_for_diff = base_id.clone();
-        let final_for_diff = final_id.clone();
+        let base_for_diff = base_id;
+        let final_for_diff = final_id;
         let _diff_guard = GitDiffStubGuard::install(move |base, head| {
             assert_eq!(base, base_for_diff);
             assert_eq!(head, final_for_diff);
@@ -26692,7 +26556,7 @@ mod tests {
         );
 
         let descriptor_snapshot = chat.pending_turn_descriptor.clone();
-        chat.auto_handle_post_turn_review(turn_config.clone(), descriptor_snapshot.as_ref());
+        chat.auto_handle_post_turn_review(turn_config, descriptor_snapshot.as_ref());
 
         assert!(
             chat.auto_state.awaiting_review(),
@@ -26862,7 +26726,7 @@ mod tests {
         assert!(matches!(state.phase, AutoResolvePhase::WaitingForReview));
 
         chat.auto_resolve_handle_review_enter();
-        chat.auto_resolve_handle_review_exit(Some(review.clone()));
+        chat.auto_resolve_handle_review_exit(Some(review));
 
         assert!(
             chat.auto_resolve_state.is_none(),
@@ -27136,8 +27000,8 @@ mod tests {
             Ok(GhostCommit::new(final_for_capture.clone(), parent))
         });
 
-        let base_for_diff = base_id.clone();
-        let final_for_diff = final_id.clone();
+        let base_for_diff = base_id;
+        let final_for_diff = final_id;
         let _diff_guard = GitDiffStubGuard::install(move |base, head| {
             assert_eq!(base, base_for_diff);
             assert_eq!(head, final_for_diff);
@@ -27148,7 +27012,7 @@ mod tests {
         assert!(chat.auto_state.awaiting_review());
 
         let descriptor_snapshot = chat.pending_turn_descriptor.clone();
-        chat.auto_handle_post_turn_review(turn_config.clone(), descriptor_snapshot.as_ref());
+        chat.auto_handle_post_turn_review(turn_config, descriptor_snapshot.as_ref());
 
         chat.handle_code_event(Event {
             id: "turn".to_string(),
@@ -27200,10 +27064,10 @@ mod tests {
                     name: "foo.txt".to_string(),
                 }],
             }),
-            order: Some(order.clone()),
+            order: Some(order),
         });
 
-        let exec_call_id = ExecCallId(call_id.clone());
+        let exec_call_id = ExecCallId(call_id);
         let running = chat
             .exec
             .running_commands
@@ -27274,8 +27138,11 @@ mod tests {
             "expected assistant cell to be added"
         );
 
-        let tail_kinds: Vec<HistoryCellType> =
-            chat.history_cells.iter().map(|cell| cell.kind()).collect();
+        let tail_kinds: Vec<HistoryCellType> = chat
+            .history_cells
+            .iter()
+            .map(super::super::history_cell::HistoryCell::kind)
+            .collect();
 
         let len = tail_kinds.len();
         assert_eq!(
@@ -27331,7 +27198,7 @@ mod tests {
         );
 
         chat.handle_code_event(Event {
-            id: turn_id.clone(),
+            id: turn_id,
             event_seq: 2,
             msg: EventMsg::AgentMessage(AgentMessageEvent {
                 message: "Completed todo items.".to_string(),
@@ -27417,7 +27284,7 @@ mod tests {
         );
 
         chat.handle_code_event(Event {
-            id: turn_id.clone(),
+            id: turn_id,
             event_seq: 3,
             msg: EventMsg::AgentStatusUpdate(AgentStatusUpdateEvent {
                 agents: vec![CoreAgentInfo {
@@ -27634,8 +27501,11 @@ mod tests {
             None,
         );
 
-        let kinds: Vec<HistoryCellType> =
-            chat.history_cells.iter().map(|cell| cell.kind()).collect();
+        let kinds: Vec<HistoryCellType> = chat
+            .history_cells
+            .iter()
+            .map(super::super::history_cell::HistoryCell::kind)
+            .collect();
 
         assert_eq!(
             kinds,
@@ -27946,10 +27816,8 @@ fn extract_latest_bold_title(text: &str) -> Option<String> {
                         .map(|ch| matches!(ch, '"' | '\n' | '\r' | ',' | '}' | ']'))
                         .unwrap_or(true);
 
-                if looks_like_heading {
-                    if let Some(clean) = normalize_candidate(candidate) {
-                        latest = Some(clean);
-                    }
+                if looks_like_heading && let Some(clean) = normalize_candidate(candidate) {
+                    latest = Some(clean);
                 }
                 open_start = None;
                 idx += 2;
@@ -27963,12 +27831,11 @@ fn extract_latest_bold_title(text: &str) -> Option<String> {
         idx += 1;
     }
 
-    if latest.is_none() {
-        if let Some(start) = open_start {
-            if let Some(clean) = normalize_candidate(&text[start..]) {
-                latest = Some(clean);
-            }
-        }
+    if latest.is_none()
+        && let Some(start) = open_start
+        && let Some(clean) = normalize_candidate(&text[start..])
+    {
+        latest = Some(clean);
     }
 
     if latest.is_some() {
@@ -28265,17 +28132,16 @@ impl ChatWidget<'_> {
             .auto_resolve_scope()
             .as_deref()
             .is_some_and(|scope| scope.eq_ignore_ascii_case("commit"))
+            && let Some(commit) = self.auto_resolve_commit_sha()
         {
-            if let Some(commit) = self.auto_resolve_commit_sha() {
-                let short_sha: String = commit.chars().take(7).collect();
-                preface.push_str("\n\nCommit under review: ");
-                preface.push_str(&commit);
-                preface.push_str(" (short SHA ");
-                preface.push_str(&short_sha);
-                preface.push_str(
+            let short_sha: String = commit.chars().take(7).collect();
+            preface.push_str("\n\nCommit under review: ");
+            preface.push_str(&commit);
+            preface.push_str(" (short SHA ");
+            preface.push_str(&short_sha);
+            preface.push_str(
                     "). If you make changes to address these findings, amend this commit before responding so the review target reflects your fixes.",
                 );
-            }
         }
         self.auto_resolve_notice(
             "Auto-resolve: asking the agent to verify and address the review findings.",
@@ -28310,17 +28176,16 @@ impl ChatWidget<'_> {
             .auto_resolve_scope()
             .as_deref()
             .is_some_and(|scope| scope.eq_ignore_ascii_case("commit"))
+            && let Some(commit) = self.auto_resolve_commit_sha()
         {
-            if let Some(commit) = self.auto_resolve_commit_sha() {
-                let short_sha: String = commit.chars().take(7).collect();
-                preface.push_str("\n\nCommit under review: ");
-                preface.push_str(&commit);
-                preface.push_str(" (short SHA ");
-                preface.push_str(&short_sha);
-                preface.push_str(
+            let short_sha: String = commit.chars().take(7).collect();
+            preface.push_str("\n\nCommit under review: ");
+            preface.push_str(&commit);
+            preface.push_str(" (short SHA ");
+            preface.push_str(&short_sha);
+            preface.push_str(
                     "). Confirm that any fixes have been committed (amend the commit if necessary) before returning `no_issue`.",
                 );
-            }
         }
 
         self.auto_resolve_notice("Auto-resolve: requesting status JSON from the agent.");
@@ -28370,23 +28235,22 @@ impl ChatWidget<'_> {
             .as_ref()
             .and_then(|meta| meta.scope.as_ref())
             .is_some_and(|scope| scope.eq_ignore_ascii_case("commit"))
+            && let Some(new_commit) = self.current_head_commit_sha()
         {
-            if let Some(new_commit) = self.current_head_commit_sha() {
-                let short_sha: String = new_commit.chars().take(7).collect();
-                let subject = self.commit_subject_for(&new_commit);
-                base_prompt = if let Some(subject) = subject {
-                    format!(
-                        "Review the code changes introduced by commit {new_commit} (\"{subject}\"). Provide prioritized, actionable findings."
-                    )
-                } else {
-                    format!(
-                        "Review the code changes introduced by commit {new_commit}. Provide prioritized, actionable findings."
-                    )
-                };
-                next_hint = format!("commit {short_sha}");
-                if let Some(meta) = next_metadata.as_mut() {
-                    meta.commit = Some(new_commit.clone());
-                }
+            let short_sha: String = new_commit.chars().take(7).collect();
+            let subject = self.commit_subject_for(&new_commit);
+            base_prompt = if let Some(subject) = subject {
+                format!(
+                    "Review the code changes introduced by commit {new_commit} (\"{subject}\"). Provide prioritized, actionable findings."
+                )
+            } else {
+                format!(
+                    "Review the code changes introduced by commit {new_commit}. Provide prioritized, actionable findings."
+                )
+            };
+            next_hint = format!("commit {short_sha}");
+            if let Some(meta) = next_metadata.as_mut() {
+                meta.commit = Some(new_commit);
             }
         }
 
@@ -28403,22 +28267,19 @@ impl ChatWidget<'_> {
             .as_ref()
             .and_then(|meta| meta.scope.as_ref())
             .is_some_and(|scope| scope.eq_ignore_ascii_case("commit"))
-        {
-            if let Some(commit) = state_snapshot
+            && let Some(commit) = state_snapshot
                 .metadata
                 .as_ref()
                 .and_then(|meta| meta.commit.clone())
-            {
-                if let Some(true) = self.worktree_has_uncommitted_changes() {
-                    continued_prompt.push_str(
-                        "\n\nNote: there are uncommitted changes in the working tree since commit ",
-                    );
-                    continued_prompt.push_str(&commit);
-                    continued_prompt.push_str(
+            && let Some(true) = self.worktree_has_uncommitted_changes()
+        {
+            continued_prompt.push_str(
+                "\n\nNote: there are uncommitted changes in the working tree since commit ",
+            );
+            continued_prompt.push_str(&commit);
+            continued_prompt.push_str(
                         ". Ensure the review covers the updated workspace rather than only the original commit snapshot.",
                     );
-                }
-            }
         }
         continued_prompt.push_str("\n\n");
         continued_prompt.push_str(AUTO_RESOLVE_REVIEW_FOLLOWUP);
@@ -28560,22 +28421,22 @@ impl ChatWidget<'_> {
             return Some(decision);
         }
 
-        if let Some(start) = raw.find("{") {
-            if let Some(end) = raw.rfind("}") {
-                let slice = &raw[start..=end];
-                if let Ok(decision) = serde_json::from_str::<AutoResolveDecision>(slice) {
-                    return Some(decision);
-                }
+        if let Some(start) = raw.find("{")
+            && let Some(end) = raw.rfind("}")
+        {
+            let slice = &raw[start..=end];
+            if let Ok(decision) = serde_json::from_str::<AutoResolveDecision>(slice) {
+                return Some(decision);
             }
         }
 
         // try to strip ```json fences
-        if let Some(json_start) = raw.find("```") {
-            if let Some(rest) = raw[json_start + 3..].split_once("```") {
-                let candidate = rest.0.trim_start_matches("json").trim();
-                if let Ok(decision) = serde_json::from_str::<AutoResolveDecision>(candidate) {
-                    return Some(decision);
-                }
+        if let Some(json_start) = raw.find("```")
+            && let Some(rest) = raw[json_start + 3..].split_once("```")
+        {
+            let candidate = rest.0.trim_start_matches("json").trim();
+            if let Ok(decision) = serde_json::from_str::<AutoResolveDecision>(candidate) {
+                return Some(decision);
             }
         }
 
@@ -28609,8 +28470,7 @@ impl ChatWidget<'_> {
         items.push(SelectionItem {
             name: "Auto Resolve settings moved to /settings".to_string(),
             description: Some(format!(
-                "{} Manage Auto Resolve reviews and max re-reviews via `/settings review`.",
-                auto_note
+                "{auto_note} Manage Auto Resolve reviews and max re-reviews via `/settings review`."
             )),
             is_current: false,
             actions: vec![Box::new(|tx: &crate::app_event_sender::AppEventSender| {
@@ -28634,10 +28494,10 @@ impl ChatWidget<'_> {
             description: Some("Look at staged, unstaged, and untracked files".to_string()),
             is_current: false,
             actions: vec![Box::new({
-                let prompt = workspace_prompt.clone();
-                let hint = workspace_hint.clone();
-                let preparation = workspace_preparation.clone();
-                let metadata = workspace_metadata.clone();
+                let prompt = workspace_prompt;
+                let hint = workspace_hint;
+                let preparation = workspace_preparation;
+                let metadata = workspace_metadata;
                 move |tx: &crate::app_event_sender::AppEventSender| {
                     tx.send(crate::app_event::AppEvent::RunReviewWithScope {
                         prompt: prompt.clone(),
@@ -28745,7 +28605,9 @@ impl ChatWidget<'_> {
                 }
             }
         } else {
-            tracing::warn!("Could not locate Beacon Code home to persist review auto resolve toggle");
+            tracing::warn!(
+                "Could not locate Beacon Code home to persist review auto resolve toggle"
+            );
             if enabled {
                 "Auto Resolve enabled for this session."
             } else {
@@ -28808,42 +28670,42 @@ impl ChatWidget<'_> {
     }
 
     fn update_review_settings_model_row(&mut self) {
-        if let Some(overlay) = self.settings.overlay.as_mut() {
-            if let Some(content) = overlay.review_content_mut() {
-                content.update_review_model(
-                    self.config.review_model.clone(),
-                    self.config.review_model_reasoning_effort,
-                );
-                content.set_use_chat_model(self.config.review_use_chat_model);
-            }
+        if let Some(overlay) = self.settings.overlay.as_mut()
+            && let Some(content) = overlay.review_content_mut()
+        {
+            content.update_review_model(
+                self.config.review_model.clone(),
+                self.config.review_model_reasoning_effort,
+            );
+            content.set_use_chat_model(self.config.review_use_chat_model);
         }
     }
 
     fn update_planning_settings_model_row(&mut self) {
-        if let Some(overlay) = self.settings.overlay.as_mut() {
-            if let Some(content) = overlay.planning_content_mut() {
-                content.update_planning_model(
-                    self.config.planning_model.clone(),
-                    self.config.planning_model_reasoning_effort,
-                );
-                content.set_use_chat_model(self.config.planning_use_chat_model);
-            }
+        if let Some(overlay) = self.settings.overlay.as_mut()
+            && let Some(content) = overlay.planning_content_mut()
+        {
+            content.update_planning_model(
+                self.config.planning_model.clone(),
+                self.config.planning_model_reasoning_effort,
+            );
+            content.set_use_chat_model(self.config.planning_use_chat_model);
         }
     }
 
     fn update_auto_drive_settings_model_row(&mut self) {
-        if let Some(overlay) = self.settings.overlay.as_mut() {
-            if let Some(content) = overlay.auto_drive_content_mut() {
-                content.update_model(
-                    self.config.auto_drive.model.clone(),
-                    self.config.auto_drive.model_reasoning_effort,
-                );
-                content.set_use_chat_model(
-                    self.config.auto_drive_use_chat_model,
-                    self.config.model.clone(),
-                    self.config.model_reasoning_effort,
-                );
-            }
+        if let Some(overlay) = self.settings.overlay.as_mut()
+            && let Some(content) = overlay.auto_drive_content_mut()
+        {
+            content.update_model(
+                self.config.auto_drive.model.clone(),
+                self.config.auto_drive.model_reasoning_effort,
+            );
+            content.set_use_chat_model(
+                self.config.auto_drive_use_chat_model,
+                self.config.model.clone(),
+                self.config.model_reasoning_effort,
+            );
         }
     }
 
@@ -29076,71 +28938,69 @@ impl ChatWidget<'_> {
         let trimmed = args.trim();
         let auto_resolve = self.config.tui.review_auto_resolve;
         if trimmed.is_empty() {
-            if Self::is_branch_worktree_path(&self.config.cwd) {
-                if let Some(git_root) =
+            if Self::is_branch_worktree_path(&self.config.cwd)
+                && let Some(git_root) =
                     code_core::git_info::resolve_root_git_project_for_trust(&self.config.cwd)
-                {
-                    let worktree_cwd = self.config.cwd.clone();
-                    let tx = self.app_event_tx.clone();
-                    let auto_flag = auto_resolve;
-                    tokio::spawn(async move {
-                        let branch_metadata =
-                            code_core::git_worktree::load_branch_metadata(&worktree_cwd);
-                        let metadata_base = branch_metadata.as_ref().and_then(|meta| {
-                            meta.remote_ref
-                                .clone()
-                                .or_else(|| {
-                                    if let (Some(remote_name), Some(base_branch)) =
-                                        (meta.remote_name.clone(), meta.base_branch.clone())
-                                    {
-                                        Some(format!("{}/{}", remote_name, base_branch))
-                                    } else {
-                                        None
-                                    }
-                                })
-                                .or_else(|| meta.base_branch.clone())
+            {
+                let worktree_cwd = self.config.cwd.clone();
+                let tx = self.app_event_tx.clone();
+                let auto_flag = auto_resolve;
+                tokio::spawn(async move {
+                    let branch_metadata =
+                        code_core::git_worktree::load_branch_metadata(&worktree_cwd);
+                    let metadata_base = branch_metadata.as_ref().and_then(|meta| {
+                        meta.remote_ref
+                            .clone()
+                            .or_else(|| {
+                                if let (Some(remote_name), Some(base_branch)) =
+                                    (meta.remote_name.clone(), meta.base_branch.clone())
+                                {
+                                    Some(format!("{remote_name}/{base_branch}"))
+                                } else {
+                                    None
+                                }
+                            })
+                            .or_else(|| meta.base_branch.clone())
+                    });
+                    let default_branch = match metadata_base {
+                        Some(value) => Some(value),
+                        None => code_core::git_worktree::detect_default_branch(&git_root)
+                            .await
+                            .map(|name| name.trim().to_string())
+                            .filter(|name| !name.is_empty()),
+                    };
+                    let current_branch = code_core::git_info::current_branch_name(&worktree_cwd)
+                        .await
+                        .map(|name| name.trim().to_string())
+                        .filter(|name| !name.is_empty());
+
+                    if let (Some(base_branch), Some(current_branch)) =
+                        (default_branch, current_branch)
+                        && base_branch != current_branch
+                    {
+                        let prompt = format!(
+                            "Review the code changes between the current branch '{current_branch}' and '{base_branch}'. Identify the intent of the changes in '{current_branch}' and ensure no obvious gaps remain. Find all geniune bugs or regressions which need to be addressed before merging. Return ALL issues which need to be addressed, not just the first one you find."
+                        );
+                        let hint = format!("against {base_branch}");
+                        let preparation_label =
+                            Some(format!("Preparing code review against {base_branch}"));
+                        let metadata = Some(ReviewContextMetadata {
+                            scope: Some("branch_diff".to_string()),
+                            base_branch: Some(base_branch),
+                            current_branch: Some(current_branch),
+                            ..Default::default()
                         });
-                        let default_branch = match metadata_base {
-                            Some(value) => Some(value),
-                            None => code_core::git_worktree::detect_default_branch(&git_root)
-                                .await
-                                .map(|name| name.trim().to_string())
-                                .filter(|name| !name.is_empty()),
-                        };
-                        let current_branch =
-                            code_core::git_info::current_branch_name(&worktree_cwd)
-                                .await
-                                .map(|name| name.trim().to_string())
-                                .filter(|name| !name.is_empty());
-
-                        if let (Some(base_branch), Some(current_branch)) =
-                            (default_branch, current_branch)
-                        {
-                            if base_branch != current_branch {
-                                let prompt = format!(
-                                    "Review the code changes between the current branch '{current_branch}' and '{base_branch}'. Identify the intent of the changes in '{current_branch}' and ensure no obvious gaps remain. Find all geniune bugs or regressions which need to be addressed before merging. Return ALL issues which need to be addressed, not just the first one you find."
-                                );
-                                let hint = format!("against {base_branch}");
-                                let preparation_label =
-                                    Some(format!("Preparing code review against {base_branch}"));
-                                let metadata = Some(ReviewContextMetadata {
-                                    scope: Some("branch_diff".to_string()),
-                                    base_branch: Some(base_branch.clone()),
-                                    current_branch: Some(current_branch.clone()),
-                                    ..Default::default()
-                                });
-                                tx.send(crate::app_event::AppEvent::RunReviewWithScope {
-                                    prompt,
-                                    hint,
-                                    preparation_label,
-                                    metadata,
-                                    auto_resolve: auto_flag,
-                                });
-                                return;
-                            }
-                        }
-
                         tx.send(crate::app_event::AppEvent::RunReviewWithScope {
+                            prompt,
+                            hint,
+                            preparation_label,
+                            metadata,
+                            auto_resolve: auto_flag,
+                        });
+                        return;
+                    }
+
+                    tx.send(crate::app_event::AppEvent::RunReviewWithScope {
                             prompt: "Review the current workspace changes and highlight bugs, regressions, risky patterns, and missing tests before merge.".to_string(),
                             hint: "current workspace changes".to_string(),
                             preparation_label: Some("Preparing code review request...".to_string()),
@@ -29150,9 +29010,8 @@ impl ChatWidget<'_> {
                             }),
                             auto_resolve: auto_flag,
                         });
-                    });
-                    return;
-                }
+                });
+                return;
             }
 
             let metadata = ReviewContextMetadata {
@@ -29344,7 +29203,7 @@ impl ChatWidget<'_> {
                         self.cloud_tasks_creation_inflight = true;
                         self.cloud_task_create_ticket = Some(self.make_background_tail_ticket());
                         self.app_event_tx.send(AppEvent::SubmitCloudTaskCreate {
-                            env_id: env.id.clone(),
+                            env_id: env.id,
                             prompt: rest.to_string(),
                             best_of_n: self.cloud_tasks_best_of_n,
                         });
@@ -29372,7 +29231,7 @@ impl ChatWidget<'_> {
             .cloud_tasks_selected_env
             .as_ref()
             .map(|env| env.id.clone());
-        let fetch_action_env = env_id.clone();
+        let fetch_action_env = env_id;
         let mut items: Vec<SelectionItem> = Vec::new();
         items.push(SelectionItem {
             name: "Browse cloud tasks".to_string(),
@@ -29450,7 +29309,7 @@ impl ChatWidget<'_> {
         };
         let view = CloudTasksView::new(
             tasks,
-            Some(env_label.clone()),
+            Some(env_label),
             environment,
             self.app_event_tx.clone(),
         );
@@ -29469,9 +29328,7 @@ impl ChatWidget<'_> {
     pub(crate) fn show_cloud_environment_loading(&mut self) {
         let loading_item = SelectionItem {
             name: "Loading environments…".to_string(),
-            description: Some(
-                "Fetching available Beacon Code Cloud environments".to_string(),
-            ),
+            description: Some("Fetching available Beacon Code Cloud environments".to_string()),
             is_current: true,
             actions: Vec::new(),
         };
@@ -29643,7 +29500,7 @@ impl ChatWidget<'_> {
             })],
         });
 
-        let subtitle = format!("{} • Env: {}", status_label, env_display);
+        let subtitle = format!("{status_label} • Env: {env_display}");
         let view = ListSelectionView::new(
             format!(" Task {} ", task.title),
             Some(subtitle),
@@ -29671,7 +29528,7 @@ impl ChatWidget<'_> {
 
         let env_display = self.display_name_for_env(&env);
         let submit_tx = self.app_event_tx.clone();
-        let env_id = env.id.clone();
+        let env_id = env.id;
         let best_of = self.cloud_tasks_best_of_n;
         let on_submit: Box<dyn Fn(String) + Send + Sync> = Box::new(move |text: String| {
             if text.trim().is_empty() {
@@ -29773,7 +29630,7 @@ impl ChatWidget<'_> {
                     message.push_str("\nConflicts: ");
                     message.push_str(&result.conflict_paths.join(", "));
                 }
-                let key = (task_id.clone(), preflight);
+                let key = (task_id, preflight);
                 let ticket = self
                     .cloud_task_apply_tickets
                     .remove(&key)
@@ -29821,7 +29678,7 @@ impl ChatWidget<'_> {
             );
         } else {
             self.insert_background_event_with_placement(
-                format!("Creating branch worktree... Task: {}", args_trim),
+                format!("Creating branch worktree... Task: {args_trim}"),
                 BackgroundPlacement::BeforeNextOutput,
                 None,
             );
@@ -29837,7 +29694,7 @@ impl ChatWidget<'_> {
                 Err(e) => {
                     tx.send_background_event_with_ticket(
                         &ticket,
-                        format!("`/branch` — not a git repo: {}", e),
+                        format!("`/branch` — not a git repo: {e}"),
                     );
                     return;
                 }
@@ -29867,7 +29724,7 @@ impl ChatWidget<'_> {
                     Err(e) => {
                         tx.send_background_event_with_ticket(
                             &ticket,
-                            format!("`/branch` — failed to create worktree: {}", e),
+                            format!("`/branch` — failed to create worktree: {e}"),
                         );
                         return;
                     }
@@ -29882,7 +29739,7 @@ impl ChatWidget<'_> {
                     Err(e) => {
                         tx.send_background_event_with_ticket(
                             &ticket,
-                            format!("`/branch` — failed to copy changes: {}", e),
+                            format!("`/branch` — failed to copy changes: {e}"),
                         );
                         // Still switch to the branch even if copy fails
                         0
@@ -29903,7 +29760,7 @@ impl ChatWidget<'_> {
                         {
                             tx.send_background_event_with_ticket(
                                 &ticket,
-                                format!("`/branch` — failed to record branch metadata: {}", e),
+                                format!("`/branch` — failed to record branch metadata: {e}"),
                             );
                         }
                         branch_metadata = meta_option;
@@ -29912,10 +29769,7 @@ impl ChatWidget<'_> {
                 Err(err) => {
                     tx.send_background_event_with_ticket(
                         &ticket,
-                        format!(
-                            "`/branch` — failed to configure local-default remote: {}",
-                            err
-                        ),
+                        format!("`/branch` — failed to configure local-default remote: {err}"),
                     );
                 }
             }
@@ -29944,7 +29798,7 @@ impl ChatWidget<'_> {
             // Compute fallback remote default
             let fallback_remote = code_core::git_worktree::detect_default_branch(&git_root)
                 .await
-                .map(|d| format!("origin/{}", d));
+                .map(|d| format!("origin/{d}"));
             let target_upstream = src_upstream.clone().or(fallback_remote);
             if let Some(up) = target_upstream {
                 let set = Command::new("git")
@@ -29959,12 +29813,11 @@ impl ChatWidget<'_> {
                     .await;
                 if let Ok(o) = set {
                     if o.status.success() {
-                        _upstream_msg =
-                            Some(format!("Set upstream for '{}' to {}", used_branch, up));
+                        _upstream_msg = Some(format!("Set upstream for '{used_branch}' to {up}"));
                     } else {
                         let e = String::from_utf8_lossy(&o.stderr).trim().to_string();
                         if !e.is_empty() {
-                            _upstream_msg = Some(format!("Upstream not set ({}).", e));
+                            _upstream_msg = Some(format!("Upstream not set ({e})."));
                         }
                     }
                 }
@@ -29980,10 +29833,10 @@ impl ChatWidget<'_> {
                         (meta.remote_name.as_ref(), meta.base_branch.as_ref())
                     {
                         Some(format!("\n  Base: {remote_name}/{base_branch}"))
-                    } else if let Some(remote_name) = meta.remote_name.as_ref() {
-                        Some(format!("\n  Base remote: {remote_name}"))
                     } else {
-                        None
+                        meta.remote_name
+                            .as_ref()
+                            .map(|remote_name| format!("\n  Base remote: {remote_name}"))
                     }
                 })
                 .unwrap_or_default();
@@ -30009,8 +29862,8 @@ impl ChatWidget<'_> {
 
             // Switch cwd and optionally submit the task
             // Prefix the auto-submitted task so it's obvious it started in the new branch
-            let initial_prompt = task_opt.map(|s| format!("[branch created] {}", s));
-            let _ = tx.send(AppEvent::SwitchCwd(worktree, initial_prompt));
+            let initial_prompt = task_opt.map(|s| format!("[branch created] {s}"));
+            tx.send(AppEvent::SwitchCwd(worktree, initial_prompt));
         });
     }
 
@@ -30031,7 +29884,7 @@ impl ChatWidget<'_> {
 
         let tx = self.app_event_tx.clone();
         let ticket = self.make_background_tail_ticket();
-        let worktree = git_root.clone();
+        let worktree = git_root;
 
         tokio::spawn(async move {
             use std::fmt::Write as _;
@@ -30236,8 +30089,7 @@ impl ChatWidget<'_> {
                 format!(" Available commands: {}", available.join(", "))
             };
             self.history_push_plain_state(crate::history_cell::new_error_event(format!(
-                "Unknown project command `{}`.{}",
-                name, suggestion
+                "Unknown project command `{name}`.{suggestion}"
             )));
             self.request_redraw();
         }
@@ -30264,7 +30116,7 @@ impl ChatWidget<'_> {
         let worktree_hint = new_cwd
             .file_name()
             .and_then(|n| n.to_str())
-            .map(|name| format!(" (worktree: {})", name))
+            .map(|name| format!(" (worktree: {name})"))
             .unwrap_or_default();
         let default_branch_note = format!(
             "System: Working directory changed from {} to {}{}. Use {} for subsequent commands.",
@@ -30278,7 +30130,7 @@ impl ChatWidget<'_> {
                 let branch_name = new_cwd
                     .file_name()
                     .and_then(|n| n.to_str())
-                    .map(|s| s.to_string())
+                    .map(std::string::ToString::to_string)
                     .unwrap_or_else(|| new_cwd.display().to_string());
                 let base_descriptor = meta
                     .remote_ref
@@ -30287,7 +30139,7 @@ impl ChatWidget<'_> {
                         if let (Some(remote_name), Some(base_branch)) =
                             (meta.remote_name.clone(), meta.base_branch.clone())
                         {
-                            Some(format!("{}/{}", remote_name, base_branch))
+                            Some(format!("{remote_name}/{base_branch}"))
                         } else {
                             None
                         }
@@ -30307,16 +30159,15 @@ impl ChatWidget<'_> {
                     (meta.remote_name.as_ref(), meta.remote_url.as_ref())
                 {
                     note.push_str(&format!(
-                        " The remote '{}' points to {}.",
-                        remote_name, remote_url
+                        " The remote '{remote_name}' points to {remote_url}."
                     ));
                 }
                 note
             } else {
-                default_branch_note.clone()
+                default_branch_note
             }
         } else {
-            default_branch_note.clone()
+            default_branch_note
         };
         self.queue_agent_note(branch_note);
 
@@ -30328,7 +30179,7 @@ impl ChatWidget<'_> {
             model_text_verbosity: self.config.model_text_verbosity,
             user_instructions: self.config.user_instructions.clone(),
             base_instructions: self.config.base_instructions.clone(),
-            approval_policy: self.config.approval_policy.clone(),
+            approval_policy: self.config.approval_policy,
             sandbox_policy: self.config.sandbox_policy.clone(),
             disable_response_storage: self.config.disable_response_storage,
             notify: self.config.notify.clone(),
@@ -30337,11 +30188,11 @@ impl ChatWidget<'_> {
         };
         self.submit_op(op);
 
-        if let Some(prompt) = initial_prompt {
-            if !prompt.is_empty() {
-                let preface = "[internal] When you finish this task, ask the user if they want any changes. If they are happy, offer to merge the branch back into the repository's default branch and delete the worktree. Use '/merge' (or an equivalent git worktree remove + switch) rather than deleting the folder directly so the UI can switch back cleanly. Wait for explicit confirmation before merging.".to_string();
-                self.submit_text_message_with_preface(prompt, preface);
-            }
+        if let Some(prompt) = initial_prompt
+            && !prompt.is_empty()
+        {
+            let preface = "[internal] When you finish this task, ask the user if they want any changes. If they are happy, offer to merge the branch back into the repository's default branch and delete the worktree. Use '/merge' (or an equivalent git worktree remove + switch) rather than deleting the folder directly so the UI can switch back cleanly. Wait for explicit confirmation before merging.".to_string();
+            self.submit_text_message_with_preface(prompt, preface);
         }
 
         self.request_redraw();
@@ -30364,7 +30215,7 @@ impl ChatWidget<'_> {
         let merge_ticket = self.make_background_tail_ticket();
         let tx = self.app_event_tx.clone();
         let work_cwd = self.config.cwd.clone();
-        let ticket = merge_ticket.clone();
+        let ticket = merge_ticket;
         self.push_background_before_next_output(
             "Evaluating repository state before merging current branch...".to_string(),
         );
@@ -30400,14 +30251,14 @@ impl ChatWidget<'_> {
                 send_background(
                     tx,
                     ticket,
-                    format!("`/merge` — handing off to agent ({})", reason_text),
+                    format!("`/merge` — handing off to agent ({reason_text})"),
                 );
                 let visible = format!(
                     "Finalize branch '{}' via /merge (agent merge required)",
                     state.worktree_branch
                 );
                 let preface = state.agent_preface(&reason_text);
-                let _ = tx.send(AppEvent::SubmitTextWithPreface { visible, preface });
+                tx.send(AppEvent::SubmitTextWithPreface { visible, preface });
             }
 
             let git_root = match code_core::git_info::resolve_root_git_project_for_trust(&work_cwd)
@@ -30434,7 +30285,7 @@ impl ChatWidget<'_> {
             let state = match MergeRepoState::gather(work_cwd.clone(), git_root.clone()).await {
                 Ok(state) => state,
                 Err(err) => {
-                    send_background(&tx, &ticket, format!("`/merge` — {}", err));
+                    send_background(&tx, &ticket, format!("`/merge` — {err}"));
                     return;
                 }
             };
@@ -30463,7 +30314,7 @@ impl ChatWidget<'_> {
                                 state.default_branch_label()
                             ),
                         );
-                        let _ = tx.send(AppEvent::SwitchCwd(state.git_root.clone(), None));
+                        tx.send(AppEvent::SwitchCwd(state.git_root.clone(), None));
                         return;
                     }
                     Err(err) => {
@@ -30576,7 +30427,7 @@ impl ChatWidget<'_> {
             (None, 0usize)
         };
 
-        let screenshot_count = screenshot_history.map(|items| items.len()).unwrap_or(0);
+        let screenshot_count = screenshot_history.map(|history| history.len()).unwrap_or(0);
         if screenshot_count == 0 {
             selected_index = 0;
         }
@@ -30588,22 +30439,20 @@ impl ChatWidget<'_> {
             .and_then(|history| history.get(selected_index))
             .and_then(|record| record.url.clone());
 
-        if screenshot_path.is_none() {
-            if let Ok(latest) = self.latest_browser_screenshot.lock() {
-                if let Some((path, url)) = latest.as_ref() {
-                    screenshot_path = Some(path.clone());
-                    if screenshot_url.is_none() {
-                        screenshot_url = Some(url.clone());
-                    }
-                }
+        if screenshot_path.is_none()
+            && let Ok(latest) = self.latest_browser_screenshot.lock()
+            && let Some((path, url)) = latest.as_ref()
+        {
+            screenshot_path = Some(path.clone());
+            if screenshot_url.is_none() {
+                screenshot_url = Some(url.clone());
             }
         }
 
         let summary_label = cell_opt
-            .map(|cell| cell.summary_label())
+            .map(BrowserSessionCell::summary_label)
             .unwrap_or_else(|| self.browser_title().to_string());
         let summary_value = screenshot_url
-            .clone()
             .filter(|value| !value.is_empty())
             .unwrap_or_else(|| summary_label.clone());
 
@@ -30635,10 +30484,10 @@ impl ChatWidget<'_> {
             left_spans.push(Span::styled("•", dot_style));
             if !summary_value.is_empty() {
                 left_spans.push(Span::raw(" "));
-                left_spans.push(Span::raw(summary_value.clone()));
+                left_spans.push(Span::raw(summary_value));
             }
             left_spans.push(Span::raw("  "));
-            left_spans.push(Span::styled(screenshot_info.clone(), label_style));
+            left_spans.push(Span::styled(screenshot_info, label_style));
 
             let right_spans: Vec<Span> = vec![
                 Span::from("Ctrl+B").style(key_hint_style),
@@ -30742,24 +30591,25 @@ impl ChatWidget<'_> {
             .as_ref()
             .map(|(_, tracker)| tracker.elapsed)
             .unwrap_or_else(|| Duration::ZERO);
-        if let Some(history) = screenshot_history {
-            if let Some(last) = history.last() {
-                total_time = total_time.max(last.timestamp);
-            }
+        if let Some(history) = screenshot_history
+            && let Some(last) = history.last()
+        {
+            total_time = total_time.max(last.timestamp);
         }
         if let Some(cell) = cell_opt {
             total_time = total_time.max(cell.total_duration());
         }
 
-        if let Some(area) = progress_area {
-            if area.height > 0 && area.width > 0 {
-                let progress_line =
-                    self.browser_overlay_progress_line(area.width, current_time, total_time);
-                Paragraph::new(progress_line)
-                    .alignment(Alignment::Center)
-                    .style(Style::default().fg(crate::colors::text()))
-                    .render(area, buf);
-            }
+        if let Some(area) = progress_area
+            && area.height > 0
+            && area.width > 0
+        {
+            let progress_line =
+                self.browser_overlay_progress_line(area.width, current_time, total_time);
+            Paragraph::new(progress_line)
+                .alignment(Alignment::Center)
+                .style(Style::default().fg(crate::colors::text()))
+                .render(area, buf);
         }
 
         if info_column.width == 0 || info_column.height == 0 {
@@ -30797,11 +30647,11 @@ impl ChatWidget<'_> {
                         self.format_overlay_mm_ss(entry.timestamp),
                         secondary_style,
                     ));
-                    if let Some(url) = entry.url.as_ref() {
-                        if !url.trim().is_empty() {
-                            spans.push(Span::raw("  "));
-                            spans.push(Span::styled(url.clone(), primary_style));
-                        }
+                    if let Some(url) = entry.url.as_ref()
+                        && !url.trim().is_empty()
+                    {
+                        spans.push(Span::raw("  "));
+                        spans.push(Span::styled(url.clone(), primary_style));
                     }
                     info_lines.push(RLine::from(spans));
                 }
@@ -31076,13 +30926,12 @@ impl ChatWidget<'_> {
         }
 
         let mut list_state = ListState::default();
-        if let Some(selected_entry) = self.agents_terminal.current_sidebar_entry() {
-            if let Some(row_idx) = row_entries
+        if let Some(selected_entry) = self.agents_terminal.current_sidebar_entry()
+            && let Some(row_idx) = row_entries
                 .iter()
                 .position(|entry| entry.as_ref() == Some(&selected_entry))
-            {
-                list_state.select(Some(row_idx));
-            }
+        {
+            list_state.select(Some(row_idx));
         }
 
         let sidebar_has_focus = self.agents_terminal.focus() == AgentsTerminalFocus::Sidebar;
@@ -31239,10 +31088,10 @@ impl ChatWidget<'_> {
             Some(AgentsSidebarEntry::Overview(batch_id)) => {
                 let mut batch_entries: Vec<&AgentTerminalEntry> = Vec::new();
                 for id in &self.agents_terminal.order {
-                    if let Some(entry) = self.agents_terminal.entries.get(id) {
-                        if entry.batch_id == batch_id {
-                            batch_entries.push(entry);
-                        }
+                    if let Some(entry) = self.agents_terminal.entries.get(id)
+                        && entry.batch_id == batch_id
+                    {
+                        batch_entries.push(entry);
                     }
                 }
 
@@ -31315,7 +31164,7 @@ impl ChatWidget<'_> {
                         .find_map(|entry| entry.batch_context.as_ref())
                         .and_then(|value| {
                             let trimmed = value.trim();
-                            (!trimmed.is_empty()).then(|| value.as_str())
+                            (!trimmed.is_empty()).then_some(value.as_str())
                         })
                     {
                         self.ensure_trailing_blank_line(&mut lines);
@@ -31726,7 +31575,7 @@ impl ChatWidget<'_> {
                 let mut line_spans: Vec<Span> = Vec::new();
                 line_spans.push(Span::from(" "));
                 line_spans.push(Span::styled(
-                    format!("{}", agent.name),
+                    agent.name.to_string(),
                     Style::default()
                         .fg(crate::colors::text())
                         .add_modifier(Modifier::BOLD),
@@ -31735,31 +31584,31 @@ impl ChatWidget<'_> {
                     format!(" [{}]", short_id(&agent.id)),
                     Style::default().fg(crate::colors::text_dim()),
                 ));
-                if let Some(ref model) = agent.model {
-                    if !model.is_empty() {
-                        line_spans.push(Span::styled(
-                            format!(" ({})", model),
-                            Style::default().fg(crate::colors::text_dim()),
-                        ));
-                    }
+                if let Some(ref model) = agent.model
+                    && !model.is_empty()
+                {
+                    line_spans.push(Span::styled(
+                        format!(" ({model})"),
+                        Style::default().fg(crate::colors::text_dim()),
+                    ));
                 }
                 line_spans.push(Span::from(": "));
                 line_spans.push(Span::styled(status_text, Style::default().fg(status_color)));
                 text_content.push(RLine::from(line_spans));
 
                 // For running agents, show latest progress hint if available
-                if matches!(agent.status, AgentStatus::Running) {
-                    if let Some(ref lp) = agent.last_progress {
-                        let mut lp_trim = lp.trim().to_string();
-                        if lp_trim.len() > 120 {
-                            lp_trim.truncate(120);
-                            lp_trim.push('…');
-                        }
-                        text_content.push(RLine::from(vec![
-                            Span::from("   "),
-                            Span::styled(lp_trim, Style::default().fg(crate::colors::text_dim())),
-                        ]));
+                if matches!(agent.status, AgentStatus::Running)
+                    && let Some(ref lp) = agent.last_progress
+                {
+                    let mut lp_trim = lp.trim().to_string();
+                    if lp_trim.len() > 120 {
+                        lp_trim.truncate(120);
+                        lp_trim.push('…');
                     }
+                    text_content.push(RLine::from(vec![
+                        Span::from("   "),
+                        Span::styled(lp_trim, Style::default().fg(crate::colors::text_dim())),
+                    ]));
                 }
 
                 // For completed/failed agents, show their final message or error
@@ -31801,21 +31650,18 @@ impl ChatWidget<'_> {
                     _ => {}
                 }
 
-                if let Some(ref batch) = agent.batch_id {
-                    if rendered_batches.insert(batch.clone()) {
-                        let batch_line = format!(
-                            "Batch {} — use agent {{\"action\":\"wait\",\"wait\":{{\"batch_id\":\"{}\"}}}}",
-                            short_id(batch),
-                            batch
-                        );
-                        text_content.push(RLine::from(vec![
-                            Span::from("   "),
-                            Span::styled(
-                                batch_line,
-                                Style::default().fg(crate::colors::text_dim()),
-                            ),
-                        ]));
-                    }
+                if let Some(ref batch) = agent.batch_id
+                    && rendered_batches.insert(batch.clone())
+                {
+                    let batch_line = format!(
+                        "Batch {} — use agent {{\"action\":\"wait\",\"wait\":{{\"batch_id\":\"{}\"}}}}",
+                        short_id(batch),
+                        batch
+                    );
+                    text_content.push(RLine::from(vec![
+                        Span::from("   "),
+                        Span::styled(batch_line, Style::default().fg(crate::colors::text_dim())),
+                    ]));
                 }
             }
         }
@@ -31977,7 +31823,7 @@ impl WidgetRef for &ChatWidget<'_> {
         self.layout.last_frame_width.set(area.width);
 
         let layout_areas = self.layout_areas(area);
-        let status_bar_area = layout_areas.get(0).copied().unwrap_or(area);
+        let status_bar_area = layout_areas.first().copied().unwrap_or(area);
         let history_area = layout_areas.get(1).copied().unwrap_or(area);
         let bottom_pane_area = layout_areas.get(2).copied().unwrap_or(area);
 
@@ -32098,43 +31944,43 @@ impl WidgetRef for &ChatWidget<'_> {
 
             let mut fallback_lines = None;
             let mut kind = RenderRequestKind::Legacy;
-            if history_id != HistoryId::ZERO {
-                if let Some(record) = self.history_state.record(history_id) {
-                    match record {
-                        HistoryRecord::Exec(_) => {
-                            kind = RenderRequestKind::Exec { id: history_id };
+            if history_id != HistoryId::ZERO
+                && let Some(record) = self.history_state.record(history_id)
+            {
+                match record {
+                    HistoryRecord::Exec(_) => {
+                        kind = RenderRequestKind::Exec { id: history_id };
+                    }
+                    HistoryRecord::MergedExec(_) => {
+                        kind = RenderRequestKind::MergedExec { id: history_id };
+                    }
+                    HistoryRecord::Explore(_) => {
+                        let hold_header = if idx < self.history_cells.len() {
+                            self.rendered_explore_should_hold(idx)
+                        } else {
+                            true
+                        };
+                        let full_detail = self.is_reasoning_shown();
+                        kind = RenderRequestKind::Explore {
+                            id: history_id,
+                            hold_header,
+                            full_detail,
+                        };
+                    }
+                    HistoryRecord::Diff(_) => {
+                        kind = RenderRequestKind::Diff { id: history_id };
+                    }
+                    HistoryRecord::AssistantStream(stream_state) => {
+                        kind = RenderRequestKind::Streaming { id: history_id };
+                        if stream_state.in_progress {
+                            cacheable = false;
                         }
-                        HistoryRecord::MergedExec(_) => {
-                            kind = RenderRequestKind::MergedExec { id: history_id };
-                        }
-                        HistoryRecord::Explore(_) => {
-                            let hold_header = if idx < self.history_cells.len() {
-                                self.rendered_explore_should_hold(idx)
-                            } else {
-                                true
-                            };
-                            let full_detail = self.is_reasoning_shown();
-                            kind = RenderRequestKind::Explore {
-                                id: history_id,
-                                hold_header,
-                                full_detail,
-                            };
-                        }
-                        HistoryRecord::Diff(_) => {
-                            kind = RenderRequestKind::Diff { id: history_id };
-                        }
-                        HistoryRecord::AssistantStream(stream_state) => {
-                            kind = RenderRequestKind::Streaming { id: history_id };
-                            if stream_state.in_progress {
-                                cacheable = false;
-                            }
-                        }
-                        HistoryRecord::AssistantMessage(_) => {
-                            kind = RenderRequestKind::Assistant { id: history_id };
-                        }
-                        other => {
-                            fallback_lines = self.fallback_lines_for_record(*cell, other);
-                        }
+                    }
+                    HistoryRecord::AssistantMessage(_) => {
+                        kind = RenderRequestKind::Assistant { id: history_id };
+                    }
+                    other => {
+                        fallback_lines = self.fallback_lines_for_record(*cell, other);
                     }
                 }
             }
@@ -32230,7 +32076,7 @@ impl WidgetRef for &ChatWidget<'_> {
                         let this_collapsed = cell
                             .as_any()
                             .downcast_ref::<crate::history_cell::CollapsibleReasoningCell>()
-                            .map(|rc| rc.is_collapsed())
+                            .map(history_cell::CollapsibleReasoningCell::is_collapsed)
                             .unwrap_or(false);
                         if this_collapsed {
                             let prev_collapsed = prev_visible_idx
@@ -32239,7 +32085,7 @@ impl WidgetRef for &ChatWidget<'_> {
                                     .and_then(|c| {
                                         c.as_any()
                                             .downcast_ref::<crate::history_cell::CollapsibleReasoningCell>()
-                                            .map(|rc| rc.is_collapsed())
+                                            .map(history_cell::CollapsibleReasoningCell::is_collapsed)
                                     }))
                                 .unwrap_or(false);
                             let next_collapsed = next_visible_idx
@@ -32248,7 +32094,7 @@ impl WidgetRef for &ChatWidget<'_> {
                                     .and_then(|c| {
                                         c.as_any()
                                             .downcast_ref::<crate::history_cell::CollapsibleReasoningCell>()
-                                            .map(|rc| rc.is_collapsed())
+                                            .map(history_cell::CollapsibleReasoningCell::is_collapsed)
                                     }))
                                 .unwrap_or(false);
                             if prev_collapsed && next_collapsed {
@@ -32288,19 +32134,21 @@ impl WidgetRef for &ChatWidget<'_> {
         let mut requested_spacer_lines = 0u16;
         let mut remainder_for_log: Option<u16> = None;
 
-        if total_height > 0 && viewport_rows > 0 && request_count > 0 {
-            if base_total_height > viewport_rows {
-                let remainder = base_total_height % viewport_rows;
-                remainder_for_log = Some(remainder);
-                if remainder == 0 {
-                    requested_spacer_lines = if base_total_height == viewport_rows {
-                        1
-                    } else {
-                        2
-                    };
-                } else if remainder <= 2 || remainder >= viewport_rows.saturating_sub(2) {
-                    requested_spacer_lines = 1;
-                }
+        if total_height > 0
+            && viewport_rows > 0
+            && request_count > 0
+            && base_total_height > viewport_rows
+        {
+            let remainder = base_total_height % viewport_rows;
+            remainder_for_log = Some(remainder);
+            if remainder == 0 {
+                requested_spacer_lines = if base_total_height == viewport_rows {
+                    1
+                } else {
+                    2
+                };
+            } else if remainder <= 2 || remainder >= viewport_rows.saturating_sub(2) {
+                requested_spacer_lines = 1;
             }
         }
 
@@ -32322,8 +32170,7 @@ impl WidgetRef for &ChatWidget<'_> {
             // requested height even if no additional history events arrive. Without
             // this, we'd keep the stale overscan row on-screen until the user types
             // or resizes the window again.
-            let _ = self
-                .app_event_tx
+            self.app_event_tx
                 .send(AppEvent::ScheduleFrameIn(HISTORY_ANIMATION_FRAME_INTERVAL));
         }
 
@@ -32459,17 +32306,14 @@ impl WidgetRef for &ChatWidget<'_> {
                 &render_requests[start_idx..end_idx],
                 render_settings,
             ));
-            _subset_rendered
-                .as_ref()
-                .map(|v| v.as_slice())
-                .unwrap_or(&[])
+            _subset_rendered.as_deref().unwrap_or(&[])
         };
 
         // Only schedule animation frames if an animating cell is actually visible.
         let has_visible_animation = visible_slice.iter().any(|visible| {
             visible
                 .cell
-                .map(|cell| cell.is_animating())
+                .map(super::history_cell::HistoryCell::is_animating)
                 .unwrap_or(false)
         });
         if has_visible_animation && !ChatWidget::auto_reduced_motion_preference() {
@@ -32513,41 +32357,41 @@ impl WidgetRef for &ChatWidget<'_> {
                 .downcast_ref::<crate::history_cell::StreamingContentCell>()
                 .is_some();
 
-            let mut layout_for_render: Option<Rc<CachedLayout>> =
-                visible.layout.as_ref().map(|lr| lr.layout());
+            let mut layout_for_render: Option<Rc<CachedLayout>> = visible
+                .layout
+                .as_ref()
+                .map(history_render::LayoutRef::layout);
 
             let item_height = visible.height;
-            if content_area.width > 0 {
-                if let Some(req) = render_requests.get(idx) {
-                    if req.history_id != HistoryId::ZERO
-                        && matches!(item.kind(), history_cell::HistoryCellType::Reasoning)
-                    {
-                        if item_height == 0 && content_width == 0 {
-                            // Zero-width viewport leaves both cached and computed heights at 0.
-                            // Skip to avoid false positives during aggressive window resizes.
-                            continue;
-                        }
+            if content_area.width > 0
+                && let Some(req) = render_requests.get(idx)
+                && req.history_id != HistoryId::ZERO
+                && matches!(item.kind(), history_cell::HistoryCellType::Reasoning)
+            {
+                if item_height == 0 && content_width == 0 {
+                    // Zero-width viewport leaves both cached and computed heights at 0.
+                    // Skip to avoid false positives during aggressive window resizes.
+                    continue;
+                }
 
-                        #[cfg(debug_assertions)]
-                        {
-                            let mut preview: Option<String> = None;
-                            let fresh = item.desired_height(content_width);
-                            if fresh != item_height {
-                                if preview.is_none() {
-                                    let lines = item.display_lines_trimmed();
-                                    if !lines.is_empty() {
-                                        preview = Some(ChatWidget::reasoning_preview(&lines));
-                                    }
-                                }
-                                height_mismatches.push(HeightMismatch {
-                                    history_id: req.history_id,
-                                    cached: item_height,
-                                    recomputed: fresh,
-                                    idx,
-                                    preview: preview.unwrap_or_default(),
-                                });
+                #[cfg(debug_assertions)]
+                {
+                    let mut preview: Option<String> = None;
+                    let fresh = item.desired_height(content_width);
+                    if fresh != item_height {
+                        if preview.is_none() {
+                            let lines = item.display_lines_trimmed();
+                            if !lines.is_empty() {
+                                preview = Some(ChatWidget::reasoning_preview(&lines));
                             }
                         }
+                        height_mismatches.push(HeightMismatch {
+                            history_id: req.history_id,
+                            cached: item_height,
+                            recomputed: fresh,
+                            idx,
+                            preview: preview.unwrap_or_default(),
+                        });
                     }
                 }
             }
@@ -32571,11 +32415,7 @@ impl WidgetRef for &ChatWidget<'_> {
             // The prefix sums already account for spacer rows between cells (and omit the
             // trailing spacer). Avoid additional compensation when rendering the final
             // visible cell; otherwise we double-count spacing and trim the last line.
-            let skip_top = if content_y < scroll_pos {
-                scroll_pos - content_y
-            } else {
-                0
-            };
+            let skip_top = scroll_pos.saturating_sub(content_y);
 
             // Stop if we've gone past the bottom of the screen
             if screen_y >= content_area.y + content_area.height {
@@ -32735,7 +32575,7 @@ impl WidgetRef for &ChatWidget<'_> {
                         && item
                             .as_any()
                             .downcast_ref::<crate::history_cell::RunningToolCallCell>()
-                            .map_or(false, |cell| cell.has_title("Waiting"))
+                            .is_some_and(|cell| cell.has_title("Waiting"))
                     {
                         crate::colors::text_bright()
                     } else if matches!(symbol, "○" | "◔" | "◑" | "◕" | "●") {
@@ -32755,7 +32595,7 @@ impl WidgetRef for &ChatWidget<'_> {
                         match symbol {
                             "›" => crate::colors::text(),        // user
                             "⋮" => crate::colors::primary(),     // thinking
-                            "•" => crate::colors::text_bright(), // codex/agent
+                            "•" => crate::colors::text_bright(), // assistant/agent
                             "⚙" => crate::colors::info(),        // tool working
                             "✔" => crate::colors::success(),     // tool complete
                             "✖" => crate::colors::error(),       // error
@@ -32807,17 +32647,17 @@ impl WidgetRef for &ChatWidget<'_> {
 
                 // Render the cell content first
                 let mut handled_assistant = false;
-                if let Some(plan) = visible.assistant_plan.as_ref() {
-                    if let Some(assistant) = visible.cell.and_then(|c| {
+                if let Some(plan) = visible.assistant_plan.as_ref()
+                    && let Some(assistant) = visible.cell.and_then(|c| {
                         c.as_any()
                             .downcast_ref::<crate::history_cell::AssistantMarkdownCell>()
-                    }) {
-                        if skip_rows < plan.total_rows() && item_area.height > 0 {
-                            assistant.render_with_layout(plan.as_ref(), item_area, buf, skip_rows);
-                        }
-                        handled_assistant = true;
-                        layout_for_render = None;
+                    })
+                {
+                    if skip_rows < plan.total_rows() && item_area.height > 0 {
+                        assistant.render_with_layout(plan.as_ref(), item_area, buf, skip_rows);
                     }
+                    handled_assistant = true;
+                    layout_for_render = None;
                 }
 
                 if !handled_assistant {
@@ -32835,42 +32675,42 @@ impl WidgetRef for &ChatWidget<'_> {
                 }
 
                 // Debug: overlay order info on the spacing row below (or above if needed).
-                if self.show_order_overlay {
-                    if let Some(Some(info)) = self.cell_order_dbg.get(idx) {
-                        let mut text = format!("⟦{}⟧", info);
-                        // Live reasoning diagnostics: append current title detection snapshot
-                        if let Some(rc) = item
-                            .as_any()
-                            .downcast_ref::<crate::history_cell::CollapsibleReasoningCell>()
-                        {
-                            let snap = rc.debug_title_overlay();
-                            text.push_str(" | ");
-                            text.push_str(&snap);
+                if self.show_order_overlay
+                    && let Some(Some(info)) = self.cell_order_dbg.get(idx)
+                {
+                    let mut text = format!("⟦{info}⟧");
+                    // Live reasoning diagnostics: append current title detection snapshot
+                    if let Some(rc) = item
+                        .as_any()
+                        .downcast_ref::<crate::history_cell::CollapsibleReasoningCell>()
+                    {
+                        let snap = rc.debug_title_overlay();
+                        text.push_str(" | ");
+                        text.push_str(&snap);
+                    }
+                    let style = Style::default().fg(crate::colors::text_dim());
+                    // Prefer below the item in the one-row spacing area
+                    let below_y = item_area.y.saturating_add(visible_height);
+                    let bottom_y = content_area.y.saturating_add(content_area.height);
+                    let maxw = item_area.width as usize;
+                    // Truncate safely by display width, not by bytes, to avoid
+                    // panics on non-UTF-8 boundaries (e.g., emoji/CJK). Use the
+                    // same width logic as our live wrap utilities.
+                    let draw_text = {
+                        use unicode_width::UnicodeWidthStr as _;
+                        if text.width() > maxw {
+                            crate::live_wrap::take_prefix_by_width(&text, maxw).0
+                        } else {
+                            text.clone()
                         }
-                        let style = Style::default().fg(crate::colors::text_dim());
-                        // Prefer below the item in the one-row spacing area
-                        let below_y = item_area.y.saturating_add(visible_height);
-                        let bottom_y = content_area.y.saturating_add(content_area.height);
-                        let maxw = item_area.width as usize;
-                        // Truncate safely by display width, not by bytes, to avoid
-                        // panics on non-UTF-8 boundaries (e.g., emoji/CJK). Use the
-                        // same width logic as our live wrap utilities.
-                        let draw_text = {
-                            use unicode_width::UnicodeWidthStr as _;
-                            if text.width() > maxw {
-                                crate::live_wrap::take_prefix_by_width(&text, maxw).0
-                            } else {
-                                text.clone()
-                            }
-                        };
-                        if item_area.width > 0 {
-                            if below_y < bottom_y {
-                                buf.set_string(item_area.x, below_y, draw_text.clone(), style);
-                            } else if item_area.y > content_area.y {
-                                // Fall back to above the item if no space below
-                                let above_y = item_area.y.saturating_sub(1);
-                                buf.set_string(item_area.x, above_y, draw_text.clone(), style);
-                            }
+                    };
+                    if item_area.width > 0 {
+                        if below_y < bottom_y {
+                            buf.set_string(item_area.x, below_y, draw_text.clone(), style);
+                        } else if item_area.y > content_area.y {
+                            // Fall back to above the item if no space below
+                            let above_y = item_area.y.saturating_sub(1);
+                            buf.set_string(item_area.x, above_y, draw_text.clone(), style);
                         }
                     }
                 }
@@ -32908,7 +32748,7 @@ impl WidgetRef for &ChatWidget<'_> {
                 let this_is_collapsed_reasoning = item
                     .as_any()
                     .downcast_ref::<crate::history_cell::CollapsibleReasoningCell>()
-                    .map(|rc| rc.is_collapsed())
+                    .map(history_cell::CollapsibleReasoningCell::is_collapsed)
                     .unwrap_or(false);
                 if this_is_collapsed_reasoning {
                     let prev_is_collapsed_reasoning = render_requests
@@ -32917,7 +32757,7 @@ impl WidgetRef for &ChatWidget<'_> {
                         .and_then(|c| {
                             c.as_any()
                                 .downcast_ref::<crate::history_cell::CollapsibleReasoningCell>()
-                                .map(|rc| rc.is_collapsed())
+                                .map(history_cell::CollapsibleReasoningCell::is_collapsed)
                         })
                         .unwrap_or(false);
                     let next_is_collapsed_reasoning = render_requests
@@ -32926,7 +32766,7 @@ impl WidgetRef for &ChatWidget<'_> {
                         .and_then(|c| {
                             c.as_any()
                                 .downcast_ref::<crate::history_cell::CollapsibleReasoningCell>()
-                                .map(|rc| rc.is_collapsed())
+                                .map(history_cell::CollapsibleReasoningCell::is_collapsed)
                         })
                         .unwrap_or(false);
                     if prev_is_collapsed_reasoning && next_is_collapsed_reasoning {
@@ -32970,20 +32810,20 @@ impl WidgetRef for &ChatWidget<'_> {
                 first.preview
             );
         }
-        if let Some(start) = render_loop_start {
-            if self.perf_state.enabled {
-                let elapsed = start.elapsed().as_nanos();
-                let pending_scroll = self.perf_state.pending_scroll_rows.get();
-                {
-                    let mut p = self.perf_state.stats.borrow_mut();
-                    p.ns_render_loop = p.ns_render_loop.saturating_add(elapsed);
-                    if pending_scroll > 0 {
-                        p.record_scroll_render(pending_scroll, elapsed);
-                    }
-                }
+        if let Some(start) = render_loop_start
+            && self.perf_state.enabled
+        {
+            let elapsed = start.elapsed().as_nanos();
+            let pending_scroll = self.perf_state.pending_scroll_rows.get();
+            {
+                let mut p = self.perf_state.stats.borrow_mut();
+                p.ns_render_loop = p.ns_render_loop.saturating_add(elapsed);
                 if pending_scroll > 0 {
-                    self.perf_state.pending_scroll_rows.set(0);
+                    p.record_scroll_render(pending_scroll, elapsed);
                 }
+            }
+            if pending_scroll > 0 {
+                self.perf_state.pending_scroll_rows.set(0);
             }
         }
 
@@ -33258,23 +33098,22 @@ impl WidgetRef for &ChatWidget<'_> {
 
                 let mut pending_visible = false;
                 let mut pending_box: Option<(Rect, Vec<RtLine<'static>>)> = None;
-                if let Some(pending) = overlay.pending_command.as_ref() {
-                    if let Some((pending_lines, pending_height)) =
+                if let Some(pending) = overlay.pending_command.as_ref()
+                    && let Some((pending_lines, pending_height)) =
                         pending_command_box_lines(pending, content.width)
-                    {
-                        if pending_height <= body_space && pending_height > 0 {
-                            bottom_cursor = bottom_cursor.saturating_sub(pending_height);
-                            let pending_area = Rect {
-                                x: content.x,
-                                y: bottom_cursor,
-                                width: content.width,
-                                height: pending_height,
-                            };
-                            body_space = body_space.saturating_sub(pending_height);
-                            pending_box = Some((pending_area, pending_lines));
-                            pending_visible = true;
-                        }
-                    }
+                    && pending_height <= body_space
+                    && pending_height > 0
+                {
+                    bottom_cursor = bottom_cursor.saturating_sub(pending_height);
+                    let pending_area = Rect {
+                        x: content.x,
+                        y: bottom_cursor,
+                        width: content.width,
+                        height: pending_height,
+                    };
+                    body_space = body_space.saturating_sub(pending_height);
+                    pending_box = Some((pending_area, pending_lines));
+                    pending_visible = true;
                 }
 
                 let body_area = Rect {
@@ -33540,7 +33379,7 @@ impl WidgetRef for &ChatWidget<'_> {
                     let labels: Vec<String> = overlay
                         .tabs
                         .iter()
-                        .map(|(t, _)| format!("  {}  ", t))
+                        .map(|(t, _)| format!("  {t}  "))
                         .collect();
                     let mut constraints: Vec<Constraint> = Vec::new();
                     let mut total: u16 = 0;
@@ -33750,84 +33589,84 @@ impl WidgetRef for &ChatWidget<'_> {
             }
 
             // Render help overlay (covering the history area) if active
-            if self.settings.overlay.is_none() {
-                if let Some(overlay) = &self.help.overlay {
-                    // Global scrim across widget
-                    let scrim_bg = Style::default()
-                        .bg(crate::colors::overlay_scrim())
-                        .fg(crate::colors::text_dim());
-                    for y in area.y..area.y + area.height {
-                        for x in area.x..area.x + area.width {
-                            buf[(x, y)].set_style(scrim_bg);
-                        }
+            if self.settings.overlay.is_none()
+                && let Some(overlay) = &self.help.overlay
+            {
+                // Global scrim across widget
+                let scrim_bg = Style::default()
+                    .bg(crate::colors::overlay_scrim())
+                    .fg(crate::colors::text_dim());
+                for y in area.y..area.y + area.height {
+                    for x in area.x..area.x + area.width {
+                        buf[(x, y)].set_style(scrim_bg);
                     }
-                    let padding = 1u16;
-                    let window_area = Rect {
-                        x: history_area.x + padding,
-                        y: history_area.y,
-                        width: history_area.width.saturating_sub(padding * 2),
-                        height: history_area.height,
-                    };
-                    Clear.render(window_area, buf);
-                    let block = Block::default()
-                        .borders(Borders::ALL)
-                        .title(ratatui::text::Line::from(vec![
-                            ratatui::text::Span::styled(
-                                " ",
-                                Style::default().fg(crate::colors::text_dim()),
-                            ),
-                            ratatui::text::Span::styled(
-                                "Help",
-                                Style::default().fg(crate::colors::text()),
-                            ),
-                            ratatui::text::Span::styled(
-                                " ——— ",
-                                Style::default().fg(crate::colors::text_dim()),
-                            ),
-                            ratatui::text::Span::styled(
-                                "Esc",
-                                Style::default().fg(crate::colors::text()),
-                            ),
-                            ratatui::text::Span::styled(
-                                " close ",
-                                Style::default().fg(crate::colors::text_dim()),
-                            ),
-                        ]))
-                        .style(Style::default().bg(crate::colors::background()))
-                        .border_style(
-                            Style::default()
-                                .fg(crate::colors::border())
-                                .bg(crate::colors::background()),
-                        );
-                    let inner = block.inner(window_area);
-                    block.render(window_area, buf);
-
-                    // Paint inner bg
-                    let inner_bg = Style::default().bg(crate::colors::background());
-                    for y in inner.y..inner.y + inner.height {
-                        for x in inner.x..inner.x + inner.width {
-                            buf[(x, y)].set_style(inner_bg);
-                        }
-                    }
-
-                    // Body area with one cell padding
-                    let body = inner.inner(ratatui::layout::Margin::new(1, 1));
-
-                    // Compute visible slice
-                    let visible_rows = body.height as usize;
-                    self.help.body_visible_rows.set(body.height);
-                    let max_off = overlay.lines.len().saturating_sub(visible_rows.max(1));
-                    let skip = (overlay.scroll as usize).min(max_off);
-                    let end = (skip + visible_rows).min(overlay.lines.len());
-                    let visible = if skip < overlay.lines.len() {
-                        &overlay.lines[skip..end]
-                    } else {
-                        &[]
-                    };
-                    let paragraph = Paragraph::new(RtText::from(visible.to_vec()))
-                        .wrap(ratatui::widgets::Wrap { trim: false });
-                    ratatui::widgets::Widget::render(paragraph, body, buf);
                 }
+                let padding = 1u16;
+                let window_area = Rect {
+                    x: history_area.x + padding,
+                    y: history_area.y,
+                    width: history_area.width.saturating_sub(padding * 2),
+                    height: history_area.height,
+                };
+                Clear.render(window_area, buf);
+                let block = Block::default()
+                    .borders(Borders::ALL)
+                    .title(ratatui::text::Line::from(vec![
+                        ratatui::text::Span::styled(
+                            " ",
+                            Style::default().fg(crate::colors::text_dim()),
+                        ),
+                        ratatui::text::Span::styled(
+                            "Help",
+                            Style::default().fg(crate::colors::text()),
+                        ),
+                        ratatui::text::Span::styled(
+                            " ——— ",
+                            Style::default().fg(crate::colors::text_dim()),
+                        ),
+                        ratatui::text::Span::styled(
+                            "Esc",
+                            Style::default().fg(crate::colors::text()),
+                        ),
+                        ratatui::text::Span::styled(
+                            " close ",
+                            Style::default().fg(crate::colors::text_dim()),
+                        ),
+                    ]))
+                    .style(Style::default().bg(crate::colors::background()))
+                    .border_style(
+                        Style::default()
+                            .fg(crate::colors::border())
+                            .bg(crate::colors::background()),
+                    );
+                let inner = block.inner(window_area);
+                block.render(window_area, buf);
+
+                // Paint inner bg
+                let inner_bg = Style::default().bg(crate::colors::background());
+                for y in inner.y..inner.y + inner.height {
+                    for x in inner.x..inner.x + inner.width {
+                        buf[(x, y)].set_style(inner_bg);
+                    }
+                }
+
+                // Body area with one cell padding
+                let body = inner.inner(ratatui::layout::Margin::new(1, 1));
+
+                // Compute visible slice
+                let visible_rows = body.height as usize;
+                self.help.body_visible_rows.set(body.height);
+                let max_off = overlay.lines.len().saturating_sub(visible_rows.max(1));
+                let skip = (overlay.scroll as usize).min(max_off);
+                let end = (skip + visible_rows).min(overlay.lines.len());
+                let visible = if skip < overlay.lines.len() {
+                    &overlay.lines[skip..end]
+                } else {
+                    &[]
+                };
+                let paragraph = Paragraph::new(RtText::from(visible.to_vec()))
+                    .wrap(ratatui::widgets::Wrap { trim: false });
+                ratatui::widgets::Widget::render(paragraph, body, buf);
             }
         }
         // Finalize widget render timing
@@ -33872,12 +33711,11 @@ fn coalesce_read_ranges_in_lines(lines: &mut Vec<ratatui::text::Line<'static>>) 
             let tail = &rest[idx + 1..];
             if tail.starts_with("(lines ") && tail.ends_with(")") {
                 let inner = &tail[7..tail.len() - 1];
-                if let Some((s1, s2)) = inner.split_once(" to ") {
-                    if let (Ok(start), Ok(end)) =
+                if let Some((s1, s2)) = inner.split_once(" to ")
+                    && let (Ok(start), Ok(end)) =
                         (s1.trim().parse::<u32>(), s2.trim().parse::<u32>())
-                    {
-                        return Some((fname, start, end, prefix));
-                    }
+                {
+                    return Some((fname, start, end, prefix));
                 }
             }
         }
@@ -33893,30 +33731,27 @@ fn coalesce_read_ranges_in_lines(lines: &mut Vec<ratatui::text::Line<'static>>) 
         };
         let mut k = i + 1;
         while k < lines.len() {
-            if let Some((fname_b, b1, b2, _prefix_b)) = parse_read_line(&lines[k]) {
-                if fname_b == fname_a {
-                    let touch_or_overlap = b1 <= a2.saturating_add(1) && b2.saturating_add(1) >= a1;
-                    if touch_or_overlap {
-                        a1 = a1.min(b1);
-                        a2 = a2.max(b2);
-                        let new_spans: Vec<Span<'static>> = vec![
-                            Span::styled(
-                                prefix_a.clone(),
-                                Style::default().add_modifier(Modifier::DIM),
-                            ),
-                            Span::styled(
-                                fname_a.clone(),
-                                Style::default().fg(crate::colors::text()),
-                            ),
-                            Span::styled(
-                                format!(" (lines {} to {})", a1, a2),
-                                Style::default().fg(crate::colors::text_dim()),
-                            ),
-                        ];
-                        lines[i] = Line::from(new_spans);
-                        lines.remove(k);
-                        continue;
-                    }
+            if let Some((fname_b, b1, b2, _prefix_b)) = parse_read_line(&lines[k])
+                && fname_b == fname_a
+            {
+                let touch_or_overlap = b1 <= a2.saturating_add(1) && b2.saturating_add(1) >= a1;
+                if touch_or_overlap {
+                    a1 = a1.min(b1);
+                    a2 = a2.max(b2);
+                    let new_spans: Vec<Span<'static>> = vec![
+                        Span::styled(
+                            prefix_a.clone(),
+                            Style::default().add_modifier(Modifier::DIM),
+                        ),
+                        Span::styled(fname_a.clone(), Style::default().fg(crate::colors::text())),
+                        Span::styled(
+                            format!(" (lines {a1} to {a2})"),
+                            Style::default().fg(crate::colors::text_dim()),
+                        ),
+                    ];
+                    lines[i] = Line::from(new_spans);
+                    lines.remove(k);
+                    continue;
                 }
             }
             k += 1;
@@ -33948,10 +33783,10 @@ impl ExecState {
         if self.suppressed_exec_end_call_ids.insert(call_id.clone()) {
             self.suppressed_exec_end_order.push_back(call_id);
             const MAX_TRACKED_SUPPRESSED_IDS: usize = 64;
-            if self.suppressed_exec_end_order.len() > MAX_TRACKED_SUPPRESSED_IDS {
-                if let Some(old) = self.suppressed_exec_end_order.pop_front() {
-                    self.suppressed_exec_end_call_ids.remove(&old);
-                }
+            if self.suppressed_exec_end_order.len() > MAX_TRACKED_SUPPRESSED_IDS
+                && let Some(old) = self.suppressed_exec_end_order.pop_front()
+            {
+                self.suppressed_exec_end_call_ids.remove(&old);
             }
         }
     }
@@ -34258,10 +34093,10 @@ fn pending_command_box_lines(
                 Some(token) => spans.push(ratatui::text::Span::styled(token, cursor_style)),
                 None => spans.push(ratatui::text::Span::styled(" ", cursor_style)),
             }
-            if let Some(after_text) = after {
-                if !after_text.is_empty() {
-                    spans.push(ratatui::text::Span::styled(after_text, text_style));
-                }
+            if let Some(after_text) = after
+                && !after_text.is_empty()
+            {
+                spans.push(ratatui::text::Span::styled(after_text, text_style));
             }
         } else {
             spans.push(ratatui::text::Span::styled(line.text.clone(), text_style));
@@ -34379,7 +34214,7 @@ impl ChatWidget<'_> {
                     self.push_background_tail(msg);
                 }
                 Err(err) => {
-                    let msg = format!("⚠️ Failed to persist TUI notifications setting: {}", err);
+                    let msg = format!("⚠️ Failed to persist TUI notifications setting: {err}");
                     self.history_push_plain_state(history_cell::new_error_event(msg));
                 }
             },
@@ -34454,11 +34289,10 @@ impl ChatWidget<'_> {
                 Ok(changed) => {
                     if changed {
                         if enable {
-                            if let Ok((enabled, _)) = code_core::config::list_mcp_servers(&home) {
-                                if let Some((_, cfg)) = enabled.into_iter().find(|(n, _)| n == name)
-                                {
-                                    self.config.mcp_servers.insert(name.to_string(), cfg);
-                                }
+                            if let Ok((enabled, _)) = code_core::config::list_mcp_servers(&home)
+                                && let Some((_, cfg)) = enabled.into_iter().find(|(n, _)| n == name)
+                            {
+                                self.config.mcp_servers.insert(name.to_string(), cfg);
                             }
                         } else {
                             self.config.mcp_servers.remove(name);
@@ -34472,12 +34306,12 @@ impl ChatWidget<'_> {
                     }
                 }
                 Err(e) => {
-                    let msg = format!("Failed to update MCP server '{}': {}", name, e);
+                    let msg = format!("Failed to update MCP server '{name}': {e}");
                     self.history_push_plain_state(history_cell::new_error_event(msg));
                 }
             },
             Err(e) => {
-                let msg = format!("Failed to locate CODEX_HOME: {}", e);
+                let msg = format!("Failed to locate CODEX_HOME: {e}");
                 self.history_push_plain_state(history_cell::new_error_event(msg));
             }
         }

@@ -17,7 +17,10 @@
 
 use std::fs::File;
 use std::fs::OpenOptions;
+use std::io::Read;
 use std::io::Result;
+use std::io::Seek;
+use std::io::SeekFrom;
 use std::io::Write;
 use std::path::PathBuf;
 
@@ -103,6 +106,7 @@ pub(crate) async fn append_entry(text: &str, session_id: &Uuid, config: &Config)
     }
 
     let mut history_file = options.open(&path)?;
+    let max_bytes = config.history.max_bytes;
 
     // Ensure permissions.
     ensure_owner_only_permissions(&history_file).await?;
@@ -116,6 +120,13 @@ pub(crate) async fn append_entry(text: &str, session_id: &Uuid, config: &Config)
                     // While holding the exclusive lock, write the full line.
                     history_file.write_all(line.as_bytes())?;
                     history_file.flush()?;
+                    if let Some(max_bytes) = max_bytes
+                        && max_bytes > 0
+                    {
+                        if let Err(err) = prune_history_if_needed(&mut history_file, max_bytes) {
+                            tracing::warn!(error = %err, "failed to prune history file");
+                        }
+                    }
                     let _ = fs2::FileExt::unlock(&history_file);
                     return Ok(());
                 }
@@ -135,6 +146,54 @@ pub(crate) async fn append_entry(text: &str, session_id: &Uuid, config: &Config)
         ))
     })
     .await??;
+
+    Ok(())
+}
+
+fn prune_history_if_needed(history_file: &mut File, max_bytes: usize) -> Result<()> {
+    let file_size = history_file.metadata()?.len() as usize;
+    if file_size <= max_bytes {
+        return Ok(());
+    }
+
+    let target_size = max_bytes.saturating_mul(4) / 5;
+    history_file.seek(SeekFrom::Start(0))?;
+
+    let mut contents = String::new();
+    history_file.read_to_string(&mut contents)?;
+    if contents.is_empty() {
+        return Ok(());
+    }
+
+    let mut kept_lines = Vec::new();
+    let mut kept_bytes = 0usize;
+    for line in contents.lines().rev() {
+        let line_bytes = line.len() + 1;
+        if kept_lines.is_empty() {
+            kept_lines.push(line);
+            kept_bytes += line_bytes;
+            continue;
+        }
+
+        if kept_bytes + line_bytes > target_size {
+            break;
+        }
+
+        kept_lines.push(line);
+        kept_bytes += line_bytes;
+    }
+
+    kept_lines.reverse();
+    let mut rebuilt = String::new();
+    for line in kept_lines {
+        rebuilt.push_str(line);
+        rebuilt.push('\n');
+    }
+
+    history_file.set_len(0)?;
+    history_file.seek(SeekFrom::Start(0))?;
+    history_file.write_all(rebuilt.as_bytes())?;
+    history_file.flush()?;
 
     Ok(())
 }
@@ -336,4 +395,63 @@ async fn ensure_owner_only_permissions(file: &File) -> Result<()> {
 async fn ensure_owner_only_permissions(_file: &File) -> Result<()> {
     // For now, on non-Unix, simply succeed.
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::HistoryEntry;
+    use super::append_entry;
+    use super::history_filepath;
+    use crate::config::Config;
+    use crate::config::ConfigOverrides;
+    use crate::config::ConfigToml;
+    use crate::config_types::History;
+    use crate::config_types::HistoryPersistence;
+    use pretty_assertions::assert_eq;
+    use tempfile::tempdir;
+    use uuid::Uuid;
+
+    fn test_config(code_home: &std::path::Path) -> Config {
+        let mut cfg = ConfigToml::default();
+        cfg.history = Some(History {
+            persistence: HistoryPersistence::SaveAll,
+            max_bytes: None,
+        });
+
+        Config::load_from_base_config_with_overrides(
+            cfg,
+            ConfigOverrides::default(),
+            code_home.to_path_buf(),
+        )
+        .expect("config")
+    }
+
+    #[tokio::test]
+    async fn history_max_bytes_prunes_old_entries() {
+        let temp = tempdir().expect("tempdir");
+        let mut config = test_config(temp.path());
+        let session_id = Uuid::new_v4();
+
+        append_entry("first", &session_id, &config)
+            .await
+            .expect("append first entry");
+
+        let path = history_filepath(&config);
+        let first_size = std::fs::metadata(&path).expect("metadata").len() as usize;
+        config.history.max_bytes = Some(first_size + 10);
+
+        append_entry("second", &session_id, &config)
+            .await
+            .expect("append second entry");
+
+        let contents = std::fs::read_to_string(&path).expect("read history");
+        let entries: Vec<HistoryEntry> = contents
+            .lines()
+            .map(|line| serde_json::from_str(line).expect("parse history entry"))
+            .collect();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].text, "second");
+        assert!(std::fs::metadata(&path).expect("metadata").len() as usize <= first_size + 10);
+    }
 }

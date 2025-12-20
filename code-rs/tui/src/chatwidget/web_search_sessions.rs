@@ -69,12 +69,12 @@ pub(super) fn handle_begin(
         tracker.cell.ensure_started_message();
     }
 
-    if let Some(ref q) = query {
-        if tracker.cell.set_query(Some(q.clone())) {
-            tracker
-                .cell
-                .record_info(tracker.started_at.elapsed(), format!("Query: \"{}\"", q));
-        }
+    if let Some(ref q) = query
+        && tracker.cell.set_query(Some(q.clone()))
+    {
+        tracker
+            .cell
+            .record_info(tracker.started_at.elapsed(), format!("Query: \"{q}\""));
     }
 
     tracker.cell.set_status(WebSearchStatus::Running);
@@ -120,7 +120,7 @@ pub(super) fn handle_complete(
                     .cloned()
             })
         })
-        .unwrap_or(fallback_key.clone());
+        .unwrap_or(fallback_key);
 
     let (mut tracker, existed) = match chat.tools_state.web_search_sessions.remove(&key) {
         Some(tracker) => (tracker, true),
@@ -131,12 +131,12 @@ pub(super) fn handle_complete(
     tracker.request_ordinal = request_ordinal;
     tracker.active_calls.remove(&call_id);
 
-    if let Some(ref q) = query {
-        if tracker.cell.set_query(Some(q.clone())) {
-            tracker
-                .cell
-                .record_info(tracker.started_at.elapsed(), format!("Query: \"{}\"", q));
-        }
+    if let Some(ref q) = query
+        && tracker.cell.set_query(Some(q.clone()))
+    {
+        tracker
+            .cell
+            .record_info(tracker.started_at.elapsed(), format!("Query: \"{q}\""));
     }
 
     let elapsed = tracker.started_at.elapsed();
@@ -207,5 +207,5 @@ fn resolve_request_ordinal(order: Option<&OrderMeta>, fallback: u64) -> u64 {
 }
 
 fn web_search_key(request_ordinal: u64) -> String {
-    format!("web_search:req:{}", request_ordinal)
+    format!("web_search:req:{request_ordinal}")
 }

@@ -122,7 +122,8 @@ impl AutoDriveCardCell {
             .theme
             .reveal
             .map(|_| Instant::now());
-        let cell = Self {
+
+        Self {
             goal: goal.and_then(Self::normalize_text),
             status: AutoDriveStatus::Running,
             actions: Vec::new(),
@@ -132,8 +133,7 @@ impl AutoDriveCardCell {
             first_action_at: None,
             completion_message: None,
             celebration_started_at: None,
-        };
-        cell
+        }
     }
 
     pub(crate) fn set_goal(&mut self, goal: Option<String>) {
@@ -499,7 +499,7 @@ impl AutoDriveCardCell {
         let mut segments = Vec::new();
         if ACTION_TIME_INDENT > 0 {
             segments.push(CardSegment::new(
-                " ".repeat(ACTION_TIME_INDENT),
+                " ".to_string(),
                 secondary_text_style(style),
             ));
         }
@@ -533,7 +533,7 @@ impl AutoDriveCardCell {
         let mut segments = Vec::new();
         if ACTION_TIME_INDENT > 0 {
             segments.push(CardSegment::new(
-                " ".repeat(ACTION_TIME_INDENT),
+                " ".to_string(),
                 secondary_text_style(style),
             ));
         }
@@ -567,7 +567,7 @@ impl AutoDriveCardCell {
         let mut segments = Vec::new();
         if ACTION_TIME_INDENT > 0 {
             segments.push(CardSegment::new(
-                " ".repeat(ACTION_TIME_INDENT),
+                " ".to_string(),
                 secondary_text_style(style),
             ));
         }
@@ -599,7 +599,7 @@ impl AutoDriveCardCell {
         }
 
         let indent_text = if ACTION_TIME_INDENT > 0 {
-            " ".repeat(ACTION_TIME_INDENT)
+            " ".to_string()
         } else {
             String::new()
         };
@@ -802,7 +802,7 @@ impl AutoDriveCardCell {
             .unwrap_or(0)
             .max(ACTION_TIME_COLUMN_MIN_WIDTH);
 
-        let indent_text = " ".repeat(ACTION_TIME_INDENT);
+        let indent_text = " ".to_string();
         let indent_style = secondary_text_style(style);
         let time_style = primary_text_style(style);
         let separator_text = if ACTION_TIME_SEPARATOR_WIDTH > 0 {
@@ -830,7 +830,7 @@ impl AutoDriveCardCell {
                 continue;
             }
 
-            let padded_time = format!("{elapsed:<width$}", width = time_width);
+            let padded_time = format!("{elapsed:<time_width$}");
             segments.push(CardSegment::new(padded_time, time_style));
             remaining = remaining.saturating_sub(time_width);
 
@@ -1011,14 +1011,14 @@ impl AutoDriveCardCell {
 
         let flush =
             |segments: &mut Vec<CardSegment>, buffer: &mut String, style: Option<(Color, bool)>| {
-                if let Some((color, bold)) = style {
-                    if !buffer.is_empty() {
-                        let mut segment_style = Style::default().fg(color);
-                        if bold {
-                            segment_style = segment_style.add_modifier(Modifier::BOLD);
-                        }
-                        segments.push(CardSegment::new(std::mem::take(buffer), segment_style));
+                if let Some((color, bold)) = style
+                    && !buffer.is_empty()
+                {
+                    let mut segment_style = Style::default().fg(color);
+                    if bold {
+                        segment_style = segment_style.add_modifier(Modifier::BOLD);
                     }
+                    segments.push(CardSegment::new(std::mem::take(buffer), segment_style));
                 }
             };
 
@@ -1167,7 +1167,7 @@ impl crate::chatwidget::tool_cards::ToolCardCell for AutoDriveCardCell {
     }
 
     fn dedupe_signature(&self) -> Option<String> {
-        self.signature().map(|value| value.to_string())
+        self.signature().map(std::string::ToString::to_string)
     }
 }
 

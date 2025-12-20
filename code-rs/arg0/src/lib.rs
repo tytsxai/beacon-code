@@ -8,7 +8,8 @@ use code_core::config::resolve_code_path_for_read;
 use std::os::unix::fs::symlink;
 use tempfile::TempDir;
 
-const LINUX_SANDBOX_ARG0: &str = "codex-linux-sandbox";
+const CODE_LINUX_SANDBOX_ARG0: &str = "code-linux-sandbox";
+const LEGACY_LINUX_SANDBOX_ARG0: &str = "codex-linux-sandbox";
 const APPLY_PATCH_ARG0: &str = "apply_patch";
 const MISSPELLED_APPLY_PATCH_ARG0: &str = "applypatch";
 
@@ -19,7 +20,7 @@ const MISSPELLED_APPLY_PATCH_ARG0: &str = "applypatch";
 /// Linux (but not Windows).
 ///
 /// When the current executable is invoked through the hard-link or alias named
-/// `codex-linux-sandbox` we *directly* execute
+/// `code-linux-sandbox` (legacy `codex-linux-sandbox`) we *directly* execute
 /// [`code_linux_sandbox::run_main`] (which never returns). Otherwise we:
 ///
 /// 1.  Use [`dotenvy::from_path`] and [`dotenvy::dotenv`] to modify the
@@ -47,7 +48,10 @@ where
         .and_then(|s| s.to_str())
         .unwrap_or("");
 
-    if exe_name == LINUX_SANDBOX_ARG0 {
+    if matches!(
+        exe_name,
+        CODE_LINUX_SANDBOX_ARG0 | LEGACY_LINUX_SANDBOX_ARG0
+    ) {
         // Safety: [`run_main`] never returns.
         code_linux_sandbox::run_main();
     } else if exe_name == APPLY_PATCH_ARG0 || exe_name == MISSPELLED_APPLY_PATCH_ARG0 {
@@ -146,13 +150,12 @@ fn load_dotenv() {
     let codex_home_missing = std::env::var("CODEX_HOME")
         .map(|v| v.trim().is_empty())
         .unwrap_or(true);
-    if codex_home_missing {
-        if let Ok(code_home) = std::env::var("CODE_HOME") {
-            if !code_home.trim().is_empty() {
-                // Safe: still single-threaded during startup.
-                unsafe { std::env::set_var("CODEX_HOME", code_home) };
-            }
-        }
+    if codex_home_missing
+        && let Ok(code_home) = std::env::var("CODE_HOME")
+        && !code_home.trim().is_empty()
+    {
+        // Safe: still single-threaded during startup.
+        unsafe { std::env::set_var("CODEX_HOME", code_home) };
     }
 }
 

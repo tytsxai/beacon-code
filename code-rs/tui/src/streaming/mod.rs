@@ -123,7 +123,7 @@ impl HeaderEmitter {
         if !already_emitted_in_stream && !already_emitted_this_turn {
             // Do not render a visible header line for either stream kind.
             // We still mark the header as emitted to preserve per-turn gating
-            // and stream state, but the UI should not show the "codex" prefix
+            // and stream state, but the UI should not show the "beacon" prefix
             // on streaming assistant messages.
             match kind {
                 StreamKind::Reasoning => {

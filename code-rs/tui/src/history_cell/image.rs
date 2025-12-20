@@ -52,10 +52,10 @@ impl HistoryCell for ImageOutputCell {
         let summary = format!("tool result ({})", descriptors.join(", "));
 
         let mut lines = vec![Line::from(summary)];
-        if let Some(alt) = record.alt_text.as_ref() {
-            if !alt.is_empty() {
-                lines.push(Line::from(format!("alt: {alt}")));
-            }
+        if let Some(alt) = record.alt_text.as_ref()
+            && !alt.is_empty()
+        {
+            lines.push(Line::from(format!("alt: {alt}")));
         }
         if let Some(path) = record.source_path.as_ref() {
             lines.push(Line::from(format!("source: {}", path.display())));

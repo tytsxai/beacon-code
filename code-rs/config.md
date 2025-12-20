@@ -465,7 +465,7 @@ env = { OPENAI_API_KEY = "your-key-here" }
 
 Code includes built-in support for these agents:
 
-- **code/codex** - Built-in Beacon agents (use current executable / `coder`)
+- **code** - Built-in Beacon agents (use current executable / `coder`; legacy alias: `codex`)
 - **cloud** - Cloud-based agent (optional, gated by `CODE_ENABLE_CLOUD_AGENT_MODEL`)
 
 ### Custom agent example

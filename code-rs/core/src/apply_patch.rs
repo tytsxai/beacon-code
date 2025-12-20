@@ -3,6 +3,8 @@ use crate::codex::Session;
 use crate::patch_harness::run_patch_harness;
 use crate::protocol::FileChange;
 use crate::protocol::ReviewDecision;
+use crate::protocol::SandboxPolicy;
+use crate::protocol::WritableRoot;
 use crate::safety::SafetyCheck;
 use crate::safety::assess_patch_safety;
 use anyhow::Context as _;
@@ -139,7 +141,37 @@ pub(crate) async fn apply_patch(
         sess.get_sandbox_policy(),
         sess.get_cwd(),
     ) {
-        SafetyCheck::AutoApprove { .. } => true,
+        SafetyCheck::AutoApprove { .. } => {
+            if let Err(reason) = check_patch_paths_within_writable_roots(
+                &action,
+                sess.get_sandbox_policy(),
+                sess.get_cwd(),
+            ) {
+                let rx = sess
+                    .request_patch_approval(
+                        sub_id.to_owned(),
+                        call_id.to_owned(),
+                        &action,
+                        Some(reason),
+                        None,
+                    )
+                    .await;
+                match rx.await.unwrap_or_default() {
+                    ReviewDecision::Approved | ReviewDecision::ApprovedForSession => false,
+                    ReviewDecision::Denied | ReviewDecision::Abort => {
+                        return ApplyPatchResult::Reply(ResponseInputItem::FunctionCallOutput {
+                            call_id: call_id.to_owned(),
+                            output: FunctionCallOutputPayload {
+                                content: "patch rejected by user".to_string(),
+                                success: Some(false),
+                            },
+                        });
+                    }
+                }
+            } else {
+                true
+            }
+        }
         SafetyCheck::AskUser => {
             let rx = sess
                 .request_patch_approval(sub_id.to_owned(), call_id.to_owned(), &action, None, None)
@@ -240,6 +272,115 @@ pub(crate) fn get_writable_roots(cwd: &Path) -> Vec<PathBuf> {
     writable_roots
 }
 
+fn check_patch_paths_within_writable_roots(
+    action: &ApplyPatchAction,
+    sandbox_policy: &SandboxPolicy,
+    cwd: &Path,
+) -> Result<(), String> {
+    let Some(writable_roots) = writable_roots_for_patch(sandbox_policy, cwd) else {
+        return Ok(());
+    };
+
+    for (path, change) in action.changes() {
+        ensure_path_writable(path, cwd, &writable_roots)?;
+        if let ApplyPatchFileChange::Update {
+            move_path: Some(dest),
+            ..
+        } = change
+        {
+            ensure_path_writable(dest, cwd, &writable_roots)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn writable_roots_for_patch(
+    sandbox_policy: &SandboxPolicy,
+    cwd: &Path,
+) -> Option<Vec<WritableRoot>> {
+    let roots = match sandbox_policy {
+        SandboxPolicy::DangerFullAccess => None,
+        SandboxPolicy::WorkspaceWrite { .. } => {
+            Some(sandbox_policy.get_writable_roots_with_cwd(cwd))
+        }
+        SandboxPolicy::ReadOnly => Some(vec![WritableRoot {
+            root: cwd.to_path_buf(),
+            read_only_subpaths: Vec::new(),
+        }]),
+    };
+
+    roots.map(normalize_writable_roots)
+}
+
+fn normalize_writable_roots(roots: Vec<WritableRoot>) -> Vec<WritableRoot> {
+    roots
+        .into_iter()
+        .map(|root| {
+            let canonical_root = dunce::canonicalize(&root.root).unwrap_or(root.root);
+            let read_only_subpaths = root
+                .read_only_subpaths
+                .into_iter()
+                .map(|path| dunce::canonicalize(&path).unwrap_or(path))
+                .collect();
+            WritableRoot {
+                root: canonical_root,
+                read_only_subpaths,
+            }
+        })
+        .collect()
+}
+
+fn ensure_path_writable(
+    path: &Path,
+    cwd: &Path,
+    writable_roots: &[WritableRoot],
+) -> Result<(), String> {
+    let path_display = path.display();
+    let resolved = resolve_patch_target(path, cwd)
+        .map_err(|err| format!("failed to resolve patch path {path_display}: {err}"))?;
+    if writable_roots
+        .iter()
+        .any(|root| root.is_path_writable(&resolved))
+    {
+        Ok(())
+    } else {
+        let resolved_display = resolved.display();
+        Err(format!(
+            "patch path {path_display} resolves outside writable roots ({resolved_display})"
+        ))
+    }
+}
+
+fn resolve_patch_target(path: &Path, cwd: &Path) -> std::io::Result<PathBuf> {
+    let abs = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        cwd.join(path)
+    };
+
+    if abs.exists() {
+        return dunce::canonicalize(&abs);
+    }
+
+    let mut current = abs.as_path();
+    let mut suffix = PathBuf::new();
+    loop {
+        if current.exists() {
+            let canonical = dunce::canonicalize(current)?;
+            return Ok(canonical.join(suffix));
+        }
+        let Some(name) = current.file_name() else {
+            return Ok(abs);
+        };
+        suffix = PathBuf::from(name).join(suffix);
+        let Some(parent) = current.parent() else {
+            return Ok(abs);
+        };
+        current = parent;
+    }
+}
+
 async fn apply_changes_from_apply_patch_and_report(
     action: &ApplyPatchAction,
     stdout: &mut impl std::io::Write,
@@ -321,4 +462,72 @@ async fn apply_changes_from_apply_patch(
         modified,
         deleted,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::protocol::SandboxPolicy;
+    use pretty_assertions::assert_eq;
+    use tempfile::TempDir;
+
+    #[test]
+    fn patch_paths_within_workspace_are_allowed() {
+        let tmp = TempDir::new().unwrap();
+        let cwd = tmp.path().to_path_buf();
+        let action = ApplyPatchAction::new_add_for_test(&cwd.join("inside.txt"), "hi".to_string());
+        let policy = SandboxPolicy::WorkspaceWrite {
+            writable_roots: vec![],
+            network_access: false,
+            exclude_tmpdir_env_var: true,
+            exclude_slash_tmp: true,
+            allow_git_writes: true,
+        };
+
+        let result = check_patch_paths_within_writable_roots(&action, &policy, &cwd);
+        assert_eq!(result.is_ok(), true);
+    }
+
+    #[test]
+    fn patch_paths_outside_workspace_need_approval() {
+        let tmp = TempDir::new().unwrap();
+        let cwd = tmp.path().to_path_buf();
+        let outside = cwd.parent().unwrap().join("outside.txt");
+        let action = ApplyPatchAction::new_add_for_test(&outside, "nope".to_string());
+        let policy = SandboxPolicy::WorkspaceWrite {
+            writable_roots: vec![],
+            network_access: false,
+            exclude_tmpdir_env_var: true,
+            exclude_slash_tmp: true,
+            allow_git_writes: true,
+        };
+
+        let result = check_patch_paths_within_writable_roots(&action, &policy, &cwd);
+        assert_eq!(result.is_err(), true);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn symlink_escape_triggers_approval() {
+        use std::os::unix::fs::symlink;
+
+        let tmp = TempDir::new().unwrap();
+        let cwd = tmp.path().to_path_buf();
+        let outside_root = TempDir::new().unwrap();
+        let link_path = cwd.join("link");
+        symlink(outside_root.path(), &link_path).unwrap();
+
+        let action =
+            ApplyPatchAction::new_add_for_test(&link_path.join("escape.txt"), "oops".to_string());
+        let policy = SandboxPolicy::WorkspaceWrite {
+            writable_roots: vec![],
+            network_access: false,
+            exclude_tmpdir_env_var: true,
+            exclude_slash_tmp: true,
+            allow_git_writes: true,
+        };
+
+        let result = check_patch_paths_within_writable_roots(&action, &policy, &cwd);
+        assert_eq!(result.is_err(), true);
+    }
 }

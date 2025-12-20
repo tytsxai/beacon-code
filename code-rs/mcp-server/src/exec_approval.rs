@@ -41,7 +41,7 @@ pub struct ExecApprovalElicitRequestParams {
     pub requested_schema: ElicitRequestParamsRequestedSchema,
 
     // These are additional fields the client can use to
-    // correlate the request with the codex tool call.
+    // correlate the request with the code tool call.
     pub code_elicitation: String,
     pub code_mcp_tool_call_id: String,
     pub code_event_id: String,

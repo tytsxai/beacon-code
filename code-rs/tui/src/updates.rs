@@ -185,7 +185,9 @@ fn version_filepath(config: &Config) -> PathBuf {
 }
 
 pub fn resolve_upgrade_resolution() -> UpgradeResolution {
-    if std::env::var_os("CODEX_MANAGED_BY_NPM").is_some() {
+    if std::env::var_os("BEACON_MANAGED_BY_NPM").is_some()
+        || std::env::var_os("CODEX_MANAGED_BY_NPM").is_some()
+    {
         return UpgradeResolution::Command {
             command: vec![
                 "npm".to_string(),
@@ -199,17 +201,17 @@ pub fn resolve_upgrade_resolution() -> UpgradeResolution {
 
     #[cfg(target_os = "macos")]
     {
-        if let Ok(exe_path) = std::env::current_exe() {
-            if exe_path.starts_with("/opt/homebrew") || exe_path.starts_with("/usr/local") {
-                return UpgradeResolution::Command {
-                    command: vec![
-                        "brew".to_string(),
-                        "upgrade".to_string(),
-                        "code".to_string(),
-                    ],
-                    display: "brew upgrade code".to_string(),
-                };
-            }
+        if let Ok(exe_path) = std::env::current_exe()
+            && (exe_path.starts_with("/opt/homebrew") || exe_path.starts_with("/usr/local"))
+        {
+            return UpgradeResolution::Command {
+                command: vec![
+                    "brew".to_string(),
+                    "upgrade".to_string(),
+                    "code".to_string(),
+                ],
+                display: "brew upgrade code".to_string(),
+            };
         }
     }
 
@@ -304,8 +306,7 @@ pub async fn auto_upgrade_if_enabled(config: &Config) -> anyhow::Result<AutoUpgr
                             if sudo_requires_manual_intervention(&fallback.stderr, fallback.status)
                             {
                                 outcome.user_notice = Some(format!(
-                                    "Automatic upgrade needs your attention. Run `/update` to finish with `{}`.",
-                                    command_display
+                                    "Automatic upgrade needs your attention. Run `/update` to finish with `{command_display}`."
                                 ));
                             }
                             warn!(
@@ -318,8 +319,7 @@ pub async fn auto_upgrade_if_enabled(config: &Config) -> anyhow::Result<AutoUpgr
                         Err(err) => {
                             warn!("auto-upgrade: sudo retry error: {err}");
                             outcome.user_notice = Some(format!(
-                                "Automatic upgrade could not escalate permissions. Run `/update` to finish with `{}`.",
-                                command_display
+                                "Automatic upgrade could not escalate permissions. Run `/update` to finish with `{command_display}`."
                             ));
                             return Ok(outcome);
                         }
@@ -417,13 +417,13 @@ impl AutoUpgradeLock {
 
 impl Drop for AutoUpgradeLock {
     fn drop(&mut self) {
-        if let Err(err) = fs::remove_file(&self.path) {
-            if err.kind() != ErrorKind::NotFound {
-                warn!(
-                    "auto-upgrade: failed to remove lock file {}: {err}",
-                    self.path.display()
-                );
-            }
+        if let Err(err) = fs::remove_file(&self.path)
+            && err.kind() != ErrorKind::NotFound
+        {
+            warn!(
+                "auto-upgrade: failed to remove lock file {}: {err}",
+                self.path.display()
+            );
         }
     }
 }
@@ -615,8 +615,7 @@ async fn fetch_latest_version(originator: &str) -> anyhow::Result<VersionInfo> {
         match parse_version(&latest_tag_name) {
             Some(_) => latest_tag_name.clone(),
             None => anyhow::bail!(
-                "Failed to parse latest tag name '{}': expected 'rust-vX.Y.Z' or 'vX.Y.Z'",
-                latest_tag_name
+                "Failed to parse latest tag name '{latest_tag_name}': expected 'rust-vX.Y.Z' or 'vX.Y.Z'"
             ),
         }
     };
@@ -629,18 +628,18 @@ async fn fetch_latest_version(originator: &str) -> anyhow::Result<VersionInfo> {
 }
 
 async fn check_for_update(version_file: &Path, originator: &str) -> anyhow::Result<VersionInfo> {
-    if let Some(info) = read_version_info(version_file)? {
-        if is_cache_fresh(&info) {
-            return Ok(info);
-        }
+    if let Some(info) = read_version_info(version_file)?
+        && is_cache_fresh(&info)
+    {
+        return Ok(info);
     }
 
     let _guard = REFRESH_LOCK.lock().await;
 
-    if let Some(info) = read_version_info(version_file)? {
-        if is_cache_fresh(&info) {
-            return Ok(info);
-        }
+    if let Some(info) = read_version_info(version_file)?
+        && is_cache_fresh(&info)
+    {
+        return Ok(info);
     }
 
     let info = fetch_latest_version(originator).await?;
@@ -702,7 +701,7 @@ mod tests {
     use tokio::time::sleep;
 
     fn write_cache(path: &Path, info: &serde_json::Value) {
-        fs::write(path, format!("{}\n", info)).expect("write version cache");
+        fs::write(path, format!("{info}\n")).expect("write version cache");
     }
 
     #[test]

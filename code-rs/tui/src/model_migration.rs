@@ -139,7 +139,7 @@ fn render_prompt(
     writeln!(stdout, "{}", copy.heading)?;
     writeln!(stdout)?;
     for line in copy.content {
-        writeln!(stdout, "{}", line)?;
+        writeln!(stdout, "{line}")?;
     }
 
     if copy.can_opt_out {

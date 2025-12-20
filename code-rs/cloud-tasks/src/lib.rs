@@ -151,7 +151,7 @@ fn spawn_apply(
 
 // (no standalone patch summarizer needed – UI displays raw diffs)
 
-/// Entry point for the `codex cloud` subcommand.
+/// Entry point for the `code cloud` subcommand.
 pub async fn run_main(cli: Cli, _code_linux_sandbox_exe: Option<PathBuf>) -> anyhow::Result<()> {
     // Non-interactive submit mode: used by the core agent runner to create a
     // cloud task and return its id on stdout.
@@ -255,7 +255,7 @@ pub async fn run_main(cli: Cli, _code_linux_sandbox_exe: Option<PathBuf>) -> any
                     }
                     _ => {
                         eprintln!(
-                            "Not signed in. Please run 'codex login' to sign in with ChatGPT, then re-run 'codex cloud'."
+                            "Not signed in. Please run 'code login' to sign in with ChatGPT, then re-run 'code cloud'."
                         );
                         std::process::exit(1);
                     }
@@ -263,7 +263,7 @@ pub async fn run_main(cli: Cli, _code_linux_sandbox_exe: Option<PathBuf>) -> any
             }
             None => {
                 eprintln!(
-                    "Not signed in. Please run 'codex login' to sign in with ChatGPT, then re-run 'codex cloud'."
+                    "Not signed in. Please run 'code login' to sign in with ChatGPT, then re-run 'code cloud'."
                 );
                 std::process::exit(1);
             }
@@ -1234,7 +1234,7 @@ pub async fn run_main(cli: Cli, _code_linux_sandbox_exe: Option<PathBuf>) -> any
                                 }
                                 KeyCode::Backspace => {
                                     if let Some(m) = app.env_modal.as_mut() {
-                                        if let Some((idx, _)) = m.query.grapheme_indices(true).last() {
+                                        if let Some((idx, _)) = m.query.grapheme_indices(true).next_back() {
                                             m.query.truncate(idx);
                                         } else {
                                             m.query.clear();
@@ -1579,12 +1579,12 @@ async fn run_submit(args: crate::cli::SubmitArgs) -> anyhow::Result<()> {
                     t
                 }
                 _ => {
-                    eprintln!("Not signed in. Run 'codex login' and retry.");
+                    eprintln!("Not signed in. Run 'code login' and retry.");
                     std::process::exit(1);
                 }
             },
             None => {
-                eprintln!("Not signed in. Run 'codex login' and retry.");
+                eprintln!("Not signed in. Run 'code login' and retry.");
                 std::process::exit(1);
             }
         };
@@ -1642,7 +1642,7 @@ async fn run_submit(args: crate::cli::SubmitArgs) -> anyhow::Result<()> {
         if text.messages.len() > seen_msgs {
             let new = text.messages.len() - seen_msgs;
             seen_msgs = text.messages.len();
-            eprintln!("progress: +{} message(s)", new);
+            eprintln!("progress: +{new} message(s)");
         }
 
         use code_cloud_tasks_client::AttemptStatus as S;
@@ -1677,13 +1677,13 @@ async fn run_submit(args: crate::cli::SubmitArgs) -> anyhow::Result<()> {
                     Some(diff) => {
                         out.push_str("Diff:\n");
                         out.push_str(&diff);
-                        out.push_str("\n");
+                        out.push('\n');
                     }
                     None => out.push_str("No diff available.\n"),
                 }
                 // Sanitize any embedded NULs that could corrupt downstream consumers.
                 let out = out.replace('\0', "");
-                print!("{}", out);
+                print!("{out}");
                 return Ok(());
             }
             S::Failed => {

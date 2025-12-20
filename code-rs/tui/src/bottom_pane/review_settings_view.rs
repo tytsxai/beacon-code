@@ -246,11 +246,9 @@ impl ReviewSettingsView {
                     Span::raw("  "),
                     Span::styled(value_text, value_style),
                 ];
-                if selected {
-                    if let Some(hint) = hint_text {
-                        spans.push(Span::raw("  "));
-                        spans.push(Span::styled(hint, Style::default().fg(colors::text_dim())));
-                    }
+                if selected && let Some(hint) = hint_text {
+                    spans.push(Span::raw("  "));
+                    spans.push(Span::styled(hint, Style::default().fg(colors::text_dim())));
                 }
                 Line::from(spans)
             }
@@ -405,14 +403,11 @@ impl ReviewSettingsView {
                         SelectionKind::Toggle => self.toggle_auto_resolve(),
                         SelectionKind::Attempts => self.adjust_auto_resolve_attempts(true),
                         SelectionKind::Model => {
-                            if let Some(sel) = self.state.selected_idx {
-                                if let Some(row) = self.build_rows().0.get(sel) {
-                                    match row {
-                                        RowData::CustomModel => {
-                                            self.open_review_model_selector();
-                                        }
-                                        _ => {}
-                                    }
+                            if let Some(sel) = self.state.selected_idx
+                                && let Some(row) = self.build_rows().0.get(sel)
+                            {
+                                if let RowData::CustomModel = row {
+                                    self.open_review_model_selector();
                                 }
                             }
                         }
@@ -467,7 +462,7 @@ impl<'a> BottomPaneView<'a> for ReviewSettingsView {
         let inner = block.inner(area);
         block.render(area, buf);
 
-        let header_lines = vec![
+        let header_lines = [
             Line::from(Span::styled(
                 "Choose review model + Auto Resolve automation for /review.",
                 Style::default().fg(colors::text_dim()),
@@ -534,7 +529,7 @@ impl<'a> BottomPaneView<'a> for ReviewSettingsView {
 
         if footer_height > 0 {
             visible_lines.push(Line::from(""));
-            visible_lines.extend(footer_lines.into_iter());
+            visible_lines.extend(footer_lines);
         }
 
         Paragraph::new(visible_lines)

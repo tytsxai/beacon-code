@@ -112,19 +112,18 @@ pub async fn fetch_environments() -> Result<Vec<CloudEnvironment>> {
     let ua = code_core::default_client::get_code_user_agent(None);
     headers.insert(
         USER_AGENT,
-        HeaderValue::from_str(&ua).unwrap_or(HeaderValue::from_static("codex-cli")),
+        HeaderValue::from_str(&ua).unwrap_or(HeaderValue::from_static("beacon-cli")),
     );
-    if let Some(token) = &config.token {
-        if let Ok(value) = HeaderValue::from_str(&format!("Bearer {token}")) {
-            headers.insert(AUTHORIZATION, value);
-        }
+    if let Some(token) = &config.token
+        && let Ok(value) = HeaderValue::from_str(&format!("Bearer {token}"))
+    {
+        headers.insert(AUTHORIZATION, value);
     }
-    if let Some(account) = &config.account_id {
-        if let Ok(name) = HeaderName::from_bytes(b"ChatGPT-Account-Id")
-            && let Ok(value) = HeaderValue::from_str(account)
-        {
-            headers.insert(name, value);
-        }
+    if let Some(account) = &config.account_id
+        && let Ok(name) = HeaderName::from_bytes(b"ChatGPT-Account-Id")
+        && let Ok(value) = HeaderValue::from_str(account)
+    {
+        headers.insert(name, value);
     }
 
     let url = environments_url(&config.base_url);
@@ -227,8 +226,7 @@ async fn load_config() -> Result<CloudTasksConfig> {
         });
     }
 
-    let code_home =
-        code_core::config::find_code_home().context("determine codex home directory")?;
+    let code_home = code_core::config::find_code_home().context("determine code home directory")?;
     let auth_manager = AuthManager::new(
         code_home,
         AuthMode::ChatGPT,
@@ -236,7 +234,7 @@ async fn load_config() -> Result<CloudTasksConfig> {
     );
     let auth = auth_manager
         .auth()
-        .ok_or_else(|| anyhow!("Not signed in. Run `codex login` to authenticate with ChatGPT."))?;
+        .ok_or_else(|| anyhow!("Not signed in. Run `code login` to authenticate with ChatGPT."))?;
     let token = auth
         .get_token()
         .await
@@ -276,7 +274,7 @@ fn extract_chatgpt_account_id(token: &str) -> Option<String> {
     json.get("https://api.openai.com/auth")
         .and_then(|auth| auth.get("chatgpt_account_id"))
         .and_then(|id| id.as_str())
-        .map(|s| s.to_string())
+        .map(std::string::ToString::to_string)
 }
 
 #[derive(Debug, Deserialize)]
