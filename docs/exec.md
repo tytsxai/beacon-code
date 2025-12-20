@@ -1,6 +1,6 @@
 ## 非交互模式
 
-使用 Every Code 的非交互模式自动化常见流程。
+使用 Beacon Code 的非交互模式自动化常见流程。
 
 ```shell
 code exec "count the total number of lines of code in this project"
@@ -76,7 +76,7 @@ JSON Schema 必须遵循[严格 Schema 规则](https://platform.openai.com/docs/
 code exec "Extract details of the project" --output-schema ~/schema.json
 ...
 
-{"project_name":"Every Code CLI","programming_languages":["Rust","TypeScript","Shell"]}
+{"project_name":"Beacon Code CLI","programming_languages":["Rust","TypeScript","Shell"]}
 ```
 
 将 `--output-schema` 与 `-o` 组合，可只输出最终 JSON。也可以给 `-o` 传文件路径以保存 JSON。

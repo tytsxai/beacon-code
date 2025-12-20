@@ -1,6 +1,6 @@
 # TUI 设置面板
 
-Every Code TUI 的全屏设置面板，可在不离开聊天的情况下修改模型、主题、Auto Drive 默认值、智能体、通知等。
+Beacon Code TUI 的全屏设置面板，可在不离开聊天的情况下修改模型、主题、Auto Drive 默认值、智能体、通知等。
 
 ## 打开与导航
 - `/settings` 打开总览；`/settings <section>` 直接跳转到指定区域（如下）。`/auto settings` 与 `/update` 会跳到各自区域。

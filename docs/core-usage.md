@@ -1,11 +1,11 @@
 # 核心上手指南
 
-面向初次使用 Every Code 的中文用户：用最少步骤完成安装、登录、首轮尝试和自动化。
+面向初次使用 Beacon Code 的中文用户：用最少步骤完成安装、登录、首轮尝试和自动化。
 
 ## 环境与安装
 - 依赖：Node.js 20+；从源码构建需 Rust 工具链（`./build-fast.sh` 会自动使用 rustup）。
-- 试用（一次性）：`npx -y @just-every/code`
-- 全局安装：`npm install -g @just-every/code`；启动命令 `code`（若与 VS Code 冲突则用 `coder`）。
+- 试用（一次性）：`npx -y @tytsxai/beacon-code`
+- 全局安装：`npm install -g @tytsxai/beacon-code`；启动命令 `code`（若与 VS Code 冲突则用 `coder`）。
 - 源码构建（仓库根执行）：
   ```bash
   npm install
@@ -31,8 +31,8 @@
 - 倒计时/手动确认：在 `/auto settings` 选择 continue 模式；Esc 可随时暂停/停止。
 
 ## 多智能体与配置
-- 默认仅内置 Codex 子智能体；多智能体命令 `/plan` `/code` `/solve` 自动并行/共识调用。
-- 指定/替换智能体：编辑 `~/.code/config.toml`（兼容读取 `~/.codex/config.toml`），添加 `[[agents]]`：
+- 默认仅内置 Beacon 子智能体；多智能体命令 `/plan` `/code` `/solve` 自动并行/共识调用。
+- 指定/替换智能体：编辑 `~/.code/config.toml`，添加 `[[agents]]`：
   ```toml
   [[agents]]
   name = "code-gpt-5.1-codex-max"

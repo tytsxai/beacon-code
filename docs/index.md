@@ -1,14 +1,14 @@
-# Every Code 文档
+# Beacon Code 文档
 
 > 中文入口：[docs/zh/index.md](zh/index.md)
 
-使用这些文档来安装、配置并运行 Every Code（Code）。
+使用这些文档来安装、配置并运行 Beacon Code（Code）。
 
 ## 从这里开始
 - [核心上手指南](core-usage.md)
 - [快速上手](getting-started.md)
 - [安装](install.md) · [Homebrew](HOMEBREW.md)
-- [认证](authentication.md) · [激活器集成](activator-integration.md)
+- [认证](authentication.md)
 - [架构与数据流总览](architecture.md)
 - [常见问题](faq.md)
 
@@ -31,6 +31,3 @@
 - [沙箱概览](sandbox.md)
 - [平台沙箱](platform-sandboxing.md)
 - [Windows 沙箱安全](platform-sandboxing.md#windows)
-
-## 项目维护
-- [上游同步指南](upstream-sync.md) ⭐

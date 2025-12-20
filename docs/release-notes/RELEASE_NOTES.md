@@ -1,4 +1,4 @@
-## @just-every/code v0.5.15
+## @tytsxai/beacon-code v0.5.15
 自动化钩子进一步收紧发布流程，CLI 获取最新二进制。
 
 ### 变更
@@ -7,8 +7,8 @@
 
 ### 安装
 ```
-npm install -g @just-every/code@latest
+npm install -g @tytsxai/beacon-code@latest
 code
 ```
 
-对比：https://github.com/just-every/code/compare/v0.5.14...v0.5.15
+对比：https://github.com/tytsxai/beacon-code/compare/v0.5.14...v0.5.15

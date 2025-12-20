@@ -1,6 +1,6 @@
 # 配置示例（中文）
 
-> 主配置位于 `~/.code/config.toml`（兼容读取 `~/.codex/config.toml`）。下列示例以中文用户常见需求为导向，未修改默认行为。
+> 主配置位于 `~/.code/config.toml`。下列示例以中文用户常见需求为导向，未修改默认行为。
 
 ## 基础示例：指定模型与审批策略
 
@@ -51,7 +51,7 @@ args = ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/project"]
 ```toml
 [notify]
 command = "terminal-notifier"
-args = ["-title", "Codex", "-message", "{message}"]
+args = ["-title", "Beacon", "-message", "{message}"]
 ```
 
 ## 语言与本地化

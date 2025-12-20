@@ -4,7 +4,7 @@ This project is under active development and the code will likely change pretty 
 
 **At the moment, we only plan to prioritize reviewing external contributions for bugs or security fixes.**
 
-If you want to add a new feature or change the behavior of an existing one, please open an issue proposing the feature and get approval from an OpenAI team member before spending time building it.
+If you want to add a new feature or change the behavior of an existing one, please open an issue proposing the feature and get approval from a maintainer before spending time building it.
 
 **New contributions that don't go through this process may be closed** if they aren't aligned with our current roadmap or conflict with other priorities/upcoming features.
 
@@ -18,14 +18,14 @@ If you want to add a new feature or change the behavior of an existing one, plea
 
 1. **Start with an issue.** Open a new one or comment on an existing discussion so we can agree on the solution before code is written.
 2. **Add or update tests.** Every new feature or bug-fix should come with test coverage that fails before your change and passes afterwards. 100% coverage is not required, but aim for meaningful assertions.
-3. **Document behaviour.** If your change affects user-facing behaviour, update the README, inline help (`codex --help`), or relevant example projects.
+3. **Document behaviour.** If your change affects user-facing behaviour, update the README, inline help (`code --help`), or relevant example projects.
 4. **Keep commits atomic.** Each commit should compile and the tests should pass. This makes reviews and potential rollbacks easier.
 
 ### Opening a pull request
 
 - Fill in the PR template (or include similar information) - **What? Why? How?**
 - Include a link to a bug report or enhancement request in the issue tracker
-- Run **all** checks locally. Use the root `just` helpers so you stay consistent with the rest of the workspace: `just fmt`, `just fix -p <crate>` for the crate you touched, and the relevant tests (e.g., `cargo test -p codex-tui` or `just test` if you need a full sweep). CI failures that could have been caught locally slow down the process.
+- Run **all** checks locally. Use the root `just` helpers so you stay consistent with the rest of the workspace: `just fmt`, `just fix -p <crate>` for the crate you touched, and the relevant tests (e.g., `cargo test -p code-tui` or `just test` if you need a full sweep). CI failures that could have been caught locally slow down the process.
 - Make sure your branch is up-to-date with `main` and that you have resolved merge conflicts.
 - Mark the PR as **Ready for review** only when you believe it is in a merge-able state.
 
@@ -46,7 +46,7 @@ If you want to add a new feature or change the behavior of an existing one, plea
 
 If you run into problems setting up the project, would like feedback on an idea, or just want to say _hi_ - please open a Discussion or jump into the relevant issue. We are happy to help.
 
-Together we can make Codex CLI an incredible tool. **Happy hacking!** :rocket:
+Together we can make Beacon CLI an incredible tool. **Happy hacking!** :rocket:
 
 ### Contributor license agreement (CLA)
 
@@ -73,4 +73,4 @@ The **DCO check** blocks merges until every commit in the PR carries the footer 
 
 ### Security & responsible AI
 
-Have you discovered a vulnerability or have concerns about model output? Please e-mail **security@openai.com** and we will respond promptly.
+Have you discovered a vulnerability or have concerns about model output? Please open a private GitHub security advisory so maintainers can respond promptly.

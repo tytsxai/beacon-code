@@ -19,7 +19,7 @@ repo root
 │  ├─ cloud-tasks* # 远端任务列取/应用
 │  ├─ otel/        # 遥测事件聚合与导出
 │  └─ 其他支撑 crate（git-apply、apply-patch、file-search、execpolicy 等）
-└─ codex-rs/       # 上游镜像，只读（对比/同步用）
+└─ codex-rs/       # 对照 workspace（用于兼容与基准对比）
 ```
 
 ## 主数据流（请求 / 响应）
@@ -33,7 +33,7 @@ flowchart LR
     Ratatui]
   end
   subgraph Core
-    Core[codex core
+    Core[core
     ConversationManager
     EventMsg]
     Tools[Exec / ApplyPatch

@@ -1,6 +1,6 @@
 # Agents 与子智能体
 
-Every Code 可以启动子智能体，并在 `/plan`、`/solve`、`/code` 等多智能体流程中编排它们。此 fork 默认仅提供 Codex 子智能体（不支持 Claude/Gemini/Qwen 外部 CLI）。
+Beacon Code 可以启动子智能体，并在 `/plan`、`/solve`、`/code` 等多智能体流程中编排它们。本项目默认仅提供 Beacon 子智能体（不支持 Claude/Gemini/Qwen 外部 CLI）。
 
 ## 智能体配置（`config.toml` 中的 `[[agents]]`）
 ```toml
@@ -19,7 +19,7 @@ instructions = "添加到该智能体提示的前言"
 字段摘要：`name`（slug/别名）、`command`（可用绝对路径）、`args*`（RO/RW 列表会覆盖基础参数）、`env`、`read-only`、`enabled`，可选 `description` 与 `instructions`。
 
 ### 内置默认值
-若未配置任何 `[[agents]]`，Code 会内置一组 Codex 子智能体（云端变体受环境变量 `CODE_ENABLE_CLOUD_AGENT_MODEL` 控制）：`code-gpt-5.1-codex-max`、`code-gpt-5.1-codex-mini`，以及（可选）`cloud-gpt-5.1-codex-max`。内置配置会移除用户提供的 `--model/-m` 以避免冲突，并插入自身参数。
+若未配置任何 `[[agents]]`，Code 会内置一组 Beacon 子智能体（云端变体受环境变量 `CODE_ENABLE_CLOUD_AGENT_MODEL` 控制）：`code-gpt-5.1-codex-max`、`code-gpt-5.1-codex-mini`，以及（可选）`cloud-gpt-5.1-codex-max`。内置配置会移除用户提供的 `--model/-m` 以避免冲突，并插入自身参数。
 
 > 注意：本仓库 fork 默认禁用 Claude/Gemini/Qwen 等外部 agent CLI；如在配置中引用这些 name/command，会在运行时直接报错。
 

@@ -10,14 +10,14 @@
 
 ### DotSlash
 
-The GitHub Release also contains a [DotSlash](https://dotslash-cli.com/) file for the Codex CLI named `codex`. Using a DotSlash file makes it possible to make a lightweight commit to source control to ensure all contributors use the same version of an executable, regardless of what platform they use for development.
+The GitHub Release also contains a [DotSlash](https://dotslash-cli.com/) file for the Beacon CLI named `code`. Using a DotSlash file makes it possible to make a lightweight commit to source control to ensure all contributors use the same version of an executable, regardless of what platform they use for development.
 
 ### Build from source
 
 ```bash
 # Clone the repository and navigate to the root of the Cargo workspace.
-git clone https://github.com/openai/codex.git
-cd codex/codex-rs
+git clone https://github.com/tytsxai/beacon-code.git
+cd code/code-rs
 
 # Install the Rust toolchain, if necessary.
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
@@ -29,18 +29,18 @@ cargo install just
 # Optional: install nextest for the `just test` helper (or use `cargo test --all-features` as a fallback)
 cargo install cargo-nextest
 
-# Build Codex.
+# Build Beacon.
 cargo build
 
 # Launch the TUI with a sample prompt.
-cargo run --bin codex -- "explain this codebase to me"
+cargo run --bin code -- "explain this codebase to me"
 
-# After making changes, use the root justfile helpers (they default to codex-rs):
+# After making changes, use the workspace justfile helpers:
 just fmt
 just fix -p <crate-you-touched>
 
 # Run the relevant tests (project-specific is fastest), for example:
-cargo test -p codex-tui
+cargo test -p code-tui
 # If you have cargo-nextest installed, `just test` runs the full suite:
 just test
 # Otherwise, fall back to:

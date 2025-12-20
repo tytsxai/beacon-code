@@ -79,7 +79,7 @@ If you don’t have the tool:
 
 ### Integration tests (core)
 
-- Prefer the utilities in `core_test_support::responses` when writing end-to-end Codex tests.
+- Prefer the utilities in `core_test_support::responses` when writing end-to-end Beacon tests.
 
 - All `mount_sse*` helpers return a `ResponseMock`; hold onto it so you can assert against outbound `/responses` POST bodies.
 - Use `ResponseMock::single_request()` when a test should only issue one POST, or `ResponseMock::requests()` to inspect every captured `ResponsesRequest`.

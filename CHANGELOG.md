@@ -1,7 +1,7 @@
 # 更新记录（Changelog）
 
 > [!TIP]
-> 我们持续改进 Code！此页记录主要变更，更多细节可查看 [releases 页面](https://github.com/just-every/code/releases) 或 `docs/release-notes/RELEASE_NOTES.md`。
+> 我们持续改进 Code！此页记录主要变更，更多细节可查看 [releases 页面](https://github.com/tytsxai/beacon-code/releases) 或 `docs/release-notes/RELEASE_NOTES.md`。
 
 ## 0.5.x 中文速览
 
@@ -16,11 +16,11 @@
 - 0.5.4（2025-11-24）：传递推理力度覆盖并自动裁剪溢出的历史。
 - 0.5.3（2025-11-24）：Auto Drive CLI 别名与全自动模式，TUI 粘贴/回退修复，网络重试更稳，配置兼容 Responses/Chat。
 - 0.5.2（2025-11-22）：Auto Drive 默认 gpt-5.1-codex-max，新增 gemini-3-pro 选项，并限制推理力度避免无效请求。
-- 0.5.0（2025-11-21）：更名 Every Code，Auto Drive 增强（压缩、诊断、自恢复），默认模型升级到 gpt-5.1 系列，统一设置与通知 UI。
+- 0.5.0（2025-11-21）：更名 Beacon Code，Auto Drive 增强（压缩、诊断、自恢复），默认模型升级到 gpt-5.1 系列，统一设置与通知 UI。
 
 ## [Unreleased]
 
-- Agents: this fork is Codex-only; disable external agent CLIs (Claude/Gemini/Qwen) and update defaults/docs accordingly.
+- Agents: this fork is Beacon-only; disable external agent CLIs (Claude/Gemini/Qwen) and update defaults/docs accordingly.
 
 ## [0.5.15] - 2025-11-28
 
@@ -87,7 +87,7 @@
 
 ## [0.5.0] - 2025-11-21
 
-- Rebrand the project to **Every Code** while keeping the `code` CLI name and refreshed docs.
+- Rebrand the project to **Beacon Code** while keeping the `code` CLI name and refreshed docs.
 - Auto Drive resilience: compaction and diagnostics, retry/backoff with observer telemetry, resume safety, and clearer cards/status.
 - Default presets upgraded to gpt-5.1 with added codex-mini variants for lighter runs.
 - UX polish: unified settings overlay refinements, /review uncommitted preset, strict streaming order, slash navigation hotkeys, and backtrack improvements.
@@ -134,7 +134,7 @@
 ## [0.4.15] - 2025-11-14
 
 - Core: migrate default CLI, TUI, and Auto Drive models to gpt-5.1 so new sessions use the upgraded stack. (698c53f)
-- Prompts: align the gpt-5.1 system instructions with Codex guidance to keep responses consistent. (e0ec79c)
+- Prompts: align the gpt-5.1 system instructions with Beacon guidance to keep responses consistent. (e0ec79c)
 - TUI Login: add device-code fallback and ensure ChatGPT auth links wrap cleanly on narrow terminals. (5279dd8, 2e47735, 322396c)
 
 ## [0.4.14] - 2025-11-13
@@ -467,7 +467,7 @@
 
 - Core: fix Responses API 400 by using supported 'web_search' tool id. (a00308b3)
 - CI: improve slug detection and labeling across issue comments and previews. (98fa99f2, 1373c4ab)
-- CI: guard 'Codex' branding regressions and auto-fix in TUI/CLI. (f20aee34)
+- CI: guard 'Beacon' branding regressions and auto-fix in TUI/CLI. (f20aee34)
 
 ## [0.2.142] - 2025-09-12
 
@@ -551,7 +551,7 @@
 
 ## [0.2.123] - 2025-09-11
 
-- Upstream merge: reconcile with `openai/codex@main` while restoring fork features and keeping local CLI/TUI improvements. (742ddc152, a0de41bac)
+- Upstream merge: reconcile with upstream main while restoring fork features and keeping local CLI/TUI improvements. (742ddc152, a0de41bac)
 - Windows bootstrap: always print bootstrap error; remove debug gate. (74785d58b)
 
 ## [0.2.122] - 2025-09-11
@@ -572,7 +572,7 @@
 ## [0.2.119] - 2025-09-11
 
 - CLI/Windows: fix global upgrade failures (EBUSY/EPERM) by caching the native binary per-user and preferring the cached launcher. (faa712d3)
-- Installer: on Windows, install binary to %LocalAppData%\just-every\code\<version>; avoid leaving a copy in node_modules. (faa712d3)
+- Installer: on Windows, install binary to %LocalAppData%\tytsxai\beacon-code\<version>; avoid leaving a copy in node_modules. (faa712d3)
 - Launcher: prefer running from cache; mirror into node_modules only on Unix for smoother upgrades. (faa712d3)
 
 ## [0.2.118] - 2025-09-11

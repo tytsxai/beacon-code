@@ -18,13 +18,12 @@ Code supports several mechanisms for setting config values:
 - A generic `-c`/`--config` flag that takes a `key=value` pair, such as `--config model="o3"`.
   - The key can contain dots to set a value deeper than the root, e.g. `--config model_providers.openai.wire_api="chat"`.
   - For consistency with `config.toml`, values are a string in TOML format rather than JSON format, so use `key='{a = 1, b = 2}'` rather than `key='{"a": 1, "b": 2}'`.
-    - The quotes around the value are necessary, as without them your shell would split the config argument on spaces, resulting in `codex` receiving `-c key={a` with (invalid) additional arguments `=`, `1,`, `b`, `=`, `2}`.
+    - The quotes around the value are necessary, as without them your shell would split the config argument on spaces, resulting in `code` receiving `-c key={a` with (invalid) additional arguments `=`, `1,`, `b`, `=`, `2}`.
   - Values can contain any TOML object, such as `--config shell_environment_policy.include_only='["PATH", "HOME", "USER"]'`.
   - If `value` cannot be parsed as a valid TOML value, it is treated as a string value. This means that `-c model='"o3"'` and `-c model=o3` are equivalent.
     - In the first case, the value is the TOML string `"o3"`, while in the second the value is `o3`, which is not valid TOML and therefore treated as the TOML string `"o3"`.
     - Because quotes are interpreted by one's shell, `-c key="true"` will be correctly interpreted in TOML as `key = true` (a boolean) and not `key = "true"` (a string). If for some reason you needed the string `"true"`, you would need to use `-c key='"true"'` (note the two sets of quotes).
 - The `$CODE_HOME/config.toml` configuration file (default: `~/.code`).
-  - For backwards compatibility, Code may also read legacy data from `$CODEX_HOME` (default: `~/.codex`).
 
 ## Config files and managed layers
 
@@ -78,7 +77,7 @@ Notes:
 
 ### model
 
-The model that Codex should use.
+The model that Beacon should use.
 
 ```toml
 model = "gpt-5.2"  # overrides the default ("gpt-5.2" across platforms)
@@ -86,7 +85,7 @@ model = "gpt-5.2"  # overrides the default ("gpt-5.2" across platforms)
 
 ### model_providers
 
-This option lets you add to the default set of model providers bundled with Codex. The map key becomes the value you use with `model_provider` to select the provider.
+This option lets you add to the default set of model providers bundled with Beacon. The map key becomes the value you use with `model_provider` to select the provider.
 
 > [!NOTE]
 > Built-in providers are not overwritten when you reuse their key. Entries you add only take effect when the key is **new**; for example `[model_providers.openai]` leaves the original OpenAI definition untouched. To customize the bundled OpenAI provider, prefer the dedicated knobs (for example the `OPENAI_BASE_URL` environment variable) or register a new provider key and point `model_provider` at it.
@@ -99,13 +98,13 @@ model = "gpt-4o"
 model_provider = "openai-chat-completions"
 
 [model_providers.openai-chat-completions]
-# Name of the provider that will be displayed in the Codex UI.
+# Name of the provider that will be displayed in the Beacon UI.
 name = "OpenAI using Chat Completions"
 # The path `/chat/completions` will be amended to this URL to make the POST
 # request for the chat completions.
 base_url = "https://api.openai.com/v1"
 # If `env_key` is set, identifies an environment variable that must be set when
-# using Codex with this provider. The value of the environment variable must be
+# using Beacon with this provider. The value of the environment variable must be
 # non-empty and will be used in the `Bearer TOKEN` HTTP header for the POST request.
 env_key = "OPENAI_API_KEY"
 # Valid values for wire_api are "chat" and "responses". Defaults to "chat" if omitted.
@@ -115,7 +114,7 @@ wire_api = "chat"
 query_params = {}
 ```
 
-Note this makes it possible to use Codex CLI with non-OpenAI models, so long as they use a wire API that is compatible with the OpenAI chat completions API. For example, you could define the following provider to use Codex CLI with Ollama running locally:
+Note this makes it possible to use Beacon CLI with non-OpenAI models, so long as they use a wire API that is compatible with the OpenAI chat completions API. For example, you could define the following provider to use Beacon CLI with Ollama running locally:
 
 ```toml
 [model_providers.ollama]
@@ -162,7 +161,7 @@ query_params = { api-version = "2025-04-01-preview" }
 wire_api = "responses"
 ```
 
-Export your key before launching Codex: `export AZURE_OPENAI_API_KEY=…`
+Export your key before launching Beacon: `export AZURE_OPENAI_API_KEY=…`
 
 #### Per-provider network tuning
 
@@ -183,15 +182,15 @@ stream_idle_timeout_ms = 300000    # 5m idle timeout
 
 ##### request_max_retries
 
-How many times Codex will retry a failed HTTP request to the model provider. Defaults to `4`.
+How many times Beacon will retry a failed HTTP request to the model provider. Defaults to `4`.
 
 ##### stream_max_retries
 
-Number of times Codex will attempt to reconnect when a streaming response is interrupted. Defaults to `5`.
+Number of times Beacon will attempt to reconnect when a streaming response is interrupted. Defaults to `5`.
 
 ##### stream_idle_timeout_ms
 
-How long Codex will wait for activity on a streaming response before treating the connection as lost. Defaults to `300_000` (5 minutes).
+How long Beacon will wait for activity on a streaming response before treating the connection as lost. Defaults to `300_000` (5 minutes).
 
 ### model_provider
 
@@ -240,7 +239,7 @@ Controls output length/detail on GPT‑5 family models when using the Responses 
 - `"medium"` (default when omitted)
 - `"high"`
 
-When set, Codex includes a `text` object in the request payload with the configured verbosity, for example: `"text": { "verbosity": "low" }`.
+When set, Beacon includes a `text` object in the request payload with the configured verbosity, for example: `"text": { "verbosity": "low" }`.
 
 Example:
 
@@ -263,11 +262,11 @@ model_supports_reasoning_summaries = true
 
 The size of the context window for the model, in tokens.
 
-In general, Codex knows the context window for the most common OpenAI models, but if you are using a new model with an old version of the Codex CLI, then you can use `model_context_window` to tell Codex what value to use to determine how much context is left during a conversation.
+In general, Beacon knows the context window for the most common OpenAI models, but if you are using a new model with an old version of the Beacon CLI, then you can use `model_context_window` to tell Beacon what value to use to determine how much context is left during a conversation.
 
 ### oss_provider
 
-Specifies the default OSS provider to use when running Codex. This is used when the `--oss` flag is provided without a specific provider.
+Specifies the default OSS provider to use when running Beacon. This is used when the `--oss` flag is provided without a specific provider.
 
 Valid values are:
 
@@ -283,22 +282,22 @@ oss_provider = "lmstudio"
 
 ### approval_policy
 
-Determines when the user should be prompted to approve whether Codex can execute a command:
+Determines when the user should be prompted to approve whether Beacon can execute a command:
 
 ```toml
-# Codex has hardcoded logic that defines a set of "trusted" commands.
-# Setting the approval_policy to `untrusted` means that Codex will prompt the
+# Beacon has hardcoded logic that defines a set of "trusted" commands.
+# Setting the approval_policy to `untrusted` means that Beacon will prompt the
 # user before running a command not in the "trusted" set.
 #
-# See https://github.com/openai/codex/issues/1260 for the plan to enable
-# end-users to define their own trusted commands.
+# See the issue tracker for the plan to enable end-users to define their own
+# trusted commands.
 approval_policy = "untrusted"
 ```
 
 If you want to be notified whenever a command fails, use "on-failure":
 
 ```toml
-# If the command fails when run in the sandbox, Codex asks for permission to
+# If the command fails when run in the sandbox, Beacon asks for permission to
 # retry the command outside the sandbox.
 approval_policy = "on-failure"
 ```
@@ -313,14 +312,14 @@ approval_policy = "on-request"
 Alternatively, you can have the model run until it is done, and never ask to run a command with escalated permissions:
 
 ```toml
-# User is never prompted: if the command fails, Codex will automatically try
+# User is never prompted: if the command fails, Beacon will automatically try
 # something out. Note the `exec` subcommand always uses this mode.
 approval_policy = "never"
 ```
 
 ### sandbox_mode
 
-Codex executes model-generated shell commands inside an OS-level sandbox.
+Beacon executes model-generated shell commands inside an OS-level sandbox.
 
 In most cases you can pick the desired behaviour with a single option:
 
@@ -332,9 +331,9 @@ sandbox_mode = "read-only"
 The default policy is `read-only`, which means commands can read any file on
 disk, but attempts to write a file or access the network will be blocked.
 
-A more relaxed policy is `workspace-write`. When specified, the current working directory for the Codex task will be writable (as well as `$TMPDIR` on macOS). Note that the CLI defaults to using the directory where it was spawned as `cwd`, though this can be overridden using `--cwd/-C`.
+A more relaxed policy is `workspace-write`. When specified, the current working directory for the Beacon task will be writable (as well as `$TMPDIR` on macOS). Note that the CLI defaults to using the directory where it was spawned as `cwd`, though this can be overridden using `--cwd/-C`.
 
-On macOS (and soon Linux), all writable roots (including `cwd`) that contain a `.git/` or `.codex/` folder _as an immediate child_ will configure those folders to be read-only while the rest of the root stays writable. This means that commands like `git commit` will fail, by default (as it entails writing to `.git/`), and will require Codex to ask for permission.
+On macOS (and soon Linux), all writable roots (including `cwd`) that contain a `.git/` or `.code/` folder _as an immediate child_ will configure those folders to be read-only while the rest of the root stays writable. This means that commands like `git commit` will fail, by default (as it entails writing to `.git/`), and will require Beacon to ask for permission.
 
 ```toml
 # same as `--sandbox workspace-write`
@@ -342,7 +341,7 @@ sandbox_mode = "workspace-write"
 
 # Extra settings that only apply when `sandbox = "workspace-write"`.
 [sandbox_workspace_write]
-# By default, the cwd for the Codex session will be writable as well as $TMPDIR
+# By default, the cwd for the Beacon session will be writable as well as $TMPDIR
 # (if set) and /tmp (if it exists). Setting the respective options to `true`
 # will override those defaults.
 exclude_tmpdir_env_var = false
@@ -363,9 +362,9 @@ To disable sandboxing altogether, specify `danger-full-access` like so:
 sandbox_mode = "danger-full-access"
 ```
 
-This is reasonable to use if Codex is running in an environment that provides its own sandboxing (such as a Docker container) such that further sandboxing is unnecessary.
+This is reasonable to use if Beacon is running in an environment that provides its own sandboxing (such as a Docker container) such that further sandboxing is unnecessary.
 
-Though using this option may also be necessary if you try to use Codex in environments where its native sandboxing mechanisms are unsupported, such as older Linux kernels or on Windows.
+Though using this option may also be necessary if you try to use Beacon in environments where its native sandboxing mechanisms are unsupported, such as older Linux kernels or on Windows.
 
 ### tools.\*
 
@@ -375,27 +374,27 @@ Use the optional `[tools]` table to toggle built-in tools that the agent may cal
 
 ```toml
 [tools]
-web_search = true   # allow Codex to issue first-party web searches without prompting you (deprecated)
+web_search = true   # allow Beacon to issue first-party web searches without prompting you (deprecated)
 view_image = false  # disable image uploads (they're enabled by default)
 ```
 
-The `view_image` toggle is useful when you want to include screenshots or diagrams from your repo without pasting them manually. Codex still respects sandboxing: it can only attach files inside the workspace roots you allow.
+The `view_image` toggle is useful when you want to include screenshots or diagrams from your repo without pasting them manually. Beacon still respects sandboxing: it can only attach files inside the workspace roots you allow.
 
 ### approval_presets
 
-Codex provides three main Approval Presets:
+Beacon provides three main Approval Presets:
 
-- Read Only: Codex can read files and answer questions; edits, running commands, and network access require approval.
-- Auto: Codex can read files, make edits, and run commands in the workspace without approval; asks for approval outside the workspace or for network access.
+- Read Only: Beacon can read files and answer questions; edits, running commands, and network access require approval.
+- Auto: Beacon can read files, make edits, and run commands in the workspace without approval; asks for approval outside the workspace or for network access.
 - Full Access: Full disk and network access without prompts; extremely risky.
 
-You can further customize how Codex runs at the command line using the `--ask-for-approval` and `--sandbox` options.
+You can further customize how Beacon runs at the command line using the `--ask-for-approval` and `--sandbox` options.
 
 > See also [Sandbox & approvals](./sandbox.md) for in-depth examples and platform-specific behaviour.
 
 ### shell_environment_policy
 
-Codex spawns subprocesses (e.g. when executing a `local_shell` tool-call suggested by the assistant). By default it now passes **your full environment** to those subprocesses. You can tune this behavior via the **`shell_environment_policy`** block in `config.toml`:
+Beacon spawns subprocesses (e.g. when executing a `local_shell` tool-call suggested by the assistant). By default it now passes **your full environment** to those subprocesses. You can tune this behavior via the **`shell_environment_policy`** block in `config.toml`:
 
 ```toml
 [shell_environment_policy]
@@ -414,7 +413,7 @@ include_only = ["PATH", "HOME"]
 | Field                     | Type                 | Default | Description                                                                                                                                     |
 | ------------------------- | -------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | `inherit`                 | string               | `all`   | Starting template for the environment:<br>`all` (clone full parent env), `core` (`HOME`, `PATH`, `USER`, …), or `none` (start empty).           |
-| `ignore_default_excludes` | boolean              | `true`  | When `false`, Codex removes any var whose **name** contains `KEY`, `SECRET`, or `TOKEN` (case-insensitive) before other rules run.              |
+| `ignore_default_excludes` | boolean              | `true`  | When `false`, Beacon removes any var whose **name** contains `KEY`, `SECRET`, or `TOKEN` (case-insensitive) before other rules run.              |
 | `exclude`                 | array<string>        | `[]`    | Case-insensitive glob patterns to drop after the default filter.<br>Examples: `"AWS_*"`, `"AZURE_*"`.                                           |
 | `set`                     | table<string,string> | `{}`    | Explicit key/value overrides or additions – always win over inherited values.                                                                   |
 | `include_only`            | array<string>        | `[]`    | If non-empty, a whitelist of patterns; only variables that match _one_ pattern survive the final step. (Generally used with `inherit = "all"`.) |
@@ -439,7 +438,7 @@ Currently, `CODEX_SANDBOX_NETWORK_DISABLED=1` is also added to the environment, 
 
 ### mcp_servers
 
-You can configure Codex to use [MCP servers](https://modelcontextprotocol.io/about) to give Codex access to external applications, resources, or services.
+You can configure Beacon to use [MCP servers](https://modelcontextprotocol.io/about) to give Beacon access to external applications, resources, or services.
 
 #### Server configuration
 
@@ -456,7 +455,7 @@ command = "npx"
 args = ["-y", "mcp-server"]
 # Optional: propagate additional env vars to the MCP server.
 # A default whitelist of env vars will be propagated to the MCP server.
-# https://github.com/openai/codex/blob/main/codex-rs/rmcp-client/src/utils.rs#L82
+# See `codex-rs/rmcp-client/src/utils.rs` for the default whitelist.
 env = { "API_KEY" = "value" }
 # or
 [mcp_servers.server_name.env]
@@ -470,7 +469,7 @@ cwd = "/Users/<user>/code/my-server"
 
 ##### Streamable HTTP
 
-[Streamable HTTP servers](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports#streamable-http) enable Codex to talk to resources that are accessed via a http url (either on localhost or another domain).
+[Streamable HTTP servers](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports#streamable-http) enable Beacon to talk to resources that are accessed via a http url (either on localhost or another domain).
 
 ```toml
 [mcp_servers.figma]
@@ -490,7 +489,7 @@ Streamable HTTP connections always use the experimental Rust MCP client under th
 rmcp_client = true
 ```
 
-After enabling it, run `codex mcp login <server-name>` when the server supports OAuth.
+After enabling it, run `code mcp login <server-name>` when the server supports OAuth.
 
 #### Other configuration options
 
@@ -507,38 +506,38 @@ enabled_tools = ["search", "summarize"]
 disabled_tools = ["search"]
 ```
 
-When both `enabled_tools` and `disabled_tools` are specified, Codex first restricts the server to the allow-list and then removes any tools that appear in the deny-list.
+When both `enabled_tools` and `disabled_tools` are specified, Beacon first restricts the server to the allow-list and then removes any tools that appear in the deny-list.
 
 #### MCP CLI commands
 
 ```shell
 # List all available commands
-codex mcp --help
+code mcp --help
 
 # Add a server (env can be repeated; `--` separates the launcher command)
-codex mcp add docs -- docs-server --port 4000
+code mcp add docs -- docs-server --port 4000
 
 # List configured servers (pretty table or JSON)
-codex mcp list
-codex mcp list --json
+code mcp list
+code mcp list --json
 
 # Show one server (table or JSON)
-codex mcp get docs
-codex mcp get docs --json
+code mcp get docs
+code mcp get docs --json
 
 # Remove a server
-codex mcp remove docs
+code mcp remove docs
 
 # Log in to a streamable HTTP server that supports oauth
-codex mcp login SERVER_NAME
+code mcp login SERVER_NAME
 
 # Log out from a streamable HTTP server that supports oauth
-codex mcp logout SERVER_NAME
+code mcp logout SERVER_NAME
 ```
 
 ### Examples of useful MCPs
 
-There is an ever growing list of useful MCP servers that can be helpful while you are working with Codex.
+There is an ever growing list of useful MCP servers that can be helpful while you are working with Beacon.
 
 Some of the most common MCPs we've seen are:
 
@@ -546,14 +545,14 @@ Some of the most common MCPs we've seen are:
 - Figma [Local](https://developers.figma.com/docs/figma-mcp-server/local-server-installation/) and [Remote](https://developers.figma.com/docs/figma-mcp-server/remote-server-installation/) - access to your Figma designs
 - [Playwright](https://www.npmjs.com/package/@playwright/mcp) - control and inspect a browser using Playwright
 - [Chrome Developer Tools](https://github.com/ChromeDevTools/chrome-devtools-mcp/) — control and inspect a Chrome browser
-- [Sentry](https://docs.sentry.io/product/sentry-mcp/#codex) — access to your Sentry logs
+- [Sentry](https://docs.sentry.io/product/sentry-mcp/) — access to your Sentry logs
 - [GitHub](https://github.com/github/github-mcp-server) — Control over your GitHub account beyond what git allows (like controlling PRs, issues, etc.)
 
 ## Observability and telemetry
 
 ### otel
 
-Codex can emit [OpenTelemetry](https://opentelemetry.io/) **log events** that
+Beacon can emit [OpenTelemetry](https://opentelemetry.io/) **log events** that
 describe each run: outbound API requests, streamed responses, user input,
 tool-approval decisions, and the result of every tool invocation. Export is
 **disabled by default** so local runs remain self-contained. Opt in by adding an
@@ -566,7 +565,7 @@ exporter = "none"          # defaults to "none"; set to otlp-http or otlp-grpc t
 log_user_prompt = false    # defaults to false; redact prompt text unless explicitly enabled
 ```
 
-Codex tags every exported event with `service.name = $ORIGINATOR` (the same
+Beacon tags every exported event with `service.name = $ORIGINATOR` (the same
 value sent in the `originator` header, `codex_cli_rs` by default), the CLI
 version, and an `env` attribute so downstream collectors can distinguish
 dev/staging/prod traffic. Only telemetry produced inside the `codex_otel`
@@ -578,7 +577,7 @@ Every event shares a common set of metadata fields: `event.timestamp`,
 `conversation.id`, `app.version`, `auth_mode` (when available),
 `user.account_id` (when available), `user.email` (when available), `terminal.type`, `model`, and `slug`.
 
-With OTEL enabled Codex emits the following event types (in addition to the
+With OTEL enabled Beacon emits the following event types (in addition to the
 metadata above):
 
 - `codex.conversation_starts`
@@ -651,8 +650,7 @@ Set `otel.exporter` to control where events go:
   ```
 
 Both OTLP exporters accept an optional `tls` block so you can trust a custom CA
-or enable mutual TLS. Relative paths are resolved against `CODE_HOME/` (falling back
-to legacy `CODEX_HOME/` if needed):
+or enable mutual TLS. Relative paths are resolved against `CODE_HOME/`:
 
 ```toml
 [otel.exporter."otlp-http"]
@@ -664,8 +662,8 @@ protocol = "binary"
 
 [otel.exporter."otlp-http".tls]
 ca-certificate = "certs/otel-ca.pem"
-client-certificate = "/etc/codex/certs/client.pem"
-client-private-key = "/etc/codex/certs/client-key.pem"
+client-certificate = "/etc/beacon/certs/client.pem"
+client-private-key = "/etc/beacon/certs/client-key.pem"
 ```
 
 Note: TLS configuration is supported by the Rust `codex-rs` CLI. The legacy
@@ -676,14 +674,14 @@ If the exporter is `none` nothing is written anywhere; otherwise you must run or
 own collector. All exporters run on a background batch worker that is flushed on
 shutdown.
 
-If you build Codex from source the OTEL crate is still behind an `otel` feature
+If you build Beacon from source the OTEL crate is still behind an `otel` feature
 flag; the official prebuilt binaries ship with the feature enabled. When the
 feature is disabled the telemetry hooks become no-ops so the CLI continues to
 function without the extra dependencies.
 
 ### notify
 
-Specify a program that will be executed to get notified about events generated by Codex. Note that the program will receive the notification argument as a string of JSON, e.g.:
+Specify a program that will be executed to get notified about events generated by Beacon. Note that the program will receive the notification argument as a string of JSON, e.g.:
 
 ```json
 {
@@ -698,7 +696,7 @@ Specify a program that will be executed to get notified about events generated b
 
 The `"type"` property will always be set. Currently, `"agent-turn-complete"` is the only notification type that is supported.
 
-`"thread-id"` contains a string that identifies the Codex session that produced the notification; you can use it to correlate multiple turns that belong to the same task.
+`"thread-id"` contains a string that identifies the Beacon session that produced the notification; you can use it to correlate multiple turns that belong to the same task.
 
 `"cwd"` reports the absolute working directory for the session so scripts can disambiguate which project triggered the notification.
 
@@ -726,9 +724,9 @@ def main() -> int:
         case "agent-turn-complete":
             assistant_message = notification.get("last-assistant-message")
             if assistant_message:
-                title = f"Codex: {assistant_message}"
+                title = f"Beacon: {assistant_message}"
             else:
-                title = "Codex: Turn Complete!"
+                title = "Beacon: Turn Complete!"
             input_messages = notification.get("input-messages", [])
             message = " ".join(input_messages)
             title += message
@@ -746,7 +744,7 @@ def main() -> int:
             "-message",
             message,
             "-group",
-            "codex-" + thread_id,
+            "beacon-" + thread_id,
             "-ignoreDnD",
             "-activate",
             "com.googlecode.iterm2",
@@ -760,20 +758,20 @@ if __name__ == "__main__":
     sys.exit(main())
 ```
 
-To have Codex use this script for notifications, you would configure it via `notify` in `~/.codex/config.toml` using the appropriate path to `notify.py` on your computer:
+To have Beacon use this script for notifications, you would configure it via `notify` in `~/.code/config.toml` using the appropriate path to `notify.py` on your computer:
 
 ```toml
-notify = ["python3", "/Users/mbolin/.codex/notify.py"]
+notify = ["python3", "/Users/mbolin/.code/notify.py"]
 ```
 
 > [!NOTE]
-> Use `notify` for automation and integrations: Codex invokes your external program with a single JSON argument for each event, independent of the TUI. If you only want lightweight desktop notifications while using the TUI, prefer `tui.notifications`, which uses terminal escape codes and requires no external program. You can enable both; `tui.notifications` covers in‑TUI alerts (e.g., approval prompts), while `notify` is best for system‑level hooks or custom notifiers. Currently, `notify` emits only `agent-turn-complete`, whereas `tui.notifications` supports `agent-turn-complete` and `approval-requested` with optional filtering.
+> Use `notify` for automation and integrations: Beacon invokes your external program with a single JSON argument for each event, independent of the TUI. If you only want lightweight desktop notifications while using the TUI, prefer `tui.notifications`, which uses terminal escape codes and requires no external program. You can enable both; `tui.notifications` covers in‑TUI alerts (e.g., approval prompts), while `notify` is best for system‑level hooks or custom notifiers. Currently, `notify` emits only `agent-turn-complete`, whereas `tui.notifications` supports `agent-turn-complete` and `approval-requested` with optional filtering.
 
-When Codex detects WSL 2 inside Windows Terminal (the session exports `WT_SESSION`), `tui.notifications` automatically switches to a Windows toast backend by spawning `powershell.exe`. This ensures both approval prompts and completed turns trigger native toasts even though Windows Terminal ignores OSC 9 escape sequences. Terminals that advertise OSC 9 support (iTerm2, WezTerm, kitty, etc.) continue to use the existing escape-sequence backend, and the `notify` hook remains unchanged.
+When Beacon detects WSL 2 inside Windows Terminal (the session exports `WT_SESSION`), `tui.notifications` automatically switches to a Windows toast backend by spawning `powershell.exe`. This ensures both approval prompts and completed turns trigger native toasts even though Windows Terminal ignores OSC 9 escape sequences. Terminals that advertise OSC 9 support (iTerm2, WezTerm, kitty, etc.) continue to use the existing escape-sequence backend, and the `notify` hook remains unchanged.
 
 ### hide_agent_reasoning
 
-Codex intermittently emits "reasoning" events that show the model's internal "thinking" before it produces a final answer. Some users may find these events distracting, especially in CI logs or minimal terminal output.
+Beacon intermittently emits "reasoning" events that show the model's internal "thinking" before it produces a final answer. Some users may find these events distracting, especially in CI logs or minimal terminal output.
 
 Setting `hide_agent_reasoning` to `true` suppresses these events in **both** the TUI as well as the headless `exec` sub-command:
 
@@ -841,11 +839,11 @@ Users can specify config values at multiple levels. Order of precedence is as fo
 1. custom command-line argument, e.g., `--model o3`
 2. as part of a profile, where the `--profile` is specified via a CLI (or in the config file itself)
 3. as an entry in `config.toml`, e.g., `model = "o3"`
-4. the default value that comes with Codex CLI (i.e., Codex CLI defaults to `gpt-5.1-codex-max`)
+4. the default value that comes with Beacon CLI (i.e., Beacon CLI defaults to `gpt-5.1-codex-max`)
 
 ### history
 
-By default, Code records messages sent to the model in `$CODE_HOME/history.jsonl`. Note that on UNIX, the file permissions are set to `o600`, so it should only be readable and writable by the owner. (For backwards compatibility, Code may also read legacy history from `$CODEX_HOME/history.jsonl`.)
+By default, Code records messages sent to the model in `$CODE_HOME/history.jsonl`. Note that on UNIX, the file permissions are set to `o600`, so it should only be readable and writable by the owner.
 
 To disable this behavior, configure `[history]` as follows:
 
@@ -855,7 +853,7 @@ persistence = "none"  # "save-all" is the default value
 ```
 
 To cap the size of `history.jsonl`, set `history.max_bytes` to a positive byte
-count. When the file grows beyond the limit, Codex removes the oldest entries,
+count. When the file grows beyond the limit, Beacon removes the oldest entries,
 compacting the file down to roughly 80% of the hard cap while keeping the newest
 record intact. Omitting the option—or setting it to `0`—disables pruning.
 
@@ -873,7 +871,7 @@ Note this is **not** a general editor setting (like `$EDITOR`), as it only accep
 - `"cursor"`
 - `"none"` to explicitly disable this feature
 
-Currently, `"vscode"` is the default, though Codex does not verify VS Code is installed. As such, `file_opener` may default to `"none"` or something else in the future.
+Currently, `"vscode"` is the default, though Beacon does not verify VS Code is installed. As such, `file_opener` may default to `"none"` or something else in the future.
 
 ### project_doc_max_bytes
 
@@ -889,7 +887,7 @@ project_doc_fallback_filenames = ["CLAUDE.md", ".exampleagentrules.md"]
 
 We recommend migrating instructions to AGENTS.md; other filenames may reduce model performance.
 
-> See also [AGENTS.md discovery](./agents_md.md) for how Codex locates these files during a session.
+> See also [AGENTS.md discovery](./agents_md.md) for how Beacon locates these files during a session.
 
 ### tui
 
@@ -911,7 +909,7 @@ animations = false
 ```
 
 > [!NOTE]
-> Codex emits desktop notifications using terminal escape codes. Not all terminals support these (notably, macOS Terminal.app and VS Code's terminal do not support custom notifications. iTerm2, Ghostty and WezTerm do support these notifications).
+> Beacon emits desktop notifications using terminal escape codes. Not all terminals support these (notably, macOS Terminal.app and VS Code's terminal do not support custom notifications. iTerm2, Ghostty and WezTerm do support these notifications).
 
 > [!NOTE] > `tui.notifications` is built‑in and limited to the TUI session. For programmatic or cross‑environment notifications—or to integrate with OS‑specific notifiers—use the top‑level `notify` option to run an external program that receives event JSON. The two settings are independent and can be used together.
 
@@ -919,17 +917,17 @@ animations = false
 
 ### Forcing a login method
 
-To force users on a given machine to use a specific login method or workspace, use a combination of [managed configurations](https://developers.openai.com/codex/security#managed-configuration) as well as either or both of the following fields:
+To force users on a given machine to use a specific login method or workspace, use managed configurations along with either or both of the following fields:
 
 ```toml
 # Force the user to log in with ChatGPT or via an api key.
 forced_login_method = "chatgpt" or "api"
 # When logging in with ChatGPT, only the specified workspace ID will be presented during the login
-# flow and the id will be validated during the oauth callback as well as every time Codex starts.
+# flow and the id will be validated during the oauth callback as well as every time Beacon starts.
 forced_chatgpt_workspace_id = "00000000-0000-0000-0000-000000000000"
 ```
 
-If the active credentials don't match the config, the user will be logged out and Codex will exit.
+If the active credentials don't match the config, the user will be logged out and Beacon will exit.
 
 If `forced_chatgpt_workspace_id` is set but `forced_login_method` is not set, API key login will still work.
 
@@ -941,13 +939,13 @@ cli_auth_credentials_store = "keyring"
 
 Valid values:
 
-- `file` (default) – Store credentials in `auth.json` under `$CODE_HOME` (falling back to `$CODEX_HOME` if needed).
+- `file` (default) – Store credentials in `auth.json` under `$CODE_HOME`.
 - `keyring` – Store credentials in the operating system keyring via the [`keyring` crate](https://crates.io/crates/keyring); the CLI reports an error if secure storage is unavailable. Backends by OS:
   - macOS: macOS Keychain
   - Windows: Windows Credential Manager
   - Linux: DBus‑based Secret Service, the kernel keyutils, or a combination
   - FreeBSD/OpenBSD: DBus‑based Secret Service
-- `auto` – Save credentials to the operating system keyring when available; otherwise, fall back to `auth.json` under `$CODE_HOME` (or legacy `$CODEX_HOME`).
+- `auto` – Save credentials to the operating system keyring when available; otherwise, fall back to `auth.json` under `$CODE_HOME`.
 
 ## Config reference
 
@@ -975,7 +973,7 @@ Valid values:
 | `mcp_servers.<id>.env`                           | map<string,string>                                                | MCP server env vars (stdio servers only).                                                                                       |
 | `mcp_servers.<id>.url`                           | string                                                            | MCP server url (streamable http servers only).                                                                                  |
 | `mcp_servers.<id>.bearer_token_env_var`          | string                                                            | environment variable containing a bearer token to use for auth (streamable http servers only).                                  |
-| `mcp_servers.<id>.enabled`                       | boolean                                                           | When false, Codex skips starting the server (default: true).                                                                    |
+| `mcp_servers.<id>.enabled`                       | boolean                                                           | When false, Beacon skips starting the server (default: true).                                                                    |
 | `mcp_servers.<id>.startup_timeout_sec`           | number                                                            | Startup timeout in seconds (default: 10). Timeout is applied both for initializing MCP server and initially listing tools.      |
 | `mcp_servers.<id>.tool_timeout_sec`              | number                                                            | Per-tool timeout in seconds (default: 60). Accepts fractional values; omit to use the default.                                  |
 | `mcp_servers.<id>.enabled_tools`                 | array<string>                                                     | Restrict the server to the listed tool names.                                                                                   |
@@ -999,7 +997,7 @@ Valid values:
 | `tui`                                            | table                                                             | TUI‑specific options.                                                                                                           |
 | `tui.notifications`                              | boolean \| array<string>                                          | Enable desktop notifications in the tui (default: true).                                                                        |
 | `hide_agent_reasoning`                           | boolean                                                           | Hide model reasoning events.                                                                                                    |
-| `check_for_update_on_startup`                    | boolean                                                           | Check for Codex updates on startup (default: true). Set to `false` only if updates are centrally managed.                       |
+| `check_for_update_on_startup`                    | boolean                                                           | Check for Beacon updates on startup (default: true). Set to `false` only if updates are centrally managed.                       |
 | `show_raw_agent_reasoning`                       | boolean                                                           | Show raw reasoning (when available).                                                                                            |
 | `model_reasoning_effort`                         | `minimal` \| `low` \| `medium` \| `high`\|`xhigh`                 | Responses API reasoning effort.                                                                                                 |
 | `model_reasoning_summary`                        | `auto` \| `concise` \| `detailed` \| `none`                       | Reasoning summaries.                                                                                                            |
@@ -1011,7 +1009,7 @@ Valid values:
 | `experimental_use_exec_command_tool`             | boolean                                                           | Use experimental exec command tool.                                                                                             |
 | `projects.<path>.trust_level`                    | string                                                            | Mark project/worktree as trusted (only `"trusted"` is recognized).                                                              |
 | `tools.web_search`                               | boolean                                                           | Enable web search tool (deprecated) (default: false).                                                                           |
-| `tools.view_image`                               | boolean                                                           | Enable or disable the `view_image` tool so Codex can attach local image files from the workspace (default: true).               |
-| `forced_login_method`                            | `chatgpt` \| `api`                                                | Only allow Codex to be used with ChatGPT or API keys.                                                                           |
-| `forced_chatgpt_workspace_id`                    | string (uuid)                                                     | Only allow Codex to be used with the specified ChatGPT workspace.                                                               |
+| `tools.view_image`                               | boolean                                                           | Enable or disable the `view_image` tool so Beacon can attach local image files from the workspace (default: true).               |
+| `forced_login_method`                            | `chatgpt` \| `api`                                                | Only allow Beacon to be used with ChatGPT or API keys.                                                                           |
+| `forced_chatgpt_workspace_id`                    | string (uuid)                                                     | Only allow Beacon to be used with the specified ChatGPT workspace.                                                               |
 | `cli_auth_credentials_store`                     | `file` \| `keyring` \| `auto`                                     | Where to store CLI login credentials (default: `file`).                                                                         |

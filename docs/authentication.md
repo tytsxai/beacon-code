@@ -23,7 +23,7 @@ code login --with-api-key < my_key.txt
 如果之前用 API Key 方式按量付费，现在想切换到 ChatGPT 套餐，请按以下步骤：
 
 1. 升级 CLI，确保 `code --version` 为 `0.5.0` 或更高
-2. 删除 `~/.code/auth.json`（若存在旧版 `~/.codex/auth.json` 也一并删除；Windows 下路径为 `C:\\Users\\USERNAME\\.code\\auth.json` 与 `C:\\Users\\USERNAME\\.codex\\auth.json`）
+2. 删除 `~/.code/auth.json`（Windows 下路径为 `C:\\Users\\USERNAME\\.code\\auth.json`）
 3. 再次运行 `code login`
 
 ## 强制特定认证方式（高级）
@@ -33,7 +33,7 @@ code login --with-api-key < my_key.txt
 - 始终使用 API Key（即便已有 ChatGPT 登录）：
 
 ```toml
-# ~/.code/config.toml（也会读取旧版 ~/.codex/config.toml）
+# ~/.code/config.toml
 preferred_auth_method = "apikey"
 ```
 
@@ -46,7 +46,7 @@ code --config preferred_auth_method="apikey"
 - 优先使用 ChatGPT 登录（默认）：
 
 ```toml
-# ~/.code/config.toml（也会读取旧版 ~/.codex/config.toml）
+# ~/.code/config.toml
 preferred_auth_method = "chatgpt"
 ```
 
@@ -64,7 +64,7 @@ preferred_auth_method = "chatgpt"
 
 仍然有效的来源：
 
-- `~/.code/.env`（或 `~/.codex/.env`）最先加载，可放全局的 `OPENAI_API_KEY`。
+- `~/.code/.env` 最先加载，可放全局的 `OPENAI_API_KEY`。
 - Shell 导出的 `OPENAI_API_KEY` 会被使用。
 
 项目级 `.env` 中的提供商密钥一律忽略——没有可选开关。
@@ -79,7 +79,7 @@ UI 提示：
 
 ### 在本地认证后复制凭据到无头机器
 
-最简单的方式是在本地完成 `code login`（此时浏览器可访问 `localhost:1455`）。认证完成后，凭据会写入 `$CODE_HOME/auth.json`（默认 `~/.code/auth.json`；若存在仍会读取 `$CODEX_HOME`/`~/.codex/auth.json`）。
+最简单的方式是在本地完成 `code login`（此时浏览器可访问 `localhost:1455`）。认证完成后，凭据会写入 `$CODE_HOME/auth.json`（默认 `~/.code/auth.json`）。
 
 由于 `auth.json` 不绑定特定主机，完成本地认证后可将 `$CODE_HOME/auth.json` 复制到无头机器，`code` 就能直接使用。复制到 Docker 容器可这样做：
 
@@ -113,38 +113,3 @@ ssh -L 1455:localhost:1455 <user>@<remote-host>
 ```
 
 然后在该 SSH 会话中运行 `code` 并选择 "Sign in with ChatGPT"。提示时，打开打印出的 URL（形如 `http://localhost:1455/...`）到本地浏览器，流量会被隧道到远程服务器。
-
-## 第三方激活器集成
-
-如果你使用第三方激活器（如 `codex-activator`）来管理认证，Code CLI 支持通过自定义 `model_providers` 配置来使用激活器提供的代理服务。
-
-### 快速配置
-
-激活器通常会将配置写入 `~/.codex/config.toml`。要让 Code CLI 使用相同配置，需要同步到 `~/.code/`：
-
-```bash
-# 手动同步
-cp ~/.codex/config.toml ~/.code/config.toml
-
-# 或设置自动同步（添加到 ~/.zshrc）
-if [ -f ~/.codex/config.toml ]; then
-  cp ~/.codex/config.toml ~/.code/config.toml 2>/dev/null
-fi
-```
-
-### 工作原理
-
-激活器配置示例：
-
-```toml
-model_provider = "crs"
-
-[model_providers.crs]
-name = "crs"
-base_url = "https://proxy.example.com/openai"  # 代理服务器地址
-wire_api = "responses"
-requires_openai_auth = true
-env_key = "CRS_OAI_KEY"  # 认证 token 的环境变量名
-```
-
-详细配置说明请参阅 [激活器集成指南](activator-integration.md)。

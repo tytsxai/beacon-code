@@ -14,7 +14,7 @@ Why this matters:
 
 ## Terminology
 
-- **Global/personal instructions**: instructions stored under the CLI’s home directory (e.g. `~/.code/AGENTS.md` or `~/.codex/AGENTS.md`).
+- **Global/personal instructions**: instructions stored under the CLI’s home directory (e.g. `~/.code/AGENTS.md`).
 - **Project instructions**: instructions stored inside a Git repository and discovered from the repo root down to the current working directory.
 - **Git root**: the closest ancestor directory (walking upward) that contains a `.git` directory or file.
 
@@ -28,7 +28,7 @@ Why this matters:
 
 ## Behavior by workspace (important: this repo has two Rust workspaces)
 
-### `code-rs/` (Every Code)
+### `code-rs/` (Beacon Code)
 
 Implemented in `code-rs/core/src/project_doc.rs`.
 
@@ -37,14 +37,14 @@ Implemented in `code-rs/core/src/project_doc.rs`.
   - `AUTO_AGENTS.md` (Auto Drive-specific project instructions)
 - **Global instructions**:
   - Loaded from `CODE_HOME/AGENTS.md` (default: `~/.code/AGENTS.md`).
-  - Falls back to legacy `CODEX_HOME/AGENTS.md` (default: `~/.codex/AGENTS.md`) for backwards compatibility.
+  - Falls back to a legacy home directory if configured for backwards compatibility.
 - **Overrides**:
   - `AGENTS.override.md` is **not** recognized in `code-rs/` today.
 - **Size limits**:
   - The maximum bytes embedded from project docs is controlled by `project_doc_max_bytes` (default: 32 KiB).
   - When the limit is reached, later files are truncated or skipped.
 
-### `codex-rs/` (upstream mirror)
+### `codex-rs/` (reference workspace)
 
 Implemented in `codex-rs/core/src/project_doc.rs`.
 
@@ -60,4 +60,3 @@ Implemented in `codex-rs/core/src/project_doc.rs`.
 - Put narrow, subsystem-specific guidance in a nested directory’s `AGENTS.md` so it only applies to that subtree.
 - Avoid duplicating the same instructions in multiple levels; prefer “general at root, specific deeper”.
 - Keep instructions short and stable; long documents consume context and can reduce model quality.
-

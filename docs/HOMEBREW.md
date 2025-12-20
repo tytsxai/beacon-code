@@ -1,6 +1,6 @@
 Homebrew（macOS）
 
-仓库包含一个脚本，可基于最新 GitHub Release 产物生成 Homebrew formula。发布到 Homebrew 需要一个 tap 仓库（如 `just-every/homebrew-tap`）。tap 就绪后按以下步骤生成并发布：
+仓库包含一个脚本，可基于最新 GitHub Release 产物生成 Homebrew formula。发布到 Homebrew 需要一个 tap 仓库（如 `tytsxai/homebrew-tap`）。tap 就绪后按以下步骤生成并发布：
 
 1) 为最新版本生成 formula：
 
@@ -13,7 +13,7 @@ scripts/generate-homebrew-formula.sh
 3) 用户即可通过：
 
 ```
-brew tap just-every/tap
+brew tap tytsxai/tap
 brew install code
 ```
 

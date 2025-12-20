@@ -2,7 +2,7 @@
 
 将常用提示保存为 Markdown 文件，可在斜杠菜单中快速复用。
 
-- 位置：文件放在 `$CODE_HOME/prompts/`（默认为 `~/.code/prompts/`；也会读取旧版 `~/.codex/prompts/`）。
+- 位置：文件放在 `$CODE_HOME/prompts/`（默认为 `~/.code/prompts/`）。
 - 文件类型：仅识别 `.md` 扩展的 Markdown。
 - 名称：去掉 `.md` 的文件名即斜杠条目。例如 `my-prompt.md` 可用 `/my-prompt`。
 - 内容：在斜杠弹窗中选择条目并按 Enter 时，文件内容会作为你的消息发送。

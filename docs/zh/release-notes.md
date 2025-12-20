@@ -3,9 +3,9 @@
 > 详尽变更请参见英文版 `../release-notes/RELEASE_NOTES.md`。本页提供当前版本的中文提要。
 
 ## v0.5.0（2025-11-21）要点
-- 更名为 **Every Code**，保留 `code` 简写。
+- 更名为 **Beacon Code**，保留 `code` 简写。
 - **Auto Drive 升级**：自动规划、重跑检查、异常恢复。
-- **易用性改进**：`/resume`、`/undo` 更可靠；上游主要特性（compaction v2、-max/-mini 模型）已移植。
+- **易用性改进**：`/resume`、`/undo` 更可靠；补齐 compaction v2、-max/-mini 模型等关键能力。
 - **统一设置中心**：`/settings` 管理限额、模型路由、主题、审批。
 - **卡片式活动视图**：多智能体、浏览器会话、Auto Drive 以卡片呈现。
 - **性能优化**：长会话渲染与流式展示更流畅。

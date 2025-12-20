@@ -1,12 +1,8 @@
-# Every CODE
+# Beacon Code
 
 &ensp;
 
-<img src="docs/images/every-logo.png" alt="Every Code Logo" width="400">
-
-&ensp;
-
-**Every Code**（简称 Code）是一款运行在终端里的本地快速编程智能体。它是社区驱动的 `openai/codex` 分支，专注真实的开发体验：浏览器集成、多智能体、主题与推理控制，同时与上游保持兼容。
+**Beacon Code**（简称 Code）是一款运行在终端里的本地快速编程智能体，专注真实的开发体验：浏览器集成、多智能体、主题与推理控制。
 
 > 📚 中文文档入口：[docs/zh/index.md](docs/zh/index.md)  
 > 💻 推荐使用 `codex-rs/` 作为主要代码目录（Rust 主实现）；`code-rs/`、`codex-cli/` 主要用于兼容和旧版支持。
@@ -15,23 +11,23 @@
 
 ## v0.5.0 有哪些更新（2025 年 11 月 21 日）
 
-- **更名为 Every Code**——便于被发现，仍保留 `code` 这个简写。
+- **更名为 Beacon Code**——便于被发现，仍保留 `code` 这个简写。
 - **Auto Drive 升级**——给 `/auto` 一个任务，它会自行规划、协调智能体、重跑检查并在异常时恢复，无需人工看护。
-- **大量易用性改进**——`/resume` 和 `/undo` 可靠运行，移植了所有主要的上游特性，包括 compaction v2 与 -max/-mini 模型。
+- **大量易用性改进**——`/resume` 和 `/undo` 可靠运行，补齐 compaction v2 与 -max/-mini 模型等关键能力。
 - **统一设置中心**——`/settings` 集中管理限额、模型路由、主题和 CLI 集成，一处即可审计配置。
 - **卡片式活动视图**——智能体、浏览器会话、网络搜索和 Auto Drive 以卡片呈现，可展开查看完整日志。
 - **性能加速**——历史渲染与流式展示经过优化，即便长时间多智能体会话也保持流畅。
-- **更聪明的智能体**——`/plan`、`/code`、`/solve` 使用 Codex 子智能体并行完成任务。
+- **更聪明的智能体**——`/plan`、`/code`、`/solve` 使用内置子智能体并行完成任务。
 
 完整变更见 `docs/release-notes/RELEASE_NOTES.md`。
 
 &ensp;
 
-## 为什么选择 Every Code
+## 为什么选择 Beacon Code
 
 - 🚀 **Auto Drive 编排**——多智能体自动化，能自愈并交付完整任务。
 - 🌐 **浏览器集成**——CDP 支持、无头浏览、截图内嵌。
-- 🤖 **多智能体命令**——`/plan`、`/code`、`/solve` 协同多个 Codex 子智能体。
+- 🤖 **多智能体命令**——`/plan`、`/code`、`/solve` 协同多个内置子智能体。
 - 🧭 **统一设置中心**——`/settings` 覆盖限额、主题、审批与提供商接入。
 - 🎨 **主题系统**——可切换无障碍主题、定制强调色、通过 `/themes` 即时预览。
 - 🔌 **MCP 支持**——可扩展文件系统、数据库、API 或自定义工具。
@@ -66,13 +62,13 @@
 ### 直接运行
 
 ```bash
-npx -y @just-every/code
+npx -y @tytsxai/beacon-code
 ```
 
 ### 安装并运行
 
 ```bash
-npm install -g @just-every/code
+npm install -g @tytsxai/beacon-code
 code // 如果已被 VS Code 占用可用 `coder`
 ```
 
@@ -84,10 +80,7 @@ code // 如果已被 VS Code 占用可用 `coder`
   - 运行 `code` 选择 "Sign in with ChatGPT"
 - **API Key**（按量计费）
   - 设置 `export OPENAI_API_KEY=xyz` 然后运行 `code`
-- **第三方激活器**（如 codex-activator）
-  - 本项目特别支持通过激活器使用代理服务，详见下方「激活器集成」章节
-
-Every Code 默认只使用 Codex 相关模型与内置能力，不需要额外安装其他 AI CLI。
+Beacon Code 默认只使用内置模型与能力，不需要额外安装其他 AI CLI。
 
 &ensp;
 
@@ -108,13 +101,13 @@ Every Code 默认只使用 Codex 相关模型与内置能力，不需要额外�
 ### Agents
 
 ```bash
-# 规划改动（Codex 多智能体共识）
+# 规划改动（多智能体共识）
 /plan "Stop the AI from ordering pizza at 3AM"
 
-# 解决复杂问题（Codex 多智能体竞速）
+# 解决复杂问题（多智能体竞速）
 /solve "Why does deleting one user drop the whole database?"
 
-# 写代码！（Codex 多智能体共识）
+# 写代码！（多智能体共识）
 /code "Show dark mode when I feel cranky"
 ```
 
@@ -165,7 +158,7 @@ Options:
 
 ## 记忆与项目文档
 
-Every Code 可在会话间记忆上下文：
+Beacon Code 可在会话间记忆上下文：
 
 1. **在项目根创建 `AGENTS.md`**：
 
@@ -209,7 +202,7 @@ code --config output_format=json "list all TODO comments"
 
 ## Model Context Protocol (MCP)
 
-Every Code 支持 MCP 扩展能力：
+Beacon Code 支持 MCP 扩展能力：
 
 - **文件操作**：高级文件系统访问
 - **数据库连接**：查询与修改数据库
@@ -231,7 +224,7 @@ args = ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/project"]
 主配置文件：`~/.code/config.toml`
 
 > [!NOTE]
-> Every Code 同时读取 `~/.code/` 与 `~/.codex/`（兼容旧版），但只会写入 `~/.code/`。若切回 Codex 启动失败，删除 `~/.codex/config.toml`。若升级后缺少设置，可将旧的 `~/.codex/config.toml` 复制到 `~/.code/`。
+> 配置默认写入 `~/.code/`，如需自定义可设置 `CODE_HOME`。
 
 ```toml
 # Model settings
@@ -265,51 +258,15 @@ model_reasoning_summary = "detailed"
 
 &ensp;
 
-## 激活器集成
-
-本项目特别支持第三方激活器（如 `codex-activator`），可实现一次激活即在多个版本间共享认证。
-
-### 工作原理
-
-激活器将配置写入 `~/.codex/config.toml`，包含自定义 `model_provider` 和环境变量。本项目通过同步该配置来复用激活器的认证。
-
-### 快速配置
-
-```bash
-# 1. 安装并运行激活器
-codex-activator
-
-# 2. 同步配置（添加到 ~/.zshrc 实现自动同步）
-if [ -f ~/.codex/config.toml ]; then
-  cp ~/.codex/config.toml ~/.code/config.toml 2>/dev/null
-fi
-
-# 3. 重新加载环境
-source ~/.zshrc
-
-# 4. 验证
-code exec "echo hello"
-```
-
-### 更换激活码
-
-1. 运行 `codex-activator` 输入新激活码
-2. 打开新终端（配置自动同步）
-3. 直接使用 `code`
-
-详细说明请参阅 [docs/activator-integration.md](docs/activator-integration.md)。
-
-&ensp;
-
 ## FAQ
 
-**与原版有何不同？**
+**有哪些特色？**
 
-> 本分支增加了浏览器集成、多智能体命令（`/plan`、`/solve`、`/code`）、主题系统与推理控制，并保持完全兼容。
+> Beacon Code 提供浏览器集成、多智能体命令（`/plan`、`/solve`、`/code`）、主题系统与推理控制等能力。
 
-**可以复用现有的 Codex 配置吗？**
+**可以复用现有配置吗？**
 
-> 可以。Every Code 会同时读取 `~/.code/`（主目录）与旧版 `~/.codex/`。只写入 `~/.code/`，切回 Codex 仍可运行；如发现冲突，可复制或删除旧文件。
+> 可以。将既有配置放到 `~/.code/` 即可继续使用；如需隔离环境，可改用 `CODE_HOME` 指向新的目录。
 
 **能配合 ChatGPT Plus 吗？**
 
@@ -323,27 +280,13 @@ code exec "echo hello"
 
 ## 贡献
 
-欢迎贡献！Every Code 在保持与上游兼容的同时加入社区需求的功能。
-
-### 🔄 上游同步原则（重要）
-
-> [!IMPORTANT]
-> 本项目是 [openai/codex](https://github.com/openai/codex) 的社区分支。
-> 我们需要**定期同步上游更新**以获取 bug 修复和新功能，同时**保持本项目特色**。
-
-**核心原则：**
-
-- ✅ **保持特色**：激活器集成、中文文档、深色主题等本项目独有功能
-- ✅ **吸收更新**：定期合并上游的功能改进、安全修复、性能优化
-- ✅ **谨慎合并**：冲突时优先保留我们的特色修改，同时采纳上游改进
-
-详细操作请参阅 [上游同步指南](docs/upstream-sync.md)。
+欢迎贡献！Beacon Code 以清晰的开发体验和可靠的终端工作流为目标，欢迎提交问题与改进。
 
 ### 开发流程
 
 ```bash
 # 克隆与安装依赖
-git clone https://github.com/just-every/code.git
+git clone https://github.com/tytsxai/beacon-code.git
 cd code
 npm install
 
@@ -369,12 +312,12 @@ npm install
 
 ### 许可证与归属
 
-- 本项目是 `openai/codex` 的社区分支，沿用 **Apache-2.0** 许可证并保留上游 LICENSE 与 NOTICE。
-- **Every Code**（Code）**并非** OpenAI 关联或认可。
+- 本项目采用 **Apache-2.0** 许可证，详情见 [LICENSE](LICENSE)。
+- **Beacon Code**（Code）**并非**任何模型提供商的关联或认可项目。
 
 ### 你的责任
 
-通过 Every Code 使用 OpenAI、Anthropic 或 Google 服务即表示你同意**它们的条款与政策**。尤其：
+通过 Beacon Code 使用 OpenAI、Anthropic 或 Google 服务即表示你同意**它们的条款与政策**。尤其：
 
 - **不要** 在非预期路径下抓取/提取内容。
 - **不要** 绕过或干扰限流、配额或安全措施。
@@ -388,7 +331,7 @@ npm install
 
 ### 可能变更
 
-AI 提供商可能调整资格、限额、模型或认证流程。Every Code 同时支持 ChatGPT 登录与 API Key 模式，可按需选择（本地/爱好 vs CI/自动化）。
+AI 提供商可能调整资格、限额、模型或认证流程。Beacon Code 同时支持 ChatGPT 登录与 API Key 模式，可按需选择（本地/爱好 vs CI/自动化）。
 
 &ensp;
 
@@ -396,8 +339,8 @@ AI 提供商可能调整资格、限额、模型或认证流程。Every Code 同
 
 Apache 2.0 - 详见 [LICENSE](LICENSE)。
 
-Every Code 是原始 Codex CLI 的社区分支，在保持兼容的同时提供开发者社区期待的增强功能。
+Beacon Code 是独立项目，聚焦终端开发体验与可控自动化。
 
 ## &ensp;
 
-**需要帮助？** 在 [GitHub](https://github.com/just-every/code/issues) 提交 issue 或查看我们的文档。
+**需要帮助？** 在 [GitHub](https://github.com/tytsxai/beacon-code/issues) 提交 issue 或查看我们的文档。

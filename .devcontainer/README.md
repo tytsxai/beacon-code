@@ -1,6 +1,6 @@
 # Containerized Development
 
-We provide the following options to facilitate Codex development in a container. This is particularly useful for verifying the Linux build when working on a macOS host.
+We provide the following options to facilitate Lumen development in a container. This is particularly useful for verifying the Linux build when working on a macOS host.
 
 ## Docker
 
@@ -20,7 +20,7 @@ Currently, the `Dockerfile` works for both x64 and arm64 Linux, though you need 
 
 ## VS Code
 
-VS Code recognizes the `devcontainer.json` file and gives you the option to develop Codex in a container. Currently, `devcontainer.json` builds and runs the `arm64` flavor of the container.
+VS Code recognizes the `devcontainer.json` file and gives you the option to develop Lumen in a container. Currently, `devcontainer.json` builds and runs the `arm64` flavor of the container.
 
 From the integrated terminal in VS Code, you can build either flavor of the `arm64` build (GNU or musl):
 

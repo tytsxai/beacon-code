@@ -1,6 +1,6 @@
 # 安装与环境（中文）
 
-> 英文版参见 `../install.md`。本页聚焦中文用户常见网络/镜像/权限问题，保持与上游兼容，仅新增说明。
+> 英文版参见 `../install.md`。本页聚焦中文用户常见网络/镜像/权限问题，补充常用说明。
 
 ## 前置
 - 推荐 Node.js 20+。如需切换版本，可使用 `n` 或 `fnm`/`nvm`，并把对应 bin 加入 PATH。
@@ -9,7 +9,7 @@
 ## 快速安装（默认路径）
 
 ```bash
-npm install -g @just-every/code
+npm install -g @tytsxai/beacon-code
 code  # 若与 VS Code 冲突，使用 coder
 ```
 
@@ -52,7 +52,6 @@ code exec "echo hello"
 - ChatGPT：运行 `code` 选择 “Sign in with ChatGPT”。
 - API Key：`export OPENAI_API_KEY=xxx` 后运行 `code`。
 
-若使用激活器（`codex-activator`），保持 `~/.codex/config.toml` 与 `~/.code/config.toml` 同步。
 
 ## 常见问题
 

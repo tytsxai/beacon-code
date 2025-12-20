@@ -1,6 +1,6 @@
 # Auto Drive
 
-了解 Auto Drive 是什么、如何启动以及在 Every Code 中的行为。
+了解 Auto Drive 是什么、如何启动以及在 Beacon Code 中的行为。
 
 ## 起始方式
 - TUI：`/auto <goal>`。若省略目标且存在近期历史，Code 会为你提议一个；`/auto settings` 可直接进入 Auto Drive 面板。

@@ -12,7 +12,7 @@ If you only need the basics (auth + config), see `docs/command-reference.md`.
 
 - Unless stated otherwise, values are treated as strings; booleans typically accept `"1"` or `"true"`.
 - Variables are read by the Rust CLI (`code-rs/`) unless stated otherwise.
-- `CODE_HOME` is the primary home directory for Every Code; legacy `CODEX_HOME` may be read for backwards compatibility.
+- `CODE_HOME` is the primary home directory for Beacon Code.
 
 ## Authentication / API access
 
@@ -26,27 +26,11 @@ If you only need the basics (auth + config), see `docs/command-reference.md`.
   - Risk: misconfiguration can send traffic to an unintended endpoint.
   - Docs: `docs/config.md` (model providers)
 
-- `CODEX_API_KEY`
-  - Purpose: override API key in `exec` mode only (legacy compatibility).
-  - Risk: same as `OPENAI_API_KEY`.
-  - Docs: `docs/exec.md`
-
 ## Config / state directories
 
 - `CODE_HOME`
   - Purpose: override the base directory for config, auth, history, logs, etc.
   - Default: `~/.code`
-
-- `CODEX_HOME`
-  - Purpose: legacy home directory (read for backwards compatibility).
-  - Default: `~/.codex`
-
-## Security hardening
-
-- `CODEX_SECURE_MODE`
-  - Purpose: when set to `"1"`, enables early “pre-main” hardening for the CLI process, then clears the variable so child processes do not inherit it.
-  - Risk: disabling hardening can increase exposure in hostile environments; enabling it can make behavior stricter than expected for some workflows.
-  - Code: `code-rs/cli/src/main.rs`
 
 ## Build / binary selection
 
@@ -59,7 +43,7 @@ If you only need the basics (auth + config), see `docs/command-reference.md`.
 - `CODE_BINARY_PATH`
   - Purpose: override which native binary the wrapper uses (or communicates to child processes).
   - Risk: pointing this at an unexpected binary can run untrusted code.
-  - Code: `codex-cli/bin/coder.js`, `code-rs/core/src/agent_tool.rs`
+  - Code: `code-rs/core/src/agent_tool.rs`
 
 ## Cleanup / retention (high risk)
 
@@ -141,20 +125,17 @@ These are exported to hook subprocesses so they can understand what triggered th
 
 ## Packaging / install (Node wrapper)
 
-These are used by the `codex-cli/` Node wrapper package.
+These are used by the Node wrapper package.
 
 - `CODE_FORCE_PREINSTALL`, `CODE_SKIP_PREINSTALL`
   - Purpose: control whether the preinstall checks run (mainly for CI/debugging).
   - Risk: skipping checks can hide install problems; forcing can make installs fail on unsupported platforms.
-  - Code: `codex-cli/scripts/preinstall.js`
 
 - `CODE_POSTINSTALL_DRY_RUN`
   - Purpose: skip actual postinstall actions (tests/dry run).
-  - Code: `codex-cli/postinstall.js`
 
 - `CODE_RUNTIME_POSTINSTALL`
   - Purpose: allow running runtime postinstall bootstrap when the native binary is missing.
-  - Code: `codex-cli/bin/coder.js`
 
 ## Diagnostics (internal / debug)
 
