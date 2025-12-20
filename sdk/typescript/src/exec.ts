@@ -76,7 +76,7 @@ export class CodexExec {
       child.once("error", reject);
       child.once("exit", (code, signal) => {
         if (signal) {
-          reject(new Error(`Codex Exec terminated by signal ${signal}`));
+          reject(new Error(`Beacon Code exec terminated by signal ${signal}`));
           return;
         }
         if (code === 0) {
@@ -85,7 +85,9 @@ export class CodexExec {
         }
         const stderrBuffer = Buffer.concat(stderrChunks);
         reject(
-          new Error(`Codex Exec exited with code ${code}: ${stderrBuffer.toString("utf8")}`),
+          new Error(
+            `Beacon Code exec exited with code ${code}: ${stderrBuffer.toString("utf8")}`,
+          ),
         );
       });
     });

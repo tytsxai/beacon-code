@@ -68,7 +68,7 @@ export type ThreadErrorEvent = {
   message: string;
 };
 
-/** Top-level JSONL events emitted by codex exec. */
+/** Top-level JSONL events emitted by Beacon Code exec (`codex exec`). */
 export type ThreadEvent =
   | ThreadStartedEvent
   | TurnStartedEvent

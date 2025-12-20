@@ -3,16 +3,16 @@
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 
-import { Codex } from "@openai/codex-sdk";
-import type { ThreadEvent, ThreadItem } from "@openai/codex-sdk";
+import { Codex as Beacon } from "@tytsxai/beacon-code-sdk";
+import type { ThreadEvent, ThreadItem } from "@tytsxai/beacon-code-sdk";
 import path from "node:path";
 
 const codexPathOverride =
   process.env.CODEX_EXECUTABLE ??
   path.join(process.cwd(), "..", "..", "code-rs", "target", "debug", "code");
 
-const codex = new Codex({ codexPathOverride });
-const thread = codex.startThread();
+const beacon = new Beacon({ codexPathOverride });
+const thread = beacon.startThread();
 const rl = createInterface({ input, output });
 
 const handleItemCompleted = (item: ThreadItem): void => {

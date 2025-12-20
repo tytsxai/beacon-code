@@ -19,7 +19,7 @@ import type { ResponsesApiRequest } from "./responsesProxy";
 
 const codexExecPath = path.join(process.cwd(), "..", "..", "code-rs", "target", "debug", "code");
 
-describe("Codex", () => {
+describe("Beacon Code", () => {
   it("returns thread events", async () => {
     const { url, close } = await startResponsesTestProxy({
       statusCode: 200,

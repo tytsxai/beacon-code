@@ -1,4 +1,4 @@
-// Launches the codex-exec-mcp-server binary bundled in this package.
+// Launches the Beacon Code exec MCP server binary (codex-exec-mcp-server) bundled in this package.
 
 import { spawn } from "node:child_process";
 import { accessSync, constants } from "node:fs";

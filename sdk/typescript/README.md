@@ -1,11 +1,11 @@
-# Codex SDK
+# Beacon Code SDK
 
-在工作流和应用里嵌入 Codex 智能体。TypeScript SDK 对随包提供的 `codex` 可执行文件做薄封装，通过 stdin/stdout 交换 JSONL 事件。
+在工作流和应用里嵌入 Beacon Code 智能体。TypeScript SDK 对随包提供的 `codex` 可执行文件做薄封装，通过 stdin/stdout 交换 JSONL 事件。
 
 ## 安装
 
 ```bash
-npm install @openai/codex-sdk
+npm install @tytsxai/beacon-code-sdk
 ```
 
 需要 Node.js 18+。
@@ -13,10 +13,10 @@ npm install @openai/codex-sdk
 ## 快速上手
 
 ```typescript
-import { Codex } from "@openai/codex-sdk";
+import { Codex as BeaconCode } from "@tytsxai/beacon-code-sdk";
 
-const codex = new Codex();
-const thread = codex.startThread();
+const beacon = new BeaconCode();
+const thread = beacon.startThread();
 const turn = await thread.run("Diagnose the test failure and propose a fix");
 
 console.log(turn.finalResponse);
@@ -50,20 +50,20 @@ for await (const event of events) {
 
 ### 恢复已有线程
 
-线程会持久化在 `~/.codex/sessions`。如果丢失了内存中的 `Thread` 对象，可用 `resumeThread()` 继续：
+线程会持久化在 `~/.codex/sessions`（可通过 `CODEX_HOME` 自定义）。如果丢失了内存中的 `Thread` 对象，可用 `resumeThread()` 继续：
 
 ```typescript
 const savedThreadId = process.env.CODEX_THREAD_ID!;
-const thread = codex.resumeThread(savedThreadId);
+const thread = beacon.resumeThread(savedThreadId);
 await thread.run("Implement the fix");
 ```
 
 ### 工作目录控制
 
-Codex 默认在当前工作目录运行，并要求该目录是 Git 仓库。若需跳过 Git 检查，在创建线程时传 `skipGitRepoCheck`：
+Beacon Code 默认在当前工作目录运行，并要求该目录是 Git 仓库。若需跳过 Git 检查，在创建线程时传 `skipGitRepoCheck`：
 
 ```typescript
-const thread = codex.startThread({
+const thread = beacon.startThread({
   workingDirectory: "/path/to/project",
   skipGitRepoCheck: true,
 });
