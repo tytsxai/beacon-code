@@ -16,17 +16,16 @@ taskkill /IM coder.exe /F 2>$null | Out-Null
 
 Write-Host "Removing old global package (if present)..."
 $npmRoot = (& npm root -g).Trim()
-$pkgPath = Join-Path $npmRoot "@just-every\code"
+$pkgPath = Join-Path $npmRoot "@tytsxai\beacon-code"
 if (Test-Path $pkgPath) {
   try { Remove-Item -LiteralPath $pkgPath -Recurse -Force -ErrorAction Stop } catch {}
 }
 
 Write-Host "Removing temp staging directories (if present)..."
-Get-ChildItem -LiteralPath (Join-Path $npmRoot "@just-every") -Force -ErrorAction SilentlyContinue |
-  Where-Object { $_.Name -like '.code-*' } |
+Get-ChildItem -LiteralPath (Join-Path $npmRoot "@tytsxai") -Force -ErrorAction SilentlyContinue |
+  Where-Object { $_.Name -like '.beacon-code-*' } |
   ForEach-Object {
     try { Remove-Item -LiteralPath $_.FullName -Recurse -Force -ErrorAction Stop } catch {}
   }
 
-Write-Host "Cleanup complete. You can now run: npm install -g @just-every/code@latest"
-
+Write-Host "Cleanup complete. You can now run: npm install -g @tytsxai/beacon-code@latest"

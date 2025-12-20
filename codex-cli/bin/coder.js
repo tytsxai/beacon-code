@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Unified entry point for the Code CLI (fork of OpenAI Codex).
+// Unified entry point for the Code CLI.
 
 import path from "path";
 import { fileURLToPath } from "url";
@@ -16,7 +16,7 @@ const __dirname = path.dirname(__filename);
 const { platform, arch } = process;
 
 // Important: Never delegate to another system's `code` binary (e.g., VS Code).
-// When users run via `npx @just-every/code`, we must always execute our
+// When users run via `npx @tytsxai/beacon-code`, we must always execute our
 // packaged native binary by absolute path to avoid PATH collisions.
 
 function isWSL() {
@@ -214,7 +214,7 @@ const getCacheDir = (version) => {
   } else {
     base = process.env.XDG_CACHE_HOME || path.join(home, ".cache");
   }
-  const dir = path.join(base, "just-every", "code", version);
+  const dir = path.join(base, "tytsxai", "beacon-code", version);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   return dir;
 };
@@ -292,17 +292,17 @@ const tryBootstrapBinary = async () => {
     try {
       const req = (await import("module")).createRequire(import.meta.url);
       const name = (() => {
-        if (platform === "win32") return "@just-every/code-win32-x64"; // may be unpublished; falls through
+        if (platform === "win32") return "@tytsxai/beacon-code-win32-x64"; // may be unpublished; falls through
         const plt = nodePlatform();
         const cpu = nodeArch();
         if (plt === "darwin" && cpu === "arm64")
-          return "@just-every/code-darwin-arm64";
+          return "@tytsxai/beacon-code-darwin-arm64";
         if (plt === "darwin" && cpu === "x64")
-          return "@just-every/code-darwin-x64";
+          return "@tytsxai/beacon-code-darwin-x64";
         if (plt === "linux" && cpu === "x64")
-          return "@just-every/code-linux-x64-musl";
+          return "@tytsxai/beacon-code-linux-x64-musl";
         if (plt === "linux" && cpu === "arm64")
-          return "@just-every/code-linux-arm64-musl";
+          return "@tytsxai/beacon-code-linux-arm64-musl";
         return null;
       })();
       if (name) {
@@ -348,7 +348,7 @@ const tryBootstrapBinary = async () => {
             return `code-${targetTriple}.tar.gz`;
           }
         })();
-    const url = `https://github.com/just-every/code/releases/download/v${version}/${archiveName}`;
+    const url = `https://github.com/tytsxai/beacon-code/releases/download/v${version}/${archiveName}`;
     const tmp = path.join(binDir, `.${archiveName}.part`);
     return httpsDownload(url, tmp)
       .then(() => {
@@ -533,11 +533,11 @@ if (existsSync(binaryPath)) {
     console.error(`Bootstrap error: ${msg}`);
   }
   console.error(`Please try reinstalling the package:`);
-  console.error(`  npm uninstall -g @just-every/code`);
-  console.error(`  npm install -g @just-every/code`);
+  console.error(`  npm uninstall -g @tytsxai/beacon-code`);
+  console.error(`  npm install -g @tytsxai/beacon-code`);
   if (isWSL()) {
     console.error("Detected WSL. Install inside WSL (Ubuntu) separately:");
-    console.error("  npx -y @just-every/code@latest  (run inside WSL)");
+    console.error("  npx -y @tytsxai/beacon-code@latest  (run inside WSL)");
     console.error(
       "If installed globally on Windows, those binaries are not usable from WSL.",
     );
@@ -557,8 +557,8 @@ if (!validation.ok) {
     "This can happen if the download failed or was modified by antivirus/proxy.",
   );
   console.error("Please try reinstalling:");
-  console.error("  npm uninstall -g @just-every/code");
-  console.error("  npm install -g @just-every/code");
+  console.error("  npm uninstall -g @tytsxai/beacon-code");
+  console.error("  npm install -g @tytsxai/beacon-code");
   if (platform === "win32") {
     console.error(
       "If the issue persists, clear npm cache and disable antivirus temporarily:",
@@ -569,7 +569,7 @@ if (!validation.ok) {
     console.error(
       "Detected WSL. Ensure you install/run inside WSL, not Windows:",
     );
-    console.error("  npx -y @just-every/code@latest  (inside WSL)");
+    console.error("  npx -y @tytsxai/beacon-code@latest  (inside WSL)");
   }
   process.exit(1);
 }
@@ -583,8 +583,8 @@ if (!checksum.ok) {
     "This can happen if the binary download was corrupted or tampered with.",
   );
   console.error("Please reinstall:");
-  console.error("  npm uninstall -g @just-every/code");
-  console.error("  npm install -g @just-every/code");
+  console.error("  npm uninstall -g @tytsxai/beacon-code");
+  console.error("  npm install -g @tytsxai/beacon-code");
   process.exit(1);
 }
 
@@ -609,20 +609,20 @@ try {
         .split(/\r?\n/)
         .map((s) => s.trim())
         .filter(Boolean)[0];
-      if (line && !line.includes("@just-every/code")) {
+      if (line && !line.includes("@tytsxai/beacon-code")) {
         otherCode = line;
       }
     } catch {}
     if (otherCode) {
       console.error(
-        `@just-every/code: running bundled binary -> ${binaryPath}`,
+        `@tytsxai/beacon-code: running bundled binary -> ${binaryPath}`,
       );
       console.error(
         `Note: a different 'code' exists at ${otherCode}; not delegating.`,
       );
     } else {
       console.error(
-        `@just-every/code: running bundled binary -> ${binaryPath}`,
+        `@tytsxai/beacon-code: running bundled binary -> ${binaryPath}`,
       );
     }
   }
@@ -655,7 +655,7 @@ child.on("error", (err) => {
     console.error(`Permission denied: ${binaryPath}`);
     console.error(`Try running: chmod +x "${binaryPath}"`);
     console.error(
-      `Or reinstall the package with: npm install -g @just-every/code`,
+      `Or reinstall the package with: npm install -g @tytsxai/beacon-code`,
     );
   } else if (code === "EFTYPE" || code === "ENOEXEC") {
     console.error(`Failed to execute native binary: ${binaryPath}`);
@@ -663,7 +663,7 @@ child.on("error", (err) => {
       "The file may be corrupt or of the wrong type. Reinstall usually fixes this:",
     );
     console.error(
-      "  npm uninstall -g @just-every/code && npm install -g @just-every/code",
+      "  npm uninstall -g @tytsxai/beacon-code && npm install -g @tytsxai/beacon-code",
     );
     if (platform === "win32") {
       console.error(
@@ -676,7 +676,7 @@ child.on("error", (err) => {
         "Detected WSL. Windows binaries cannot be executed from WSL.",
       );
       console.error(
-        "Install inside WSL and run there: npx -y @just-every/code@latest",
+        "Install inside WSL and run there: npx -y @tytsxai/beacon-code@latest",
       );
     }
   } else {

@@ -18,11 +18,12 @@ import {
   renameSync,
   realpathSync,
 } from "fs";
-import { join, dirname } from "path";
+import { join, dirname, resolve } from "path";
 import { fileURLToPath } from "url";
 import { get } from "https";
 import { platform, arch, tmpdir } from "os";
 import { execSync } from "child_process";
+import { createHash } from "crypto";
 import { createRequire } from "module";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -59,7 +60,7 @@ function getCacheDir(version) {
   } else {
     base = process.env.XDG_CACHE_HOME || join(home, ".cache");
   }
-  const dir = join(base, "just-every", "code", version);
+  const dir = join(base, "tytsxai", "beacon-code", version);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   return dir;
 }
@@ -70,8 +71,62 @@ function getCachedBinaryPath(version, targetTriple, isWindows) {
   return join(cacheDir, `code-${targetTriple}${ext}`);
 }
 
+let cachedChecksums = undefined;
+function loadChecksums() {
+  if (cachedChecksums !== undefined) return cachedChecksums;
+  try {
+    const contents = readFileSync(join(__dirname, "checksums.json"), "utf8");
+    const parsed = JSON.parse(contents);
+    if (!parsed || typeof parsed !== "object") {
+      cachedChecksums = null;
+      return cachedChecksums;
+    }
+    const keys = Object.keys(parsed);
+    cachedChecksums = keys.length === 0 ? null : parsed;
+    return cachedChecksums;
+  } catch {
+    cachedChecksums = null;
+    return cachedChecksums;
+  }
+}
+
+function sha256FileSync(path) {
+  const hash = createHash("sha256");
+  const fd = openSync(path, "r");
+  try {
+    const buf = Buffer.alloc(1024 * 1024);
+    while (true) {
+      const n = readSync(fd, buf, 0, buf.length, null);
+      if (n === 0) break;
+      hash.update(buf.subarray(0, n));
+    }
+  } finally {
+    closeSync(fd);
+  }
+  return hash.digest("hex");
+}
+
+function verifyBinaryChecksum(path, binaryName) {
+  const checksums = loadChecksums();
+  if (!checksums) return { ok: true, skipped: true };
+  const expected = checksums[binaryName];
+  if (typeof expected !== "string" || expected.trim() === "") {
+    return { ok: false, reason: `missing checksum for ${binaryName}` };
+  }
+  const actual = sha256FileSync(path);
+  if (actual.toLowerCase() !== expected.trim().toLowerCase()) {
+    return {
+      ok: false,
+      reason: `sha256 mismatch for ${binaryName}`,
+      expected: expected.trim(),
+      actual,
+    };
+  }
+  return { ok: true };
+}
+
 const CODE_SHIM_SIGNATURES = [
-  "@just-every/code",
+  "@tytsxai/beacon-code",
   "bin/coder.js",
   '$(dirname "$0")/coder',
   "%~dp0coder",
@@ -371,13 +426,22 @@ function validateDownloadedBinary(p) {
   }
 }
 
-async function main() {
+export async function runPostinstall(options = {}) {
+  const { skipGlobalAlias = false, invokedByRuntime = false } = options;
+  if (process.env.CODE_POSTINSTALL_DRY_RUN === "1") {
+    return { skipped: true };
+  }
+
+  if (invokedByRuntime) {
+    process.env.CODE_RUNTIME_POSTINSTALL =
+      process.env.CODE_RUNTIME_POSTINSTALL || "1";
+  }
   // Detect potential PATH conflict with an existing `code` command (e.g., VS Code)
   // Only relevant for global installs; skip for npx/local installs to keep postinstall fast.
   const ua = process.env.npm_config_user_agent || "";
   const isNpx = ua.includes("npx");
   const isGlobal = process.env.npm_config_global === "true";
-  if (isGlobal && !isNpx) {
+  if (!skipGlobalAlias && isGlobal && !isNpx) {
     try {
       const whichCmd =
         process.platform === "win32"
@@ -408,7 +472,7 @@ async function main() {
             "         If `code` runs another tool, prefer using: coder",
           );
           console.warn(
-            "         Or run our CLI explicitly via: npx -y @just-every/code",
+            "         Or run our CLI explicitly via: npx -y @tytsxai/beacon-code",
           );
         }
       }
@@ -435,7 +499,7 @@ async function main() {
   // Download only the primary binary; we'll create wrappers for legacy names.
   const binaries = ["code"];
 
-  console.log(`Installing @just-every/code v${version} for ${targetTriple}...`);
+  console.log(`Installing @tytsxai/beacon-code v${version} for ${targetTriple}...`);
 
   for (const binary of binaries) {
     const binaryName = `${binary}-${targetTriple}${binaryExt}`;
@@ -453,6 +517,13 @@ async function main() {
       if (existsSync(cachePath)) {
         const valid = validateDownloadedBinary(cachePath);
         if (valid.ok) {
+          const checksum = verifyBinaryChecksum(cachePath, binaryName);
+          if (!checksum.ok) {
+            try {
+              unlinkSync(cachePath);
+            } catch {}
+            throw new Error(checksum.reason);
+          }
           // Avoid mirroring into node_modules on Windows or WSL-on-NTFS.
           const wsl = isWSL();
           const binDirReal = (() => {
@@ -484,17 +555,17 @@ async function main() {
     const require = createRequire(import.meta.url);
     const platformPkg = (() => {
       const name = (() => {
-        if (isWindows) return "@just-every/code-win32-x64";
+        if (isWindows) return "@tytsxai/beacon-code-win32-x64";
         const plt = platform();
         const cpu = arch();
         if (plt === "darwin" && cpu === "arm64")
-          return "@just-every/code-darwin-arm64";
+          return "@tytsxai/beacon-code-darwin-arm64";
         if (plt === "darwin" && cpu === "x64")
-          return "@just-every/code-darwin-x64";
+          return "@tytsxai/beacon-code-darwin-x64";
         if (plt === "linux" && cpu === "x64")
-          return "@just-every/code-linux-x64-musl";
+          return "@tytsxai/beacon-code-linux-x64-musl";
         if (plt === "linux" && cpu === "arm64")
-          return "@just-every/code-linux-arm64-musl";
+          return "@tytsxai/beacon-code-linux-arm64-musl";
         return null;
       })();
       if (!name) return null;
@@ -518,6 +589,13 @@ async function main() {
         }
         // Populate cache first (canonical location) atomically
         await writeCacheAtomic(src, cachePath);
+        const checksum = verifyBinaryChecksum(cachePath, binaryName);
+        if (!checksum.ok) {
+          try {
+            unlinkSync(cachePath);
+          } catch {}
+          throw new Error(checksum.reason);
+        }
         // Mirror into local bin only on Unix-like filesystems (not Windows/WSL-on-NTFS)
         const wsl = isWSL();
         const binDirReal = (() => {
@@ -552,7 +630,7 @@ async function main() {
     // - Windows: .zip
     // - macOS/Linux: prefer .zst if `zstd` CLI is available; otherwise use .tar.gz
     const isWin = isWindows;
-    const isWSL = (() => {
+    const detectedWSL = (() => {
       if (platform() !== "linux") return false;
       try {
         const ver = readFileSync("/proc/version", "utf8").toLowerCase();
@@ -568,7 +646,10 @@ async function main() {
         return binDir;
       }
     })();
-    const mirrorToLocal = !(isWin || (isWSL && isPathOnWindowsFs(binDirReal)));
+    const mirrorToLocal = !(
+      isWin ||
+      (detectedWSL && isPathOnWindowsFs(binDirReal))
+    );
     let useZst = false;
     if (!isWin) {
       try {
@@ -583,13 +664,13 @@ async function main() {
       : useZst
         ? `${binaryName}.zst`
         : `${binaryName}.tar.gz`;
-    const downloadUrl = `https://github.com/just-every/code/releases/download/v${version}/${archiveName}`;
+    const downloadUrl = `https://github.com/tytsxai/beacon-code/releases/download/v${version}/${archiveName}`;
 
     console.log(`Downloading ${archiveName}...`);
     try {
       const needsIsolation = isWin || (!isWin && !mirrorToLocal); // Windows or WSL-on-NTFS
       let safeTempDir = needsIsolation
-        ? join(tmpdir(), "just-every", "code", version)
+        ? join(tmpdir(), "tytsxai", "beacon-code", version)
         : binDir;
       // Ensure staging dir exists; if tmp fails (permissions/space), fall back to user cache.
       if (needsIsolation) {
@@ -741,6 +822,21 @@ async function main() {
             : unlinkSync(localPath);
         } catch {}
         throw new Error(`invalid binary (${valid.reason})`);
+      }
+
+      const checksumPath = isWin
+        ? cachePath
+        : mirrorToLocal
+          ? localPath
+          : cachePath;
+      const checksum = verifyBinaryChecksum(checksumPath, binaryName);
+      if (!checksum.ok) {
+        try {
+          isWin || !mirrorToLocal
+            ? unlinkSync(cachePath)
+            : unlinkSync(localPath);
+        } catch {}
+        throw new Error(checksum.reason);
       }
 
       // Make executable on Unix-like systems
@@ -1041,7 +1137,19 @@ async function main() {
     }
 }
 
-main().catch((error) => {
-  console.error("Installation failed:", error);
-  process.exit(1);
-});
+function isExecutedDirectly() {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  try {
+    return resolve(entry) === fileURLToPath(import.meta.url);
+  } catch {
+    return false;
+  }
+}
+
+if (isExecutedDirectly()) {
+  runPostinstall().catch((error) => {
+    console.error("Installation failed:", error);
+    process.exit(1);
+  });
+}

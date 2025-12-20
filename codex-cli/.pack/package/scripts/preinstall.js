@@ -47,7 +47,7 @@ if (isWin) {
 }
 
 // 2) Remove stale staging dirs from previous failed installs under the global
-//    @just-every scope, which npm will reuse (e.g., .code-XXXXX). Remove only
+//    @tytsxai scope, which npm will reuse (e.g., .beacon-code-XXXXX). Remove only
 //    old entries and never the current staging or live package.
 try {
   let scopeDir = "";
@@ -58,7 +58,7 @@ try {
     })
       .toString()
       .trim();
-    scopeDir = path.join(root, "@just-every");
+    scopeDir = path.join(root, "@tytsxai");
   } catch {
     // Fall back to guessing from this script location: <staging>\..\..\
     const here = path.resolve(path.dirname(fileURLToPath(import.meta.url)));
@@ -72,7 +72,7 @@ try {
       "..",
     );
     for (const name of readdirSync(scopeDir)) {
-      if (!name.startsWith(".code-")) continue;
+      if (!name.startsWith(".beacon-code-")) continue;
       const p = path.join(scopeDir, name);
       if (path.resolve(p) === currentDir) continue; // never remove our current dir
       try {

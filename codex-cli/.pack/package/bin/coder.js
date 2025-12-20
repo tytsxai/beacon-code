@@ -1,11 +1,13 @@
 #!/usr/bin/env node
-// Unified entry point for the Code CLI (fork of OpenAI Codex).
+// Unified entry point for the Code CLI.
 
 import path from "path";
 import { fileURLToPath } from "url";
 import { platform as nodePlatform, arch as nodeArch } from "os";
 import { execSync } from "child_process";
 import { get as httpsGet } from "https";
+import { createHash } from "crypto";
+import { runPostinstall } from "../postinstall.js";
 
 // __dirname equivalent in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -14,10 +16,10 @@ const __dirname = path.dirname(__filename);
 const { platform, arch } = process;
 
 // Important: Never delegate to another system's `code` binary (e.g., VS Code).
-// When users run via `npx @just-every/code`, we must always execute our
+// When users run via `npx @tytsxai/beacon-code`, we must always execute our
 // packaged native binary by absolute path to avoid PATH collisions.
 
-const isWSL = () => {
+function isWSL() {
   if (platform !== "linux") return false;
   try {
     const txt = readFileSync("/proc/version", "utf8").toLowerCase();
@@ -25,7 +27,7 @@ const isWSL = () => {
   } catch {
     return false;
   }
-};
+}
 
 let targetTriple = null;
 switch (platform) {
@@ -97,6 +99,65 @@ import {
   createWriteStream,
 } from "fs";
 
+let cachedChecksums = undefined;
+const loadChecksums = () => {
+  if (cachedChecksums !== undefined) return cachedChecksums;
+  try {
+    const p = path.join(__dirname, "..", "checksums.json");
+    const contents = readFileSync(p, "utf8");
+    const parsed = JSON.parse(contents);
+    if (!parsed || typeof parsed !== "object") {
+      cachedChecksums = null;
+      return cachedChecksums;
+    }
+    const keys = Object.keys(parsed);
+    cachedChecksums = keys.length === 0 ? null : parsed;
+    return cachedChecksums;
+  } catch {
+    cachedChecksums = null;
+    return cachedChecksums;
+  }
+};
+
+const sha256FileSync = (p) => {
+  const hash = createHash("sha256");
+  const fd = openSync(p, "r");
+  try {
+    const buf = Buffer.alloc(1024 * 1024);
+    while (true) {
+      const n = readSync(fd, buf, 0, buf.length, null);
+      if (n === 0) break;
+      hash.update(buf.subarray(0, n));
+    }
+  } finally {
+    closeSync(fd);
+  }
+  return hash.digest("hex");
+};
+
+const verifyBinaryChecksum = (p) => {
+  const checksums = loadChecksums();
+  if (!checksums) return { ok: true, skipped: true };
+
+  const name = path.basename(p);
+  const expected = checksums[name];
+  if (typeof expected !== "string" || expected.trim() === "") {
+    // Don't block legacy fallback names.
+    if (name.startsWith("coder-")) return { ok: true, skipped: true };
+    return { ok: false, reason: `missing checksum for ${name}` };
+  }
+  const actual = sha256FileSync(p);
+  if (actual.toLowerCase() !== expected.trim().toLowerCase()) {
+    return {
+      ok: false,
+      reason: `sha256 mismatch for ${name}`,
+      expected: expected.trim(),
+      actual,
+    };
+  }
+  return { ok: true };
+};
+
 const validateBinary = (p) => {
   try {
     const st = statSync(p);
@@ -153,7 +214,7 @@ const getCacheDir = (version) => {
   } else {
     base = process.env.XDG_CACHE_HOME || path.join(home, ".cache");
   }
-  const dir = path.join(base, "just-every", "code", version);
+  const dir = path.join(base, "tytsxai", "beacon-code", version);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   return dir;
 };
@@ -214,7 +275,8 @@ const tryBootstrapBinary = async () => {
     const cachePath = getCachedBinaryPath(version);
     if (existsSync(cachePath)) {
       const v = validateBinary(cachePath);
-      if (v.ok) {
+      const checksum = v.ok ? verifyBinaryChecksum(cachePath) : { ok: false };
+      if (v.ok && checksum.ok) {
         // Prefer running directly from cache; mirror into node_modules on Unix
         if (platform !== "win32") {
           copyFileSync(cachePath, binaryPath);
@@ -230,17 +292,17 @@ const tryBootstrapBinary = async () => {
     try {
       const req = (await import("module")).createRequire(import.meta.url);
       const name = (() => {
-        if (platform === "win32") return "@just-every/code-win32-x64"; // may be unpublished; falls through
+        if (platform === "win32") return "@tytsxai/beacon-code-win32-x64"; // may be unpublished; falls through
         const plt = nodePlatform();
         const cpu = nodeArch();
         if (plt === "darwin" && cpu === "arm64")
-          return "@just-every/code-darwin-arm64";
+          return "@tytsxai/beacon-code-darwin-arm64";
         if (plt === "darwin" && cpu === "x64")
-          return "@just-every/code-darwin-x64";
+          return "@tytsxai/beacon-code-darwin-x64";
         if (plt === "linux" && cpu === "x64")
-          return "@just-every/code-linux-x64-musl";
+          return "@tytsxai/beacon-code-linux-x64-musl";
         if (plt === "linux" && cpu === "arm64")
-          return "@just-every/code-linux-arm64-musl";
+          return "@tytsxai/beacon-code-linux-arm64-musl";
         return null;
       })();
       if (name) {
@@ -251,6 +313,13 @@ const tryBootstrapBinary = async () => {
           if (existsSync(src)) {
             // Always ensure cache has the binary; on Unix mirror into node_modules
             copyFileSync(src, cachePath);
+            const checksum = verifyBinaryChecksum(cachePath);
+            if (!checksum.ok) {
+              try {
+                unlinkSync(cachePath);
+              } catch {}
+              throw new Error(checksum.reason);
+            }
             if (platform !== "win32") {
               copyFileSync(cachePath, binaryPath);
               try {
@@ -279,7 +348,7 @@ const tryBootstrapBinary = async () => {
             return `code-${targetTriple}.tar.gz`;
           }
         })();
-    const url = `https://github.com/just-every/code/releases/download/v${version}/${archiveName}`;
+    const url = `https://github.com/tytsxai/beacon-code/releases/download/v${version}/${archiveName}`;
     const tmp = path.join(binDir, `.${archiveName}.part`);
     return httpsDownload(url, tmp)
       .then(() => {
@@ -381,6 +450,10 @@ const tryBootstrapBinary = async () => {
 
         const v = validateBinary(platform === "win32" ? cachePath : binaryPath);
         if (!v.ok) throw new Error(`invalid binary (${v.reason})`);
+        const checksum = verifyBinaryChecksum(
+          platform === "win32" ? cachePath : binaryPath,
+        );
+        if (!checksum.ok) throw new Error(checksum.reason);
         if (platform !== "win32")
           try {
             chmodSync(binaryPath, 0o755);
@@ -397,12 +470,26 @@ const tryBootstrapBinary = async () => {
 };
 
 // If missing, attempt to bootstrap into place (helps when Bun blocks postinstall)
-if (!existsSync(binaryPath) && !existsSync(legacyBinaryPath)) {
-  const ok = await tryBootstrapBinary();
-  if (!ok) {
-    // retry legacy name in case archive provided coder-*
-    if (existsSync(legacyBinaryPath) && !existsSync(binaryPath)) {
-      binaryPath = legacyBinaryPath;
+let binaryReady = existsSync(binaryPath) || existsSync(legacyBinaryPath);
+if (!binaryReady) {
+  let runtimePostinstallError = null;
+  try {
+    await runPostinstall({ invokedByRuntime: true, skipGlobalAlias: true });
+  } catch (err) {
+    runtimePostinstallError = err;
+  }
+
+  binaryReady = existsSync(binaryPath) || existsSync(legacyBinaryPath);
+  if (!binaryReady) {
+    const ok = await tryBootstrapBinary();
+    if (!ok) {
+      if (runtimePostinstallError && !lastBootstrapError) {
+        lastBootstrapError = runtimePostinstallError;
+      }
+      // retry legacy name in case archive provided coder-*
+      if (existsSync(legacyBinaryPath) && !existsSync(binaryPath)) {
+        binaryPath = legacyBinaryPath;
+      }
     }
   }
 }
@@ -446,11 +533,11 @@ if (existsSync(binaryPath)) {
     console.error(`Bootstrap error: ${msg}`);
   }
   console.error(`Please try reinstalling the package:`);
-  console.error(`  npm uninstall -g @just-every/code`);
-  console.error(`  npm install -g @just-every/code`);
+  console.error(`  npm uninstall -g @tytsxai/beacon-code`);
+  console.error(`  npm install -g @tytsxai/beacon-code`);
   if (isWSL()) {
     console.error("Detected WSL. Install inside WSL (Ubuntu) separately:");
-    console.error("  npx -y @just-every/code@latest  (run inside WSL)");
+    console.error("  npx -y @tytsxai/beacon-code@latest  (run inside WSL)");
     console.error(
       "If installed globally on Windows, those binaries are not usable from WSL.",
     );
@@ -470,8 +557,8 @@ if (!validation.ok) {
     "This can happen if the download failed or was modified by antivirus/proxy.",
   );
   console.error("Please try reinstalling:");
-  console.error("  npm uninstall -g @just-every/code");
-  console.error("  npm install -g @just-every/code");
+  console.error("  npm uninstall -g @tytsxai/beacon-code");
+  console.error("  npm install -g @tytsxai/beacon-code");
   if (platform === "win32") {
     console.error(
       "If the issue persists, clear npm cache and disable antivirus temporarily:",
@@ -482,8 +569,22 @@ if (!validation.ok) {
     console.error(
       "Detected WSL. Ensure you install/run inside WSL, not Windows:",
     );
-    console.error("  npx -y @just-every/code@latest  (inside WSL)");
+    console.error("  npx -y @tytsxai/beacon-code@latest  (inside WSL)");
   }
+  process.exit(1);
+}
+
+const checksum = verifyBinaryChecksum(binaryPath);
+if (!checksum.ok) {
+  console.error(
+    `Checksum verification failed for ${binaryPath}: ${checksum.reason}`,
+  );
+  console.error(
+    "This can happen if the binary download was corrupted or tampered with.",
+  );
+  console.error("Please reinstall:");
+  console.error("  npm uninstall -g @tytsxai/beacon-code");
+  console.error("  npm install -g @tytsxai/beacon-code");
   process.exit(1);
 }
 
@@ -508,20 +609,20 @@ try {
         .split(/\r?\n/)
         .map((s) => s.trim())
         .filter(Boolean)[0];
-      if (line && !line.includes("@just-every/code")) {
+      if (line && !line.includes("@tytsxai/beacon-code")) {
         otherCode = line;
       }
     } catch {}
     if (otherCode) {
       console.error(
-        `@just-every/code: running bundled binary -> ${binaryPath}`,
+        `@tytsxai/beacon-code: running bundled binary -> ${binaryPath}`,
       );
       console.error(
         `Note: a different 'code' exists at ${otherCode}; not delegating.`,
       );
     } else {
       console.error(
-        `@just-every/code: running bundled binary -> ${binaryPath}`,
+        `@tytsxai/beacon-code: running bundled binary -> ${binaryPath}`,
       );
     }
   }
@@ -534,9 +635,17 @@ try {
 // receives a fatal signal, both processes exit in a predictable manner.
 const { spawn } = await import("child_process");
 
+// Make the resolved native binary path visible to spawned agents/subprocesses.
+process.env.CODE_BINARY_PATH = binaryPath;
+
 const child = spawn(binaryPath, process.argv.slice(2), {
   stdio: "inherit",
-  env: { ...process.env, CODER_MANAGED_BY_NPM: "1", CODEX_MANAGED_BY_NPM: "1" },
+  env: {
+    ...process.env,
+    CODER_MANAGED_BY_NPM: "1",
+    CODEX_MANAGED_BY_NPM: "1",
+    CODE_BINARY_PATH: binaryPath,
+  },
 });
 
 child.on("error", (err) => {
@@ -546,7 +655,7 @@ child.on("error", (err) => {
     console.error(`Permission denied: ${binaryPath}`);
     console.error(`Try running: chmod +x "${binaryPath}"`);
     console.error(
-      `Or reinstall the package with: npm install -g @just-every/code`,
+      `Or reinstall the package with: npm install -g @tytsxai/beacon-code`,
     );
   } else if (code === "EFTYPE" || code === "ENOEXEC") {
     console.error(`Failed to execute native binary: ${binaryPath}`);
@@ -554,7 +663,7 @@ child.on("error", (err) => {
       "The file may be corrupt or of the wrong type. Reinstall usually fixes this:",
     );
     console.error(
-      "  npm uninstall -g @just-every/code && npm install -g @just-every/code",
+      "  npm uninstall -g @tytsxai/beacon-code && npm install -g @tytsxai/beacon-code",
     );
     if (platform === "win32") {
       console.error(
@@ -567,7 +676,7 @@ child.on("error", (err) => {
         "Detected WSL. Windows binaries cannot be executed from WSL.",
       );
       console.error(
-        "Install inside WSL and run there: npx -y @just-every/code@latest",
+        "Install inside WSL and run there: npx -y @tytsxai/beacon-code@latest",
       );
     }
   } else {

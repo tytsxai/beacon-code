@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Unified entry point for the Codex CLI.
+// Unified entry point for the Code CLI.
 
 import { spawn } from "node:child_process";
 import { existsSync } from "fs";
@@ -81,7 +81,7 @@ function getUpdatedPath(newDirs) {
 }
 
 /**
- * Use heuristics to detect the package manager that was used to install Codex
+ * Use heuristics to detect the package manager that was used to install Code
  * in order to give the user a hint about how to update it.
  */
 function detectPackageManager() {

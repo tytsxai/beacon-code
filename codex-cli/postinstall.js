@@ -60,7 +60,7 @@ function getCacheDir(version) {
   } else {
     base = process.env.XDG_CACHE_HOME || join(home, ".cache");
   }
-  const dir = join(base, "just-every", "code", version);
+  const dir = join(base, "tytsxai", "beacon-code", version);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   return dir;
 }
@@ -126,7 +126,7 @@ function verifyBinaryChecksum(path, binaryName) {
 }
 
 const CODE_SHIM_SIGNATURES = [
-  "@just-every/code",
+  "@tytsxai/beacon-code",
   "bin/coder.js",
   '$(dirname "$0")/coder',
   "%~dp0coder",
@@ -472,7 +472,7 @@ export async function runPostinstall(options = {}) {
             "         If `code` runs another tool, prefer using: coder",
           );
           console.warn(
-            "         Or run our CLI explicitly via: npx -y @just-every/code",
+            "         Or run our CLI explicitly via: npx -y @tytsxai/beacon-code",
           );
         }
       }
@@ -499,7 +499,7 @@ export async function runPostinstall(options = {}) {
   // Download only the primary binary; we'll create wrappers for legacy names.
   const binaries = ["code"];
 
-  console.log(`Installing @just-every/code v${version} for ${targetTriple}...`);
+  console.log(`Installing @tytsxai/beacon-code v${version} for ${targetTriple}...`);
 
   for (const binary of binaries) {
     const binaryName = `${binary}-${targetTriple}${binaryExt}`;
@@ -555,17 +555,17 @@ export async function runPostinstall(options = {}) {
     const require = createRequire(import.meta.url);
     const platformPkg = (() => {
       const name = (() => {
-        if (isWindows) return "@just-every/code-win32-x64";
+        if (isWindows) return "@tytsxai/beacon-code-win32-x64";
         const plt = platform();
         const cpu = arch();
         if (plt === "darwin" && cpu === "arm64")
-          return "@just-every/code-darwin-arm64";
+          return "@tytsxai/beacon-code-darwin-arm64";
         if (plt === "darwin" && cpu === "x64")
-          return "@just-every/code-darwin-x64";
+          return "@tytsxai/beacon-code-darwin-x64";
         if (plt === "linux" && cpu === "x64")
-          return "@just-every/code-linux-x64-musl";
+          return "@tytsxai/beacon-code-linux-x64-musl";
         if (plt === "linux" && cpu === "arm64")
-          return "@just-every/code-linux-arm64-musl";
+          return "@tytsxai/beacon-code-linux-arm64-musl";
         return null;
       })();
       if (!name) return null;
@@ -664,13 +664,13 @@ export async function runPostinstall(options = {}) {
       : useZst
         ? `${binaryName}.zst`
         : `${binaryName}.tar.gz`;
-    const downloadUrl = `https://github.com/just-every/code/releases/download/v${version}/${archiveName}`;
+    const downloadUrl = `https://github.com/tytsxai/beacon-code/releases/download/v${version}/${archiveName}`;
 
     console.log(`Downloading ${archiveName}...`);
     try {
       const needsIsolation = isWin || (!isWin && !mirrorToLocal); // Windows or WSL-on-NTFS
       let safeTempDir = needsIsolation
-        ? join(tmpdir(), "just-every", "code", version)
+        ? join(tmpdir(), "tytsxai", "beacon-code", version)
         : binDir;
       // Ensure staging dir exists; if tmp fails (permissions/space), fall back to user cache.
       if (needsIsolation) {

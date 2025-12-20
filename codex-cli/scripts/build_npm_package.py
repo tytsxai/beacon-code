@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage and optionally package the @openai/codex npm module."""
+"""Stage and optionally package the @tytsxai/beacon-code npm module."""
 
 import argparse
 import json
@@ -33,7 +33,7 @@ COMPONENT_DEST_DIR: dict[str, str] = {
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Build or stage the Codex CLI npm package.")
+    parser = argparse.ArgumentParser(description="Build or stage the Beacon Code CLI npm package.")
     parser.add_argument(
         "--package",
         choices=("codex", "codex-responses-api-proxy", "codex-sdk"),

@@ -1,19 +1,19 @@
-# EVERY CODE (Code)
+# Beacon Code (Code)
 
 &ensp;
 
 <p align="center">
-  <img src="docs/logo.png" alt="Every Code Logo" width="400">
+  <img src="docs/logo.png" alt="Beacon Code Logo" width="400">
 </p>
 
 &ensp;
 
-**Every Code** (Code for short) is a fast, local coding agent for your terminal. It's a community-driven fork of `openai/codex` focused on real developer ergonomics: Browser integration, multi-agents, theming, and reasoning control — all while staying compatible with upstream.
+**Beacon Code** (Code for short) is a fast, local coding agent for your terminal, focused on real developer ergonomics: Browser integration, multi-agents, theming, and reasoning control — all while staying compatible with upstream tooling.
 
 &ensp;
 ## What's new in v0.5.0 (November 2025)
 
-- **Renamed to Every Code** – new name for better discoverability while keeping the `code` shorthand.
+- **Renamed to Beacon Code** – new name for better discoverability while keeping the `code` shorthand.
 - **Auto Drive upgraded** – hand `/auto` a task and it now plans, coordinates agents, reruns checks, and recovers from hiccups without babysitting.
 - **Unified settings** – `/settings` centralizes limits, model routing, themes, and CLI integrations so you can audit configuration in one place.
 - **Card-based activity** – Agents, browser sessions, web search, and Auto Drive render as compact cards with drill-down overlays for full logs.
@@ -23,7 +23,7 @@
 Read the full notes in `docs/release-notes/RELEASE_NOTES.md`.
 
 &ensp;
-## Why Every Code
+## Why Beacon Code
 
 - 🚀 **Auto Drive orchestration** – Multi-agent automation that now self-heals and ships complete tasks.
 - 🌐 **Browser Integration** – CDP support, headless browsing, screenshots captured inline.
@@ -60,13 +60,13 @@ Read the full notes in `docs/release-notes/RELEASE_NOTES.md`.
 ### Run
 
 ```bash
-npx -y @just-every/code
+npx -y @tytsxai/beacon-code
 ```
 
 ### Install & Run
 
 ```bash
-npm install -g @just-every/code
+npm install -g @tytsxai/beacon-code
 code // or `coder` if you're using VS Code
 ```
 
@@ -80,7 +80,7 @@ Note: If another tool already provides a `code` command (e.g. VS Code), our CLI 
 
 ### Install Claude & Gemini (optional)
 
-Every Code supports orchestrating other AI CLI tools. Install these and config to use alongside Code.
+Beacon Code supports orchestrating other AI CLI tools. Install these and config to use alongside Code.
 
 ```bash
 # Ensure Node.js 20+ is available locally (installs into ~/.n)
@@ -176,7 +176,7 @@ Options:
 &ensp;
 ## Memory & project docs
 
-Every Code can remember context across sessions:
+Beacon Code can remember context across sessions:
 
 1. **Create an `AGENTS.md` or `CLAUDE.md` file** in your project root:
 ```markdown
@@ -214,7 +214,7 @@ code --config output_format=json "list all TODO comments"
 &ensp;
 ## Model Context Protocol (MCP)
 
-Every Code supports MCP for extended capabilities:
+Beacon Code supports MCP for extended capabilities:
 
 - **File operations**: Advanced file system access
 - **Database connections**: Query and modify databases
@@ -235,7 +235,7 @@ args = ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/project"]
 Main config file: `~/.code/config.toml`
 
 > [!NOTE]
-> Every Code reads from both `~/.code/` and `~/.codex/` for backwards compatibility, but it only writes updates to `~/.code/`. If you switch back to Codex and it fails to start, remove `~/.codex/config.toml`. If Every Code appears to miss settings after upgrading, copy your legacy `~/.codex/config.toml` into `~/.code/`.
+> Beacon Code reads from both `~/.code/` and `~/.codex/` for backwards compatibility, but it only writes updates to `~/.code/`. If you switch back to the upstream CLI and it fails to start, remove `~/.codex/config.toml`. If Beacon Code appears to miss settings after upgrading, copy your legacy `~/.codex/config.toml` into `~/.code/`.
 
 ```toml
 # Model settings
@@ -273,8 +273,8 @@ model_reasoning_summary = "detailed"
 **How is this different from the original?**
 > This fork adds browser integration, multi-agent commands (`/plan`, `/solve`, `/code`), theme system, and enhanced reasoning controls while maintaining full compatibility.
 
-**Can I use my existing Codex configuration?**
-> Yes. Every Code reads from both `~/.code/` (primary) and legacy `~/.codex/` directories. We only write to `~/.code/`, so Codex will keep running if you switch back; copy or remove legacy files if you notice conflicts.
+**Can I use my existing Beacon configuration?**
+> Yes. Beacon Code reads from both `~/.code/` (primary) and legacy `~/.codex/` directories. We only write to `~/.code/`, so Beacon will keep running if you switch back; copy or remove legacy files if you notice conflicts.
 
 **Does this work with ChatGPT Plus?**
 > Absolutely. Use the same "Sign in with ChatGPT" flow as the original.
@@ -285,14 +285,14 @@ model_reasoning_summary = "detailed"
 &ensp;
 ## Contributing
 
-We welcome contributions! Every Code maintains compatibility with upstream while adding community-requested features.
+We welcome contributions! Beacon Code maintains compatibility with upstream while adding community-requested features.
 
 ### Development workflow
 
 ```bash
 # Clone and setup
-git clone https://github.com/just-every/code.git
-cd code
+git clone https://github.com/tytsxai/beacon-code.git
+cd beacon-code
 npm install
 
 # Build (use fast build for development)
@@ -316,11 +316,11 @@ npm install
 ## Legal & Use
 
 ### License & attribution
-- This project is a community fork of `openai/codex` under **Apache-2.0**. We preserve upstream LICENSE and NOTICE files.
-- **Every Code** (Code) is **not** affiliated with, sponsored by, or endorsed by OpenAI.
+- This project is derived from upstream `openai/codex` under **Apache-2.0**. We preserve upstream LICENSE and NOTICE files.
+- **Beacon Code** (Code) is **not** affiliated with, sponsored by, or endorsed by OpenAI.
 
 ### Your responsibilities
-Using OpenAI, Anthropic or Google services through Every Code means you agree to **their Terms and policies**. In particular:
+Using OpenAI, Anthropic or Google services through Beacon Code means you agree to **their Terms and policies**. In particular:
 - **Don't** programmatically scrape/extract content outside intended flows.
 - **Don't** bypass or interfere with rate limits, quotas, or safety mitigations.
 - Use your **own** account; don't share or rotate accounts to evade limits.
@@ -331,15 +331,15 @@ Using OpenAI, Anthropic or Google services through Every Code means you agree to
 - Inputs/outputs you send to AI providers are handled under their Terms and Privacy Policy; consult those documents (and any org-level data-sharing settings).
 
 ### Subject to change
-AI providers can change eligibility, limits, models, or authentication flows. Every Code supports **both** ChatGPT sign-in and API-key modes so you can pick what fits (local/hobby vs CI/automation).
+AI providers can change eligibility, limits, models, or authentication flows. Beacon Code supports **both** ChatGPT sign-in and API-key modes so you can pick what fits (local/hobby vs CI/automation).
 
 &ensp;
 ## License
 
 Apache 2.0 - See [LICENSE](LICENSE) file for details.
 
-Every Code is a community fork of the original Codex CLI. We maintain compatibility while adding enhanced features requested by the developer community.
+Beacon Code is a community-led continuation of the original CLI. We maintain compatibility while adding enhanced features requested by the developer community.
 
 &ensp;
 ---
-**Need help?** Open an issue on [GitHub](https://github.com/just-every/code/issues) or check our documentation.
+**Need help?** Open an issue on [GitHub](https://github.com/tytsxai/beacon-code/issues) or check our documentation.
