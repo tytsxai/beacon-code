@@ -108,7 +108,7 @@ fn extra_syntax_set() -> &'static Option<SyntaxSet> {
 fn themes() -> &'static ThemeSet {
     THEMES.get_or_init(|| {
         let mut ts = ThemeSet::load_defaults();
-        // Insert Codex built-in themes
+        // Insert Beacon Code built-in themes
         ts.themes
             .insert("Code Dark".to_string(), build_code_dark_theme());
         ts.themes

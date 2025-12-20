@@ -3762,7 +3762,7 @@ dependencies = [
 [[package]]
 name = "mcp-types"
 version = "0.0.0"
-source = "git+https://github.com/openai/codex.git?rev=6c384eb9c610f9a83037d9cad120fb792e782c7c#6c384eb9c610f9a83037d9cad120fb792e782c7c"
+source = "git+https://github.com/tytsxai/beacon-code.git?rev=6c384eb9c610f9a83037d9cad120fb792e782c7c#6c384eb9c610f9a83037d9cad120fb792e782c7c"
 dependencies = [
  "schemars 0.8.22",
  "serde",

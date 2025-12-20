@@ -13,7 +13,7 @@ use code_core::config::write_global_mcp_servers;
 use code_core::config_types::McpServerConfig;
 use code_core::config_types::McpServerTransportConfig;
 
-/// [experimental] Launch Codex as an MCP server or manage configured MCP servers.
+/// [experimental] Launch Beacon Code as an MCP server or manage configured MCP servers.
 ///
 /// Subcommands:
 /// - `serve`  — run the MCP server on stdio

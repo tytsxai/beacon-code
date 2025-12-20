@@ -1931,7 +1931,7 @@ fn agents_terminal_overlay_full_details() {
             agents: vec![
                 AgentInfo {
                     id: "docs-sweep-codex-max".into(),
-                    name: "Docs Sweep (Codex Max)".into(),
+                    name: "Docs Sweep (Beacon Code Max)".into(),
                     status: "running".into(),
                     batch_id: Some("batch-docs".into()),
                     model: Some("code-gpt-5.1-codex-max".into()),
@@ -1943,7 +1943,7 @@ fn agents_terminal_overlay_full_details() {
                 },
                 AgentInfo {
                     id: "docs-sweep-codex-mini".into(),
-                    name: "Docs Sweep (Codex Mini)".into(),
+                    name: "Docs Sweep (Beacon Code Mini)".into(),
                     status: "pending".into(),
                     batch_id: Some("batch-docs".into()),
                     model: Some("code-gpt-5.1-codex-mini".into()),
@@ -1974,7 +1974,7 @@ fn agents_terminal_overlay_full_details() {
             agents: vec![
                 AgentInfo {
                     id: "docs-sweep-codex-max".into(),
-                    name: "Docs Sweep (Codex Max)".into(),
+                    name: "Docs Sweep (Beacon Code Max)".into(),
                     status: "completed".into(),
                     batch_id: Some("batch-docs".into()),
                     model: Some("code-gpt-5.1-codex-max".into()),
@@ -1989,7 +1989,7 @@ fn agents_terminal_overlay_full_details() {
                 },
                 AgentInfo {
                     id: "docs-sweep-codex-mini".into(),
-                    name: "Docs Sweep (Codex Mini)".into(),
+                    name: "Docs Sweep (Beacon Code Mini)".into(),
                     status: "failed".into(),
                     batch_id: Some("batch-docs".into()),
                     model: Some("code-gpt-5.1-codex-mini".into()),

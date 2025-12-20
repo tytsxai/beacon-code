@@ -31,14 +31,14 @@ pub(crate) fn spawn_agent(
             Ok(v) => v,
             Err(e) => {
                 tracing::error!("failed to initialize codex: {e}");
-                let message = format!("Failed to start Codex session: {e}");
+                let message = format!("Failed to start Beacon Code session: {e}");
                 app_event_tx_clone.send(AppEvent::InsertHistoryWithKind {
                     id: None,
                     kind: crate::streaming::StreamKind::Answer,
                     lines: vec![Line::from(message.clone())],
                 });
                 app_event_tx_clone.send(AppEvent::EmitTuiNotification {
-                    title: "Codex session failed".to_string(),
+                    title: "Beacon Code session failed".to_string(),
                     body: Some(message),
                 });
                 app_event_tx_clone.send(AppEvent::RequestRedraw);

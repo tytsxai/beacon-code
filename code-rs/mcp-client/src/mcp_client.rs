@@ -423,7 +423,7 @@ const DEFAULT_ENV_VARS: &[&str] = &[
     "USER",
     "__CF_USER_TEXT_ENCODING",
 
-    // Additional environment variables Codex chooses to include by default:
+    // Additional environment variables Beacon Code chooses to include by default:
     "LANG",
     "LC_ALL",
     "TERM",

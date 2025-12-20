@@ -83,7 +83,7 @@ pub(crate) async fn handle_create_conversation(
         }
     };
 
-    // Initialize Codex session via server API
+    // Initialize Beacon Code session via server API
     let NewConversation {
         conversation_id: session_id,
         conversation,

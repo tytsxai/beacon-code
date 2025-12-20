@@ -8,13 +8,13 @@ import subprocess
 import sys
 
 
-REPO = "openai/codex"
+REPO = "tytsxai/beacon-code"
 BRANCH_REF = "heads/main"
 CARGO_TOML_PATH = "code-rs/Cargo.toml"
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Publish a tagged Codex release.")
+    parser = argparse.ArgumentParser(description="Publish a tagged Beacon Code release.")
     parser.add_argument(
         "-n",
         "--dry-run",

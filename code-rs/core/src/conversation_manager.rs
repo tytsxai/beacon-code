@@ -21,7 +21,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-/// Represents a newly created Codex conversation, including the first event
+/// Represents a newly created Beacon Code conversation, including the first event
 /// (which is [`EventMsg::SessionConfigured`]).
 pub struct NewConversation {
     pub conversation_id: ConversationId,

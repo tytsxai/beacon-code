@@ -247,9 +247,9 @@ impl McpConnectionManager {
                     client_info: Implementation {
                         name: "codex-mcp-client".to_owned(),
                         version: env!("CARGO_PKG_VERSION").to_owned(),
-                        title: Some("Codex".into()),
-                        // This field is used by Codex when it is an MCP
-                        // server: it should not be used when Codex is
+                        title: Some("Beacon Code".into()),
+                        // This field is used by Beacon Code when it is an MCP
+                        // server: it should not be used when Beacon Code is
                         // an MCP client.
                         user_agent: None,
                     },

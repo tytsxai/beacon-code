@@ -114,7 +114,7 @@ impl MessageProcessor {
     pub(crate) async fn process_request(&mut self, request: JSONRPCRequest) {
         if let Ok(request_json) = serde_json::to_value(request.clone()) {
             if let Ok(code_request) = serde_json::from_value::<ClientRequest>(request_json) {
-                // If the request is a Codex request, handle it with the Codex
+                // If the request is a Beacon Code request, handle it with the
                 // message processor.
                 self.code_message_processor
                     .process_request(code_request)
@@ -406,7 +406,7 @@ impl MessageProcessor {
         let server_info = serde_json::json!({
             "name": "code-mcp-server",
             "version": env!("CARGO_PKG_VERSION"),
-            "title": "Codex",
+            "title": "Beacon Code",
             "user_agent": get_code_user_agent_default(),
         });
 
@@ -577,7 +577,9 @@ impl MessageProcessor {
                     Ok(cfg) => cfg,
                     Err(e) => {
                         let message =
-                            format!("Failed to load Codex configuration from overrides: {e}");
+                            format!(
+                                "Failed to load Beacon Code configuration from overrides: {e}"
+                            );
                         let result = CallToolResult {
                             content: vec![ContentBlock::TextContent(TextContent {
                                 r#type: "text".to_owned(),
@@ -596,7 +598,8 @@ impl MessageProcessor {
                     }
                 },
                 Err(e) => {
-                    let message = format!("Failed to parse configuration for Codex tool: {e}");
+                    let message =
+                        format!("Failed to parse configuration for Beacon Code tool: {e}");
                     let result = CallToolResult {
                         content: vec![ContentBlock::TextContent(TextContent {
                             r#type: "text".to_owned(),
@@ -642,10 +645,10 @@ impl MessageProcessor {
         let session_map = self.session_map.clone();
         let running_requests_id_to_code_uuid = self.running_requests_id_to_code_uuid.clone();
 
-        // Spawn an async task to handle the Codex session so that we do not
+        // Spawn an async task to handle the Beacon Code session so that we do not
         // block the synchronous message-processing loop.
         task::spawn(async move {
-            // Run the Codex session and stream events back to the client.
+            // Run the Beacon Code session and stream events back to the client.
             crate::code_tool_runner::run_code_tool_session(
                 id,
                 initial_prompt,
@@ -671,7 +674,9 @@ impl MessageProcessor {
             Some(json_val) => match serde_json::from_value::<CodexToolCallReplyParam>(json_val) {
                 Ok(params) => params,
                 Err(e) => {
-                    tracing::error!("Failed to parse Codex tool call reply parameters: {e}");
+                    tracing::error!(
+                        "Failed to parse Beacon Code tool call reply parameters: {e}"
+                    );
                     let message = format!("Failed to parse codex-reply parameters: {e}");
                     let result = CallToolResult {
                         content: vec![ContentBlock::TextContent(TextContent {
@@ -822,7 +827,7 @@ impl MessageProcessor {
         };
         tracing::info!("session_id: {session_id}");
 
-        // Obtain the Codex conversation from the session map, falling back to the conversation manager.
+        // Obtain the Beacon Code conversation from the session map, falling back to the conversation manager.
         let code_arc = if let Some(entry) = self.session_map.lock().await.get(&session_id) {
             entry.conversation.clone()
         } else {
@@ -839,7 +844,7 @@ impl MessageProcessor {
             }
         };
 
-        // Submit interrupt to Codex.
+        // Submit interrupt to Beacon Code.
         let err = code_arc
             .submit_with_id(Submission {
                 id: request_id_string,
@@ -847,7 +852,7 @@ impl MessageProcessor {
             })
             .await;
         if let Err(e) = err {
-            tracing::error!("Failed to submit interrupt to Codex: {e}");
+            tracing::error!("Failed to submit interrupt to Beacon Code: {e}");
             return;
         }
         // unregister the id so we don't keep it in the map

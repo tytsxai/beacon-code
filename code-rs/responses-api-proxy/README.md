@@ -12,7 +12,7 @@ A privileged user (i.e., `root` or a user with `sudo`) who has access to `OPENAI
 printenv OPENAI_API_KEY | codex-responses-api-proxy --http-shutdown --server-info /tmp/server-info.json
 ```
 
-A non-privileged user would then run Codex as follows, specifying the `model_provider` dynamically:
+A non-privileged user would then run Beacon as follows, specifying the `model_provider` dynamically:
 
 ```shell
 PROXY_PORT=$(jq .port /tmp/server-info.json)
@@ -56,7 +56,7 @@ codex-responses-api-proxy [--port <PORT>] [--server-info <FILE>] [--http-shutdow
 
 Care is taken to restrict access/copying to the value of `OPENAI_API_KEY` retained in memory:
 
-- We leverage [`code_process_hardening`](https://github.com/openai/codex/blob/main/codex-rs/process-hardening/README.md) so `codex-responses-api-proxy` is run with standard process-hardening techniques.
+- We leverage [`code_process_hardening`](https://github.com/tytsxai/beacon-code/blob/main/codex-rs/process-hardening/README.md) so `codex-responses-api-proxy` is run with standard process-hardening techniques.
 - At startup, we allocate a `1024` byte buffer on the stack and write `"Bearer "` as the first `7` bytes.
 - We then read from `stdin`, copying the contents into the buffer after `"Bearer "`.
 - After verifying the key matches `/^[a-zA-Z0-9_-]+$/` (and does not exceed the buffer), we create a `String` from that buffer (so the data is now on the heap).

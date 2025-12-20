@@ -56,7 +56,7 @@ pub fn build_provider(
     Ok(provider)
 }
 
-/// Filter predicate for exporting only Codex-owned events via OTEL.
+/// Filter predicate for exporting only Beacon Code-owned events via OTEL.
 /// Keeps events that originated from code_otel module.
 pub fn code_export_filter(meta: &tracing::Metadata<'_>) -> bool {
     meta.target().starts_with("code_otel")

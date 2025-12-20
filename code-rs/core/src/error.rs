@@ -115,7 +115,7 @@ pub enum CodexErr {
     AuthRefreshPermanent(String),
 
     #[error(
-        "To use Codex with your ChatGPT plan, upgrade to Plus: https://openai.com/chatgpt/pricing."
+        "To use Beacon Code with your ChatGPT plan, upgrade to Plus: https://openai.com/chatgpt/pricing."
     )]
     UsageNotIncluded,
 

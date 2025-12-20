@@ -258,10 +258,10 @@ pub struct Config {
     /// Preferred locale for model-facing prompts and assistant replies (BCP 47). Defaults to en-US.
     pub ui_locale: UiLocale,
 
-    /// Optional external notifier command. When set, Codex will spawn this
+    /// Optional external notifier command. When set, Beacon Code will spawn this
     /// program after each completed *turn* (i.e. when the agent finishes
     /// processing a user submission). The value must be the full command
-    /// broken into argv tokens **without** the trailing JSON argument - Codex
+    /// broken into argv tokens **without** the trailing JSON argument - Beacon Code
     /// appends one extra argument containing a JSON payload describing the
     /// event.
     ///
@@ -269,13 +269,13 @@ pub struct Config {
     /// `~/.codex/config.toml`):
     ///
     /// ```toml
-    /// notify = ["notify-send", "Codex"]
+    /// notify = ["notify-send", "Beacon Code"]
     /// ```
     ///
     /// which will be invoked as:
     ///
     /// ```shell
-    /// notify-send Codex '{"type":"agent-turn-complete","turn-id":"12345"}'
+    /// notify-send Beacon Code '{"type":"agent-turn-complete","turn-id":"12345"}'
     /// ```
     ///
     /// If unset the feature is disabled.
@@ -296,7 +296,7 @@ pub struct Config {
     /// resolved against this path.
     pub cwd: PathBuf,
 
-    /// Definition for MCP servers that Codex can reach out to for tool calls.
+    /// Definition for MCP servers that Beacon Code can reach out to for tool calls.
     pub mcp_servers: HashMap<String, McpServerConfig>,
 
     /// Optional ACP client tool identifiers supplied by the host IDE.
@@ -314,7 +314,7 @@ pub struct Config {
     /// Ordered list of fallback filenames to consider when loading project docs.
     pub project_doc_fallback_filenames: Vec<String>,
 
-    /// Directory containing all Codex state (defaults to `~/.code`; can be
+    /// Directory containing all Beacon Code state (defaults to `~/.code`; can be
     /// overridden by the `CODE_HOME` or `CODEX_HOME` environment variables).
     pub code_home: PathBuf,
 
@@ -412,7 +412,7 @@ impl Config {
         cli_overrides: Vec<(String, TomlValue)>,
         overrides: ConfigOverrides,
     ) -> std::io::Result<Self> {
-        // Resolve the directory that stores Codex state (e.g. ~/.code or the
+        // Resolve the directory that stores Beacon Code state (e.g. ~/.code or the
         // value of $CODEX_HOME) so we can embed it into the resulting
         // `Config` instance.
         let code_home = find_code_home()?;
@@ -1881,7 +1881,7 @@ pub struct ConfigToml {
     /// System instructions.
     pub instructions: Option<String>,
 
-    /// Definition for MCP servers that Codex can reach out to for tool calls.
+    /// Definition for MCP servers that Beacon Code can reach out to for tool calls.
     #[serde(default)]
     pub mcp_servers: HashMap<String, McpServerConfig>,
 
@@ -2860,7 +2860,7 @@ fn path_exists(path: &Path) -> bool {
     std::fs::metadata(path).is_ok()
 }
 
-/// Resolve the filesystem path used for *reading* Codex state that may live in
+/// Resolve the filesystem path used for *reading* Beacon Code state that may live in
 /// a legacy `~/.codex` directory. Writes should continue targeting `code_home`.
 pub fn resolve_code_path_for_read(code_home: &Path, relative: &Path) -> PathBuf {
     let default_path = code_home.join(relative);
@@ -2889,7 +2889,7 @@ pub fn resolve_code_path_for_read(code_home: &Path, relative: &Path) -> PathBuf 
     default_path
 }
 
-/// Returns the path to the Code/Codex configuration directory, which can be
+/// Returns the path to the Code/Beacon Code configuration directory, which can be
 /// specified by the `CODE_HOME` or `CODEX_HOME` environment variables. If not set,
 /// defaults to `~/.code` for the fork.
 ///
@@ -2917,7 +2917,7 @@ pub fn find_code_home() -> std::io::Result<PathBuf> {
     Ok(write_path)
 }
 
-/// Returns the path to the folder where Codex logs are stored. Does not verify
+/// Returns the path to the folder where Beacon Code logs are stored. Does not verify
 /// that the directory exists.
 pub fn log_dir(cfg: &Config) -> std::io::Result<PathBuf> {
     let mut p = cfg.code_home.clone();

@@ -64,7 +64,7 @@ const APPROVAL_TIMEOUT: Duration = Duration::from_secs(300);
 
 // Removed deprecated ChatGPT login support scaffolding
 
-/// Handles JSON-RPC messages for Codex conversations.
+/// Handles JSON-RPC messages for Beacon Code conversations.
 pub struct CodexMessageProcessor {
     _auth_manager: Arc<AuthManager>,
     conversation_manager: Arc<ConversationManager>,

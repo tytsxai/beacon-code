@@ -381,7 +381,7 @@ def define_struct(
         else:
             fields.append(StructField("pub", rs_prop.name, prop_type, rs_prop.serde))
 
-    # Special-case: add Codex-specific user_agent to Implementation
+    # Special-case: add Beacon Code-specific user_agent to Implementation
     if name == "Implementation":
         fields.append(
             StructField(
@@ -389,7 +389,7 @@ def define_struct(
                 "user_agent",
                 "Option<String>",
                 '#[serde(default, skip_serializing_if = "Option::is_none")]',
-                "This is an extra field that the Codex MCP server sends as part of InitializeResult.",
+                "This is an extra field that the Beacon Code MCP server sends as part of InitializeResult.",
             )
         )
 

@@ -56,7 +56,7 @@ pub async fn run_conversation_loop(
                         continue;
                     }
                     EventMsg::Error(_) => {
-                        error!("Codex runtime error");
+                        error!("Beacon Code runtime error");
                     }
                     EventMsg::ApplyPatchApprovalRequest(ApplyPatchApprovalRequestEvent {
                         call_id,
@@ -123,7 +123,7 @@ pub async fn run_conversation_loop(
                 }
             }
             Err(e) => {
-                error!("Codex runtime error: {e}");
+                error!("Beacon Code runtime error: {e}");
             }
         }
     }

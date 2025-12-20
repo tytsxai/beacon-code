@@ -359,7 +359,7 @@ impl ThemeSelectionView {
                         return;
                     }
                 };
-                // Use the same auth preference as the active Codex session.
+                // Use the same auth preference as the active Beacon Code session.
                 // When logged in with ChatGPT, prefer ChatGPT auth; otherwise fall back to API key.
                 let preferred_auth = if cfg.using_chatgpt_auth {
                     code_protocol::mcp_protocol::AuthMode::ChatGPT

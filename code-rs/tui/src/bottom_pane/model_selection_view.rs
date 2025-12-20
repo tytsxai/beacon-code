@@ -397,7 +397,7 @@ impl ModelSelectionView {
 
     fn model_description(model: &str) -> Option<&'static str> {
         if model.eq_ignore_ascii_case("gpt-5.1-codex-max") {
-            Some("Latest Codex-optimized flagship for deep and fast reasoning.")
+            Some("Latest flagship model optimized for deep and fast reasoning.")
         } else if model.eq_ignore_ascii_case("gpt-5.1-codex") {
             Some("Optimized for Code.")
         } else if model.eq_ignore_ascii_case("gpt-5.1-codex-mini") {

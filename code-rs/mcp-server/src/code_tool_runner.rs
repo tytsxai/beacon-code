@@ -1,4 +1,4 @@
-//! Asynchronous worker that executes a **Codex** tool-call inside a spawned
+//! Asynchronous worker that executes a **Beacon Code** tool-call inside a spawned
 //! Tokio task. Separated from `message_processor.rs` to keep that file small
 //! and to make future feature-growth easier to manage.
 
@@ -50,7 +50,7 @@ async fn cleanup_session(
         .await;
 }
 
-/// Run a complete Codex session and stream events back to the client.
+/// Run a complete Beacon Code session and stream events back to the client.
 ///
 /// On completion (success or error) the function sends the appropriate
 /// `tools/call` response so the LLM can continue the conversation.
@@ -74,7 +74,7 @@ pub async fn run_code_tool_session(
             let result = CallToolResult {
                 content: vec![ContentBlock::TextContent(TextContent {
                     r#type: "text".to_string(),
-                    text: format!("Failed to start Codex session: {e}"),
+                    text: format!("Failed to start Beacon Code session: {e}"),
                     annotations: None,
                 })],
                 is_error: Some(true),
@@ -105,7 +105,7 @@ pub async fn run_code_tool_session(
         )
         .await;
 
-    // Use the original MCP request ID as the `sub_id` for the Codex submission so that
+    // Use the original MCP request ID as the `sub_id` for the Beacon Code submission so that
     // any events emitted for this tool-call can be correlated with the
     // originating `tools/call` request.
     let sub_id = match &id {
@@ -262,7 +262,7 @@ async fn run_code_tool_session_inner(
                         continue;
                     }
                     EventMsg::Error(err_event) => {
-                        // Return a response to conclude the tool call when the Codex session reports an error (e.g., interruption).
+                        // Return a response to conclude the tool call when the Beacon Code session reports an error (e.g., interruption).
                         let mut structured = json!({
                             "status": "error",
                             "sessionId": session_id,
@@ -408,7 +408,7 @@ async fn run_code_tool_session_inner(
                 }
             }
             Err(e) => {
-                let text = format!("Codex runtime error: {e}");
+                let text = format!("Beacon Code runtime error: {e}");
                 let mut structured = json!({
                     "status": "error",
                     "sessionId": session_id,

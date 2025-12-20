@@ -119,7 +119,7 @@ fn format_agent_not_found_error(agent_name: &str, command: &str) -> String {
                command = \"C:\\\\Users\\\\YourUser\\\\AppData\\\\Roaming\\\\npm\\\\{}.cmd\"\n\
             3. Verify your PATH includes the directory containing '{}'\n\
             4. On Windows, ensure the file has a valid extension (.exe, .cmd, .bat, .com)\n\n\
-            For more information, see: https://github.com/just-every/code/blob/main/code-rs/config.md",
+            For more information, see: https://github.com/tytsxai/beacon-code/blob/main/code-rs/config.md",
             command, agent_name, command, command
         ));
     }
@@ -134,7 +134,7 @@ fn format_agent_not_found_error(agent_name: &str, command: &str) -> String {
                [[agents]]\n\
                name = \"{agent_name}\"\n\
                command = \"/absolute/path/to/{command}\"\n\n\
-            For more information, see: https://github.com/just-every/code/blob/main/code-rs/config.md"
+            For more information, see: https://github.com/tytsxai/beacon-code/blob/main/code-rs/config.md"
         ));
     }
 
@@ -900,7 +900,7 @@ async fn execute_model_with_permissions(
         command_base.clone()
     };
 
-    // Special case: for the built‑in Codex agent, prefer invoking the currently
+    // Special case: for the built‑in Beacon Code agent, prefer invoking the currently
     // running executable with the `exec` subcommand rather than relying on a
     // `codex` binary to be present on PATH. This improves portability,
     // especially on Windows where global shims may be missing.
@@ -917,7 +917,7 @@ async fn execute_model_with_permissions(
         || matches!(command_stem_lower.as_str(), "claude" | "gemini" | "qwen")
     {
         return Err(
-            "This fork only supports running built-in Codex agents (e.g., code-gpt-5.1-codex-max, code-gpt-5.1-codex-mini). External agent CLIs are disabled."
+            "This fork only supports running built-in Beacon Code agents (e.g., code-gpt-5.1-codex-max, code-gpt-5.1-codex-mini). External agent CLIs are disabled."
                 .to_string(),
         );
     }
@@ -1007,8 +1007,8 @@ async fn execute_model_with_permissions(
         other => other,
     };
 
-    // Configuration overrides for Codex CLI families. Only Codex understands
-    // our config flags, so only attach these when launching Codex binaries.
+    // Configuration overrides for Beacon Code CLI families. Only Beacon Code understands
+    // our config flags, so only attach these when launching Beacon Code binaries.
     let effort_override = format!(
         "model_reasoning_effort={}",
         clamped_effort.to_string().to_ascii_lowercase()

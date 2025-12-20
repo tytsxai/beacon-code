@@ -112,7 +112,7 @@ pub async fn run_main(cli: Cli, code_linux_sandbox_exe: Option<PathBuf>) -> anyh
 
             // Ensure the user knows we are waiting on stdin, as they may
             // have gotten into this state by mistake. If so, and they are not
-            // writing to stdin, Codex will hang indefinitely, so this should
+            // writing to stdin, Beacon Code will hang indefinitely, so this should
             // help them debug in that case.
             if !force_stdin {
                 eprintln!("Reading prompt from stdin...");
@@ -288,7 +288,7 @@ pub async fn run_main(cli: Cli, code_linux_sandbox_exe: Option<PathBuf>) -> anyh
             .map_err(|e| anyhow::anyhow!("OSS setup failed: {e}"))?;
     }
 
-    // Print the effective configuration and prompt so users can see what Codex
+    // Print the effective configuration and prompt so users can see what Beacon Code
     // is using.
     event_processor.print_config_summary(&config, &summary_prompt);
 
@@ -333,7 +333,7 @@ pub async fn run_main(cli: Cli, code_linux_sandbox_exe: Option<PathBuf>) -> anyh
             .new_conversation(config.clone())
             .await?
     };
-    info!("Codex initialized with event: {session_configured:?}");
+    info!("Beacon Code initialized with event: {session_configured:?}");
 
     // When running in JSON mode, explicitly emit the session-configured event so
     // SDK consumers can reliably discover the session id for `exec resume`.

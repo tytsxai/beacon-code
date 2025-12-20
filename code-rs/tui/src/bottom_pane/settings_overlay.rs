@@ -75,7 +75,7 @@ impl SettingsSection {
             SettingsSection::Model => "Model settings coming soon.",
             SettingsSection::Theme => "Theme settings coming soon.",
             SettingsSection::Planning => "Planning settings coming soon.",
-            SettingsSection::Updates => "Upgrade Codex and manage automatic updates.",
+            SettingsSection::Updates => "Upgrade Beacon Code and manage automatic updates.",
             SettingsSection::Agents => "Agents configuration coming soon.",
             SettingsSection::AutoDrive => "Auto Drive controls coming soon.",
             SettingsSection::Review => "Adjust Auto Resolve automation for /review.",

@@ -9,7 +9,7 @@ pub struct CodexConversation {
 }
 
 /// Conduit for the bidirectional stream of messages that compose a conversation
-/// in Codex.
+/// in Beacon Code.
 impl CodexConversation {
     pub(crate) fn new(codex: Codex) -> Self {
         Self { codex }

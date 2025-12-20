@@ -3,7 +3,7 @@ use clap::Parser;
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
-#[command(about = "Generate TypeScript bindings for the Codex protocol")]
+#[command(about = "Generate TypeScript bindings for the Beacon Code protocol")]
 struct Args {
     /// Output directory where .ts files will be written
     #[arg(short = 'o', long = "out", value_name = "DIR")]

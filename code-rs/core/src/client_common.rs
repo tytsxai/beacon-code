@@ -25,7 +25,7 @@ use std::task::Poll;
 use tokio::sync::mpsc;
 use uuid::Uuid;
 
-/// Additional prompt for Code. Can not edit Codex instructions.
+/// Additional prompt for Code. Can not edit Beacon Code instructions.
 const PROMPT_CODER_TEMPLATE: &str = include_str!("../prompt_coder.md");
 static BASE_MODEL_DESCRIPTIONS: Lazy<String> = Lazy::new(model_guide_markdown);
 static DEFAULT_DEVELOPER_PROMPT: Lazy<String> =

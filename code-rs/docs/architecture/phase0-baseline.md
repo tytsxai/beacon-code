@@ -7,9 +7,9 @@ identify the modules that will be split up in later phases.
 ## Workspace Layout
 
 - **Core execution**
-  - `codex-core`: orchestration crate exposing `Codex`, conversation
-    management, exec tooling, confirm-guard policy, safety wrappers, and
-    project/plan utilities. Most business logic lives here today.
+  - `codex-core`: orchestration crate exposing `Codex` (Beacon engine),
+    conversation management, exec tooling, confirm-guard policy, safety
+    wrappers, and project/plan utilities. Most business logic lives here today.
   - `codex-exec`: headsless CLI that streams protocol events to stdout/human or
     JSON renderers.
   - `codex-cli`: thin binary that wires auth/config to the TUI.
@@ -33,7 +33,8 @@ identify the modules that will be split up in later phases.
 ## Core Command Pipeline (Today)
 
 1. **Conversation spawn** (`codex-core::ConversationManager`)
-   - Creates `Codex` via `Codex::spawn`, yielding an async event stream.
+   - Creates `Codex` (Beacon engine) via `Codex::spawn`, yielding an async event
+     stream.
    - Produces `SessionConfiguredEvent` and registers the conversation in a
      shared `RwLock<HashMap<ConversationId, Arc<CodexConversation>>>`.
 2. **Event loop** (`codex-core::Codex` & `CodexConversation`)

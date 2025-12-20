@@ -467,7 +467,7 @@ fn default_true() -> bool {
 /// GitHub integration settings.
 #[derive(Deserialize, Debug, Clone, PartialEq, Default)]
 pub struct GithubConfig {
-    /// When true, Codex watches for GitHub Actions workflow runs after a
+    /// When true, Beacon Code watches for GitHub Actions workflow runs after a
     /// successful `git push` and reports failures as background messages.
     /// Enabled by default; can be disabled via `~/.code/config.toml` under
     /// `[github]` with `check_workflows_on_push = false`.
@@ -691,7 +691,7 @@ pub struct Tui {
     pub notifications: Notifications,
 
     /// Whether to use the terminal's Alternate Screen (full-screen) mode.
-    /// When false, Codex renders nothing and leaves the standard terminal
+    /// When false, Beacon Code renders nothing and leaves the standard terminal
     /// buffer visible; users can toggle back to Alternate Screen at runtime
     /// with Ctrl+T. Defaults to true.
     #[serde(default = "default_true")]
@@ -1096,7 +1096,7 @@ pub struct ThemeConfig {
 pub struct SpinnerSelection {
     /// Name of the spinner to use. Accepts one of the names from
     /// sindresorhus/cli-spinners (kebab-case), or custom names supported
-    /// by Codex. Defaults to "diamond".
+    /// by Beacon Code. Defaults to "diamond".
     #[serde(default = "default_spinner_name")]
     pub name: String,
     /// Custom spinner definitions saved by the user

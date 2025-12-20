@@ -20,7 +20,7 @@ use std::path::PathBuf;
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
 #[serde(rename_all = "kebab-case")]
 pub struct CodexToolCallParam {
-    /// The *initial user prompt* to start the Codex conversation.
+    /// The *initial user prompt* to start the Beacon Code conversation.
     pub prompt: String,
 
     /// Optional override for the model name (e.g. "o3", "o4-mini").
@@ -101,7 +101,7 @@ impl From<CodexToolCallSandboxMode> for SandboxMode {
     }
 }
 
-/// Builds a `Tool` definition (JSON schema etc.) for the Codex tool-call.
+/// Builds a `Tool` definition (JSON schema etc.) for the Beacon Code tool-call.
 pub(crate) fn create_tool_for_code_tool_call_param() -> Tool {
     let schema = SchemaSettings::draft2019_09()
         .with(|s| {
@@ -113,7 +113,7 @@ pub(crate) fn create_tool_for_code_tool_call_param() -> Tool {
 
     #[expect(clippy::expect_used)]
     let schema_value =
-        serde_json::to_value(&schema).expect("Codex tool schema should serialise to JSON");
+        serde_json::to_value(&schema).expect("Beacon Code tool schema should serialise to JSON");
 
     let tool_input_schema =
         serde_json::from_value::<ToolInputSchema>(schema_value).unwrap_or_else(|e| {
@@ -135,11 +135,11 @@ pub(crate) fn create_tool_for_code_tool_call_param() -> Tool {
 
     Tool {
         name: "codex".to_string(),
-        title: Some("Codex".to_string()),
+        title: Some("Beacon Code".to_string()),
         input_schema: tool_input_schema,
         output_schema: Some(tool_output_schema),
         description: Some(
-            "Run a Codex session. Accepts configuration parameters matching the Codex Config struct.".to_string(),
+            "Run a Beacon Code session. Accepts configuration parameters matching the Beacon Code config struct.".to_string(),
         ),
         annotations: None,
     }
@@ -167,7 +167,7 @@ pub(crate) fn create_tool_for_acp_new_session() -> Tool {
         title: Some(acp::AGENT_METHOD_NAMES.session_new.to_string()),
         input_schema,
         output_schema: Some(output_schema),
-        description: Some("Start a Codex session over ACP.".to_string()),
+        description: Some("Start a Beacon Code session over ACP.".to_string()),
         annotations: None,
     }
 }
@@ -189,7 +189,7 @@ pub(crate) fn create_tool_for_acp_prompt() -> Tool {
         title: Some(acp::AGENT_METHOD_NAMES.session_prompt.to_string()),
         input_schema,
         output_schema: None,
-        description: Some("Send a prompt to an existing ACP Codex session.".to_string()),
+        description: Some("Send a prompt to an existing ACP Beacon Code session.".to_string()),
         annotations: None,
     }
 }
@@ -210,7 +210,7 @@ pub(crate) fn create_tool_for_acp_set_model() -> Tool {
         title: Some(acp::AGENT_METHOD_NAMES.session_set_model.to_string()),
         input_schema,
         output_schema: None,
-        description: Some("Select a model for an existing ACP Codex session.".to_string()),
+        description: Some("Select a model for an existing ACP Beacon Code session.".to_string()),
         annotations: None,
     }
 }
@@ -244,7 +244,7 @@ pub struct AcpSetModelToolArgs {
 }
 
 impl CodexToolCallParam {
-    /// Returns the initial user prompt to start the Codex conversation and the
+    /// Returns the initial user prompt to start the Beacon Code conversation and the
     /// effective Config object generated from the supplied parameters.
     pub fn into_config(
         self,
@@ -305,7 +305,7 @@ pub struct CodexToolCallReplyParam {
     /// The *session id* for this conversation.
     pub session_id: String,
 
-    /// The *next user prompt* to continue the Codex conversation.
+    /// The *next user prompt* to continue the Beacon Code conversation.
     pub prompt: String,
 }
 
@@ -321,7 +321,7 @@ pub(crate) fn create_tool_for_code_tool_call_reply_param() -> Tool {
 
     #[expect(clippy::expect_used)]
     let schema_value =
-        serde_json::to_value(&schema).expect("Codex reply tool schema should serialise to JSON");
+        serde_json::to_value(&schema).expect("Beacon Code reply tool schema should serialise to JSON");
 
     let tool_input_schema =
         serde_json::from_value::<ToolInputSchema>(schema_value).unwrap_or_else(|e| {
@@ -330,11 +330,11 @@ pub(crate) fn create_tool_for_code_tool_call_reply_param() -> Tool {
 
     Tool {
         name: "codex-reply".to_string(),
-        title: Some("Codex Reply".to_string()),
+        title: Some("Beacon Code Reply".to_string()),
         input_schema: tool_input_schema,
         output_schema: None,
         description: Some(
-            "Continue a Codex session by providing the session id and prompt.".to_string(),
+            "Continue a Beacon Code session by providing the session id and prompt.".to_string(),
         ),
         annotations: None,
     }
@@ -363,8 +363,8 @@ mod tests {
         let tool_json = serde_json::to_value(&tool).expect("tool serializes");
         let expected_tool_json = serde_json::json!({
           "name": "codex",
-          "title": "Codex",
-          "description": "Run a Codex session. Accepts configuration parameters matching the Codex Config struct.",
+          "title": "Beacon Code",
+          "description": "Run a Beacon Code session. Accepts configuration parameters matching the Beacon Code config struct.",
           "inputSchema": {
             "type": "object",
             "properties": {
@@ -409,7 +409,7 @@ mod tests {
                 "type": "string"
               },
               "prompt": {
-                "description": "The *initial user prompt* to start the Codex conversation.",
+                "description": "The *initial user prompt* to start the Beacon Code conversation.",
                 "type": "string"
               },
               "base-instructions": {
@@ -454,11 +454,11 @@ mod tests {
         #[expect(clippy::expect_used)]
         let tool_json = serde_json::to_value(&tool).expect("tool serializes");
         let expected_tool_json = serde_json::json!({
-          "description": "Continue a Codex session by providing the session id and prompt.",
+          "description": "Continue a Beacon Code session by providing the session id and prompt.",
           "inputSchema": {
             "properties": {
               "prompt": {
-                "description": "The *next user prompt* to continue the Codex conversation.",
+                "description": "The *next user prompt* to continue the Beacon Code conversation.",
                 "type": "string"
               },
               "sessionId": {
@@ -473,7 +473,7 @@ mod tests {
             "type": "object",
           },
           "name": "codex-reply",
-          "title": "Codex Reply",
+          "title": "Beacon Code Reply",
         });
         assert_eq!(expected_tool_json, tool_json);
     }

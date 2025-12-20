@@ -1,6 +1,6 @@
-# Codex MCP Interface [experimental]
+# Beacon MCP Interface [experimental]
 
-This document describes Codex’s experimental MCP interface: a JSON‑RPC API that runs over the Model Context Protocol (MCP) transport to control a local Codex engine.
+This document describes Beacon’s experimental MCP interface: a JSON‑RPC API that runs over the Model Context Protocol (MCP) transport to control a local Beacon engine.
 
 - Status: experimental and subject to change without notice
 - Recommended entry point: `code mcp` (alias: `code acp`; both wrap the same binary used by the CLI)
@@ -10,12 +10,12 @@ This document describes Codex’s experimental MCP interface: a JSON‑RPC API t
 
 ## Overview
 
-Codex exposes a small set of MCP‑compatible methods to create and manage conversations, send user input, receive live events, and handle approval prompts. The types are defined in `app-server-protocol/src/protocol.rs` and re-used by the MCP server implementation in `mcp-server/`.
+Beacon exposes a small set of MCP‑compatible methods to create and manage conversations, send user input, receive live events, and handle approval prompts. The types are defined in `app-server-protocol/src/protocol.rs` and re-used by the MCP server implementation in `mcp-server/`.
 
 At a glance:
 
 - Conversations
-  - `newConversation` → start a Codex session
+  - `newConversation` → start a Beacon session
   - `sendUserMessage` / `sendUserTurn` → send user input into a conversation
   - `interruptConversation` → stop the current turn
   - `listConversations`, `resumeConversation`, `archiveConversation`
@@ -35,7 +35,7 @@ See code for full type definitions and exact shapes: `app-server-protocol/src/pr
 
 ## Starting the server
 
-Run Codex as an MCP server and connect an MCP client:
+Run Beacon as an MCP server and connect an MCP client:
 
 ```bash
 codex mcp-server | your_mcp_client
@@ -79,14 +79,14 @@ List/resume/archive: `listConversations`, `resumeConversation`, `archiveConversa
 
 While a conversation runs, the server sends notifications:
 
-- `codex/event` with the serialized Codex event payload. The shape matches `core/src/protocol.rs`’s `Event` and `EventMsg` types. Some notifications include a `_meta.requestId` to correlate with the originating request.
+- `codex/event` with the serialized Beacon event payload. The shape matches `core/src/protocol.rs`’s `Event` and `EventMsg` types. Some notifications include a `_meta.requestId` to correlate with the originating request.
 - Auth notifications via method names `loginChatGptComplete` and `authStatusChange`.
 
 Clients should render events and, when present, surface approval requests (see next section).
 
 ## Approvals (server → client)
 
-When Codex needs approval to apply changes or run commands, the server issues JSON‑RPC requests to the client:
+When Beacon needs approval to apply changes or run commands, the server issues JSON‑RPC requests to the client:
 
 - `applyPatchApproval { conversationId, callId, fileChanges, reason?, grantRoot? }`
 - `execCommandApproval { conversationId, callId, command, cwd, reason? }`
@@ -116,7 +116,7 @@ Server responds:
 Then send input:
 
 ```json
-{ "jsonrpc": "2.0", "id": 2, "method": "sendUserMessage", "params": { "conversationId": "c7b0…", "items": [{ "type": "text", "text": "Hello Codex" }] } }
+{ "jsonrpc": "2.0", "id": 2, "method": "sendUserMessage", "params": { "conversationId": "c7b0…", "items": [{ "type": "text", "text": "Hello Beacon" }] } }
 ```
 
 While processing, the server emits `codex/event` notifications containing agent output, approvals, and status updates.

@@ -22,7 +22,7 @@ unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 allow-git = [
-    "https://github.com/openai/codex.git",
+    "https://github.com/tytsxai/beacon-code.git",
     "https://github.com/nornagon/ratatui",
 ]
 

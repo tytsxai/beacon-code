@@ -1,4 +1,4 @@
-//! Defines the protocol for a Codex session between a client and an agent.
+//! Defines the protocol for a Beacon Code session between a client and an agent.
 //!
 //! Uses a SQ (Submission Queue) / EQ (Event Queue) pattern to asynchronously communicate
 //! between user and agent.
@@ -39,7 +39,7 @@ pub const ENVIRONMENT_CONTEXT_DELTA_OPEN_TAG: &str = "<environment_context_delta
 pub const ENVIRONMENT_CONTEXT_DELTA_CLOSE_TAG: &str = "</environment_context_delta>";
 pub const BROWSER_SNAPSHOT_OPEN_TAG: &str = "<browser_snapshot>";
 pub const BROWSER_SNAPSHOT_CLOSE_TAG: &str = "</browser_snapshot>";
-pub const USER_MESSAGE_BEGIN: &str = "## My request for Codex:";
+pub const USER_MESSAGE_BEGIN: &str = "## My request for Beacon Code:";
 
 /// Submission Queue Entry - requests from user
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -197,12 +197,12 @@ pub enum Op {
     /// Request a code review from the agent.
     Review { review_request: ReviewRequest },
 
-    /// Request to shut down codex instance.
+    /// Request to shut down the Beacon Code instance.
     Shutdown,
 }
 
 /// Determines the conditions under which the user is consulted to approve
-/// running the command proposed by Codex.
+/// running the command proposed by Beacon Code.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, Serialize, Deserialize, Display, TS)]
 #[serde(rename_all = "kebab-case")]
 #[strum(serialize_all = "kebab-case")]

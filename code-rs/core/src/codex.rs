@@ -948,7 +948,7 @@ use serde_json::Value;
 use std::sync::OnceLock;
 use tokio::sync::Notify;
 
-/// The high-level interface to the Codex system.
+/// The high-level interface to the Beacon Code system.
 /// It operates as a queue pair where you send submissions and receive events.
 pub struct Codex {
     next_id: AtomicU64,
@@ -1010,7 +1010,7 @@ impl Codex {
 
         let config = Arc::new(config);
 
-        // Generate a unique ID for the lifetime of this Codex session.
+        // Generate a unique ID for the lifetime of this Beacon Code session.
         let session_id = Uuid::new_v4();
 
         // This task will run until Op::Shutdown is received.
@@ -5074,7 +5074,7 @@ async fn submission_loop(
                 *sess_arc.next_turn_text_format.lock().unwrap() = Some(format);
             }
             Op::Shutdown => {
-                info!("Shutting down Codex instance");
+                info!("Shutting down Beacon Code instance");
 
                 // Ensure any running agent is aborted so streaming stops promptly.
                 if let Some(sess_arc) = sess.as_ref() {
@@ -7630,7 +7630,7 @@ async fn handle_web_fetch(
                         output: FunctionCallOutputPayload { content: body.to_string(), success: Some(true) },
                     };
                 }
-            // Attempt 1: Codex UA + polite headers
+            // Attempt 1: Beacon Code UA + polite headers
             let resp = match do_request(&params.url, &code_ua, timeout, None).await {
                 Ok(r) => r,
                 Err(e) => {
@@ -8946,7 +8946,7 @@ pub(crate) async fn handle_run_agent(
                 }
             }
 
-            // If nothing runnable remains, fall back to a single built‑in Codex agent.
+            // If nothing runnable remains, fall back to a single built‑in Beacon Code agent.
             if agent_ids.is_empty() {
                 let read_only = resolve_agent_read_only(params.write, params.read_only, None);
                 let agent_id = manager

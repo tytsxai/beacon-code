@@ -61,7 +61,7 @@ fn pre_main_hardening() {
     }
 }
 
-/// Codex CLI
+/// Beacon Code CLI
 ///
 /// If no subcommand is specified, options will be forwarded to the interactive CLI.
 #[derive(Debug, Parser)]
@@ -72,7 +72,7 @@ fn pre_main_hardening() {
     // If a sub‑command is given, ignore requirements of the default args.
     subcommand_negates_reqs = true,
     // The executable is sometimes invoked via a platform‑specific name like
-    // `codex-x86_64-unknown-linux-musl`, but the help output should always use
+    // `code-x86_64-unknown-linux-musl`, but the help output should always use
     // the generic `code` command name that users run.
     bin_name = "code"
 )]
@@ -93,7 +93,7 @@ struct MultitoolCli {
 
 #[derive(Debug, clap::Subcommand)]
 enum Subcommand {
-    /// Run Codex non-interactively.
+    /// Run Beacon Code non-interactively.
     #[clap(visible_alias = "e")]
     Exec(ExecCli),
 
@@ -107,11 +107,11 @@ enum Subcommand {
     /// Remove stored authentication credentials.
     Logout(LogoutCommand),
 
-    /// [experimental] Run Codex as an MCP server and manage MCP servers.
+    /// [experimental] Run Beacon Code as an MCP server and manage MCP servers.
     #[clap(visible_alias = "acp")]
     Mcp(McpCli),
 
-    /// [experimental] Run the Codex MCP server (stdio transport).
+    /// [experimental] Run the Beacon Code MCP server (stdio transport).
     McpServer,
 
     /// [experimental] Run the app server.
@@ -127,7 +127,7 @@ enum Subcommand {
     #[clap(hide = false)]
     OrderReplay(OrderReplayArgs),
 
-    /// Apply the latest diff produced by Codex agent as a `git apply` to your local working tree.
+    /// Apply the latest diff produced by Beacon Code as a `git apply` to your local working tree.
     #[clap(visible_alias = "a")]
     Apply(ApplyCommand),
 
@@ -137,7 +137,7 @@ enum Subcommand {
     /// Internal: generate TypeScript protocol bindings.
     #[clap(hide = true)]
     GenerateTs(GenerateTsCommand),
-    /// [EXPERIMENTAL] Browse tasks from Codex Cloud and apply changes locally.
+    /// [EXPERIMENTAL] Browse tasks from Beacon Code Cloud and apply changes locally.
     #[clap(name = "cloud", alias = "cloud-tasks")]
     Cloud(CloudTasksCli),
 
@@ -266,7 +266,7 @@ struct OrderReplayArgs {
 struct PreviewArgs {
     /// Slug identifier (e.g., faster-downloads)
     slug: String,
-    /// Optional owner/repo to override (defaults to just-every/code or $GITHUB_REPOSITORY)
+    /// Optional owner/repo to override (defaults to tytsxai/beacon-code or $GITHUB_REPOSITORY)
     #[arg(long = "repo", value_name = "OWNER/REPO")]
     repo: Option<String>,
     /// Output directory where the binary will be extracted
@@ -607,7 +607,8 @@ fn resolve_resume_path(session_id: Option<&str>, last: bool) -> anyhow::Result<O
     }
 
     let code_home =
-        code_core::config::find_code_home().context("failed to locate Codex home directory")?;
+        code_core::config::find_code_home()
+            .context("failed to locate Beacon Code home directory")?;
 
     let sess = session_id.map(|s| s.to_string());
     let fetch = async move {
@@ -801,7 +802,7 @@ async fn preview_main(args: PreviewArgs) -> anyhow::Result<()> {
     let repo = args
         .repo
         .or_else(|| env::var("GITHUB_REPOSITORY").ok())
-        .unwrap_or_else(|| "just-every/code".to_string());
+        .unwrap_or_else(|| "tytsxai/beacon-code".to_string());
     let (owner, name) = repo
         .split_once('/')
         .map(|(o, n)| (o.to_string(), n.to_string()))
@@ -1141,7 +1142,7 @@ async fn doctor_main() -> anyhow::Result<()> {
         let bun_coder = format!("{}/coder", bun_bin);
         if coder_paths.iter().any(|p| p == &bun_coder) {
             println!("\nBun shim detected for 'coder': {}", bun_coder);
-            println!("Suggestion: remove old Bun global with: bun remove -g @just-every/code");
+            println!("Suggestion: remove old Bun global with: bun remove -g @tytsxai/beacon-code");
         }
         let bun_code = format!("{}/code", bun_bin);
         if code_paths.iter().any(|p| p == &bun_code) {
@@ -1178,8 +1179,8 @@ async fn doctor_main() -> anyhow::Result<()> {
     }
 
     println!("\nIf versions differ, remove older installs and keep one package manager:");
-    println!("  - Bun: bun remove -g @just-every/code");
-    println!("  - npm/pnpm: npm uninstall -g @just-every/code");
+    println!("  - Bun: bun remove -g @tytsxai/beacon-code");
+    println!("  - npm/pnpm: npm uninstall -g @tytsxai/beacon-code");
     println!("  - Homebrew: brew uninstall code");
     println!("  - Prefer using 'coder' to avoid conflicts with VS Code's 'code'.");
 

@@ -321,7 +321,7 @@ mod tests {
         assert!(result.is_some());
         let plan_prompt = result.unwrap();
         assert!(plan_prompt.contains("final, comprehensive plan"));
-        // Default agents list should be Codex-only when no [[agents]] configured
+        // Default agents list should be Beacon Code-only when no [[agents]] configured
         assert!(plan_prompt.contains("code-gpt-5.1-codex-max"));
         assert!(plan_prompt.contains("code-gpt-5.1-codex-mini"));
         assert!(!plan_prompt.contains("cloud-gpt-5.1-codex-max"));

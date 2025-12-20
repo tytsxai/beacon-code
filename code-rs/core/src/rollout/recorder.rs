@@ -1,4 +1,4 @@
-//! Persist Codex session rollouts (.jsonl) so sessions can be replayed or inspected later.
+//! Persist Beacon Code session rollouts (.jsonl) so sessions can be replayed or inspected later.
 
 use std::fs::File;
 use std::fs::{self};
@@ -115,7 +115,7 @@ impl RolloutRecorderParams {
 }
 
 impl RolloutRecorder {
-    /// List conversations (rollout files) under the provided Codex home directory.
+    /// List conversations (rollout files) under the provided Beacon Code home directory.
     pub async fn list_conversations(
         code_home: &Path,
         page_size: usize,

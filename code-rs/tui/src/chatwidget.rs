@@ -14850,7 +14850,7 @@ fi\n\
 
             let lowercase = agent_name.trim().to_ascii_lowercase();
             let script = match lowercase.as_str() {
-                "coder" | "code" => linux_agent_install_script(&cmd, "@just-every/code"),
+                "coder" | "code" => linux_agent_install_script(&cmd, "@tytsxai/beacon-code"),
                 _ => format!(
                     "{cmd} --version || (echo \"Please install {cmd} via your package manager\" && false)",
                     cmd = cmd
@@ -18972,8 +18972,8 @@ Have we met every part of this goal and is there no further work to do?"#
             if cmd_str == "test-approval" {
                 continue;
             }
-            // Prefer "Code" branding in the Help panel
-            let desc = cmd.description().replace("Codex", "Code");
+            // Prefer "Beacon Code" branding in the Help panel
+            let desc = cmd.description().replace("Codex", "Beacon Code");
             // Render as "/command  —  description"
             lines.push(RtLine::from(vec![
                 RtSpan::styled(format!("/{cmd_str:<12}"), t_fg),
@@ -20856,7 +20856,7 @@ Have we met every part of this goal and is there no further work to do?"#
                 tracing::info!("Persisted TUI spinner selection to config.toml");
             }
         } else {
-            tracing::warn!("Could not locate Codex home to persist spinner selection");
+            tracing::warn!("Could not locate Beacon Code home to persist spinner selection");
         }
 
         // Confirmation message (replaceable system notice)
@@ -21120,7 +21120,7 @@ Have we met every part of this goal and is there no further work to do?"#
                 }
             }
             Err(e) => {
-                tracing::warn!("Could not locate Codex home to persist theme: {}", e);
+                tracing::warn!("Could not locate Beacon Code home to persist theme: {}", e);
             }
         }
     }
@@ -28745,7 +28745,7 @@ impl ChatWidget<'_> {
                 }
             }
         } else {
-            tracing::warn!("Could not locate Codex home to persist review auto resolve toggle");
+            tracing::warn!("Could not locate Beacon Code home to persist review auto resolve toggle");
             if enabled {
                 "Auto Resolve enabled for this session."
             } else {
@@ -28798,7 +28798,7 @@ impl ChatWidget<'_> {
                 }
             }
         } else {
-            tracing::warn!("Could not locate Codex home to persist auto resolve attempts");
+            tracing::warn!("Could not locate Beacon Code home to persist auto resolve attempts");
             format!("Max re-reviews set to {} for this session.", limit.get())
         };
 
@@ -29417,7 +29417,7 @@ impl ChatWidget<'_> {
     pub(crate) fn show_cloud_tasks_loading(&mut self) {
         let loading_item = SelectionItem {
             name: "Loading cloud tasks…".to_string(),
-            description: Some("Fetching latest tasks from Codex Cloud".to_string()),
+            description: Some("Fetching latest tasks from Beacon Code Cloud".to_string()),
             is_current: true,
             actions: Vec::new(),
         };
@@ -29469,7 +29469,9 @@ impl ChatWidget<'_> {
     pub(crate) fn show_cloud_environment_loading(&mut self) {
         let loading_item = SelectionItem {
             name: "Loading environments…".to_string(),
-            description: Some("Fetching available Codex Cloud environments".to_string()),
+            description: Some(
+                "Fetching available Beacon Code Cloud environments".to_string(),
+            ),
             is_current: true,
             actions: Vec::new(),
         };
@@ -29684,7 +29686,7 @@ impl ChatWidget<'_> {
 
         let view = CustomPromptView::new(
             format!("Create cloud task ({env_display})"),
-            "Describe the change you want Codex to implement".to_string(),
+            "Describe the change you want Beacon Code to implement".to_string(),
             Some("Press Enter to submit · Esc cancel".to_string()),
             self.app_event_tx.clone(),
             None,

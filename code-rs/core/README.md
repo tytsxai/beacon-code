@@ -1,6 +1,6 @@
 # codex-core
 
-This crate implements the business logic for Codex. It is designed to be used by the various Codex UIs written in Rust.
+This crate implements the business logic for Beacon. It is designed to be used by the various Beacon UIs written in Rust.
 
 See also: [Slash Commands](../../docs/slash-commands.md) for a complete list of
 interactive commands available in the TUI.

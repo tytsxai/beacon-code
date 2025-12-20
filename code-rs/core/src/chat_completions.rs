@@ -489,7 +489,7 @@ pub(crate) async fn stream_chat_completions(
 }
 
 /// Lightweight SSE processor for the Chat Completions streaming format. The
-/// output is mapped onto Codex's internal [`ResponseEvent`] so that the rest
+/// output is mapped onto Beacon Code's internal [`ResponseEvent`] so that the rest
 /// of the pipeline can stay agnostic of the underlying wire format.
 async fn process_chat_sse<S>(
     stream: S,

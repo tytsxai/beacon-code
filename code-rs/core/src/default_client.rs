@@ -4,7 +4,7 @@ use std::sync::Mutex;
 
 pub const DEFAULT_ORIGINATOR: &str = "code_cli_rs";
 
-/// Optional suffix for the Codex User-Agent string.
+/// Optional suffix for the Beacon Code User-Agent string.
 ///
 /// This is primarily used by the MCP server implementation to include
 /// client-provided identity in the UA. Because there is a single MCP server
@@ -52,17 +52,17 @@ fn sanitize_user_agent(candidate: String, fallback: &str) -> String {
         .collect();
     if !sanitized.is_empty() && HeaderValue::from_str(sanitized.as_str()).is_ok() {
         tracing::warn!(
-            "Sanitized Codex user agent because provided suffix contained invalid header characters"
+            "Sanitized Beacon Code user agent because provided suffix contained invalid header characters"
         );
         sanitized
     } else if HeaderValue::from_str(fallback).is_ok() {
         tracing::warn!(
-            "Falling back to base Codex user agent because provided suffix could not be sanitized"
+            "Falling back to base Beacon Code user agent because provided suffix could not be sanitized"
         );
         fallback.to_string()
     } else {
         tracing::warn!(
-            "Falling back to default Codex originator because base user agent string is invalid"
+            "Falling back to default Beacon Code originator because base user agent string is invalid"
         );
         DEFAULT_ORIGINATOR.to_string()
     }
@@ -139,7 +139,7 @@ mod tests {
             .expect("originator header missing");
         assert_eq!(originator_header.to_str().unwrap(), originator);
 
-        // User-Agent matches the computed Codex UA for that originator
+        // User-Agent matches the computed Beacon Code UA for that originator
         let expected_ua = get_code_user_agent(Some(originator));
         let ua_header = headers
             .get("user-agent")

@@ -6,7 +6,7 @@ use code_core::config::Config;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
-/// In-memory session entry tracking an active Codex conversation and its config.
+/// In-memory session entry tracking an active Beacon Code conversation and its config.
 #[derive(Clone)]
 pub struct SessionEntry {
     pub conversation: Arc<CodexConversation>,

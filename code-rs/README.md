@@ -1,11 +1,11 @@
-# Every Code CLI（Rust 实现）
+# Beacon Code CLI（Rust 实现）
 
-我们提供零依赖的原生可执行文件，直接运行即可体验终端版 Every Code。
+我们提供零依赖的原生可执行文件，直接运行即可体验终端版 Beacon Code。
 
-## 安装 Every Code
+## 安装 Beacon Code
 
 ```bash
-npm install -g @just-every/code
+npm install -g @tytsxai/beacon-code
 code   # 若命令被占用，可使用 coder
 ```
 
@@ -21,7 +21,7 @@ Rust CLI 使用 `config.toml` 而非 `config.json`。详细选项见 [`docs/conf
 
 ## 汉化维护原则
 
-- 汉化改动仅落在 `code-rs/`，不改镜像的 `codex-rs/`，方便跟上游同步。
+- 汉化改动仅落在 `code-rs/`，保留 `codex-rs/` 作为对照 workspace。
 - 默认界面为英文；设置 `ui_locale = "zh-CN"` 可切换为中文，缺失条目自动回退英文避免功能回归。
 - 字符串集中管理（单一表/模块），上游增量改文案时只需补键，降低合并冲突。
 - 所有汉化变更需继续通过 `./build-fast.sh`，遇到 warning 视为失败。
@@ -88,7 +88,7 @@ code --sandbox workspace-write    # 工作区可写但默认禁网
 code --sandbox danger-full-access # 危险：关闭沙箱
 ```
 
-同样可在 `~/.code/config.toml`（也读取 `~/.codex/config.toml`）中持久化，例如：
+同样可在 `~/.code/config.toml` 中持久化，例如：
 
 ```toml
 sandbox_mode = "workspace-write"
@@ -121,14 +121,8 @@ allow_git_writes = false
 
 本目录是一个 Cargo workspace，包含若干核心 crate：
 
-- [`core/`](./core)：Every Code 的业务逻辑，未来希望作为通用库复用。
+- [`core/`](./core)：Beacon Code 的业务逻辑，未来希望作为通用库复用。
 - [`exec/`](./exec)：无头 CLI，用于自动化场景。
 - [`tui/`](./tui)：基于 [Ratatui](https://ratatui.rs/) 的全屏终端 UI。
 - [`cli/`](./cli)：多功能入口，提供以上子命令。
 - [`code-auto-drive-core/`](./code-auto-drive-core)：Auto Drive 增强功能模块。
-
-## 上游同步
-
-本项目 fork 自 [openai/codex](https://github.com/openai/codex)，定期从上游同步更新。
-
-同步时需要特别保护本地增强功能，详见 [`docs/UPSTREAM_SYNC_GUIDE.md`](./docs/UPSTREAM_SYNC_GUIDE.md)。

@@ -144,10 +144,10 @@ struct ReleaseInfo {
 }
 
 const VERSION_FILENAME: &str = "version.json";
-const LATEST_RELEASE_URL: &str = "https://api.github.com/repos/just-every/code/releases/latest";
-const CURRENT_RELEASE_REPO: &str = "just-every/code";
-const LEGACY_RELEASE_REPO: &str = "openai/codex";
-pub const CODE_RELEASE_URL: &str = "https://github.com/just-every/code/releases/latest";
+const LATEST_RELEASE_URL: &str = "https://api.github.com/repos/tytsxai/beacon-code/releases/latest";
+const CURRENT_RELEASE_REPO: &str = "tytsxai/beacon-code";
+const LEGACY_RELEASE_REPO: &str = "tytsxai/code";
+pub const CODE_RELEASE_URL: &str = "https://github.com/tytsxai/beacon-code/releases/latest";
 
 const CACHE_TTL_HOURS: i64 = 20;
 const MAX_CLOCK_SKEW_MINUTES: i64 = 5;
@@ -191,9 +191,9 @@ pub fn resolve_upgrade_resolution() -> UpgradeResolution {
                 "npm".to_string(),
                 "install".to_string(),
                 "-g".to_string(),
-                "@just-every/code@latest".to_string(),
+                "@tytsxai/beacon-code@latest".to_string(),
             ],
-            display: "npm install -g @just-every/code@latest".to_string(),
+            display: "npm install -g @tytsxai/beacon-code@latest".to_string(),
         };
     }
 

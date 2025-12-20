@@ -115,13 +115,13 @@ pub enum ClientRequest {
         request_id: RequestId,
         params: NewConversationParams,
     },
-    /// List recorded Codex conversations (rollouts) with optional pagination and search.
+    /// List recorded Beacon Code conversations (rollouts) with optional pagination and search.
     ListConversations {
         #[serde(rename = "id")]
         request_id: RequestId,
         params: ListConversationsParams,
     },
-    /// Resume a recorded Codex conversation from a rollout file.
+    /// Resume a recorded Beacon Code conversation from a rollout file.
     ResumeConversation {
         #[serde(rename = "id")]
         request_id: RequestId,

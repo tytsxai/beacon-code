@@ -44,7 +44,7 @@ pub async fn new_session(
             let result = CallToolResult {
                 content: vec![ContentBlock::TextContent(TextContent {
                     r#type: "text".to_string(),
-                    text: format!("Failed to start Codex session: {err}"),
+                    text: format!("Failed to start Beacon Code session: {err}"),
                     annotations: None,
                 })],
                 is_error: Some(true),
@@ -77,7 +77,7 @@ pub async fn prompt(
     codex
         .submit(Op::UserInput { items })
         .await
-        .context("failed to submit prompt to Codex")?;
+        .context("failed to submit prompt to Beacon Code")?;
 
     let mut stop_reason = acp::StopReason::EndTurn;
 

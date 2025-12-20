@@ -69,8 +69,8 @@ impl MessageProcessor {
             && let Ok(code_request) = serde_json::from_value::<ClientRequest>(request_json)
         {
             match code_request {
-                // Handle Initialize internally so CodexMessageProcessor does not have to concern
-                // itself with the `initialized` bool.
+            // Handle Initialize internally so the message processor does not have to concern
+            // itself with the `initialized` bool.
                 ClientRequest::Initialize { request_id, params } => {
                     if self.initialized {
                         let error = JSONRPCErrorError {
