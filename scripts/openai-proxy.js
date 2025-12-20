@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Local OpenAI proxy replicating the upstream-merge workflow behavior.
+// Local OpenAI proxy that mirrors the production request flow for dev testing.
 //
 // Features:
 // - Injects real OPENAI_API_KEY server-side; clients can use a dummy key
@@ -17,7 +17,7 @@
 //   #    or choose a port / upstream base
 //   PORT=5055 OPENAI_BASE_URL=https://api.openai.com/v1 node scripts/openai-proxy.js
 //
-//   # 3) Run the local Codex binary with the proxy (dummy key to client)
+//   # 3) Run the local Beacon Code binary with the proxy (dummy key to client)
 //   #    Build the binary first: ./build-fast.sh
 //   OPENAI_API_KEY="x" OPENAI_BASE_URL="http://127.0.0.1:${PORT:-5055}/v1" \
 //     ./code-rs/target/dev-fast/code llm request \
