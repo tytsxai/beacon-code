@@ -1036,7 +1036,7 @@ fn scenarios() -> Vec<ScenarioSpec> {
             },
         },
         ScenarioSpec {
-            name: "apply_patch_shell_command_requires_patch_approval",
+            name: "apply_patch_shell_command_auto_approves_inside_workspace",
             approval_policy: UnlessTrusted,
             sandbox_policy: workspace_write(false),
             action: ActionKind::ApplyPatchShell {
@@ -1046,10 +1046,7 @@ fn scenarios() -> Vec<ScenarioSpec> {
             sandbox_permissions: SandboxPermissions::UseDefault,
             features: vec![],
             model_override: None,
-            outcome: Outcome::PatchApproval {
-                decision: ReviewDecision::Approved,
-                expected_reason: None,
-            },
+            outcome: Outcome::Auto,
             expectation: Expectation::PatchApplied {
                 target: TargetPath::Workspace("apply_patch_shell.txt"),
                 content: "shell-apply-patch",
@@ -1150,7 +1147,7 @@ fn scenarios() -> Vec<ScenarioSpec> {
             },
         },
         ScenarioSpec {
-            name: "apply_patch_function_unless_trusted_requires_patch_approval",
+            name: "apply_patch_function_unless_trusted_auto_approves_inside_workspace",
             approval_policy: UnlessTrusted,
             sandbox_policy: workspace_write(false),
             action: ActionKind::ApplyPatchFunction {
@@ -1160,10 +1157,7 @@ fn scenarios() -> Vec<ScenarioSpec> {
             sandbox_permissions: SandboxPermissions::UseDefault,
             features: vec![],
             model_override: Some("gpt-5.1-codex"),
-            outcome: Outcome::PatchApproval {
-                decision: ReviewDecision::Approved,
-                expected_reason: None,
-            },
+            outcome: Outcome::Auto,
             expectation: Expectation::PatchApplied {
                 target: TargetPath::Workspace("apply_patch_function_unless_trusted.txt"),
                 content: "function-patch-unless-trusted",

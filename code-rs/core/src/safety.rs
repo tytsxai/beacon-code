@@ -48,13 +48,11 @@ pub fn assess_patch_safety(
     }
 
     match policy {
-        AskForApproval::OnFailure | AskForApproval::Never | AskForApproval::OnRequest => {
+        AskForApproval::OnFailure
+        | AskForApproval::Never
+        | AskForApproval::OnRequest
+        | AskForApproval::UnlessTrusted => {
             // Continue to see if this can be auto-approved.
-        }
-        // TODO(ragona): I'm not sure this is actually correct? I believe in this case
-        // we want to continue to the writable paths check before asking the user.
-        AskForApproval::UnlessTrusted => {
-            return SafetyCheck::AskUser;
         }
     }
 
@@ -423,5 +421,66 @@ mod tests {
             None => SafetyCheck::AskUser,
         };
         assert_eq!(safety_check, expected);
+    }
+
+    #[test]
+    fn test_unless_trusted_auto_approves_writable_paths() {
+        let tmp = TempDir::new().unwrap();
+        let cwd = tmp.path().to_path_buf();
+        let action =
+            ApplyPatchAction::new_add_for_test(&cwd.join("file.txt"), "content".to_string());
+
+        let policy_workspace_only = SandboxPolicy::WorkspaceWrite {
+            writable_roots: vec![],
+            network_access: false,
+            exclude_tmpdir_env_var: true,
+            exclude_slash_tmp: true,
+            allow_git_writes: true,
+        };
+
+        let result = assess_patch_safety(
+            &action,
+            AskForApproval::UnlessTrusted,
+            &policy_workspace_only,
+            &cwd,
+        );
+
+        // Patch is constrained to writable paths, so it should be auto-approved
+        // (in a sandbox if available).
+        let expected = match get_platform_sandbox() {
+            Some(sandbox_type) => SafetyCheck::AutoApprove {
+                sandbox_type,
+                user_explicitly_approved: false,
+            },
+            None => SafetyCheck::AskUser,
+        };
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_unless_trusted_asks_for_non_writable_paths() {
+        let tmp = TempDir::new().unwrap();
+        let cwd = tmp.path().to_path_buf();
+        let parent = cwd.parent().unwrap().to_path_buf();
+        let action =
+            ApplyPatchAction::new_add_for_test(&parent.join("outside.txt"), "content".to_string());
+
+        let policy_workspace_only = SandboxPolicy::WorkspaceWrite {
+            writable_roots: vec![],
+            network_access: false,
+            exclude_tmpdir_env_var: true,
+            exclude_slash_tmp: true,
+            allow_git_writes: true,
+        };
+
+        let result = assess_patch_safety(
+            &action,
+            AskForApproval::UnlessTrusted,
+            &policy_workspace_only,
+            &cwd,
+        );
+
+        // Patch is outside writable paths, so it should ask the user.
+        assert_eq!(result, SafetyCheck::AskUser);
     }
 }
