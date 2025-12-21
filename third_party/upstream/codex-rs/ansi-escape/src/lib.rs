@@ -47,11 +47,11 @@ pub fn ansi_escape(s: &str) -> Text<'static> {
                 tracing::error!(
                     "ansi_to_tui NomError docs claim should never happen when parsing `{s}`: {message}"
                 );
-                panic!();
+                Text::from(s.to_string())
             }
             Error::Utf8Error(utf8error) => {
                 tracing::error!("Utf8Error: {utf8error}");
-                panic!();
+                Text::from(s.to_string())
             }
         },
     }
