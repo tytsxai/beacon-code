@@ -23,6 +23,11 @@ pub(crate) async fn run_fuzzy_file_search(
     roots: Vec<String>,
     cancellation_flag: Arc<AtomicBool>,
 ) -> Vec<FuzzyFileSearchResult> {
+    // Early return to avoid division by zero when roots is empty
+    if roots.is_empty() {
+        return Vec::new();
+    }
+
     #[expect(clippy::expect_used)]
     let limit_per_root =
         NonZero::new(LIMIT_PER_ROOT).expect("LIMIT_PER_ROOT should be a valid non-zero usize");
