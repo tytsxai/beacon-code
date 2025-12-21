@@ -334,11 +334,7 @@ mod tests {
     #[test]
     fn gpt_5_1_codex_max_hidden_for_api_key_auth() {
         let presets = builtin_model_presets(Some(AuthMode::ApiKey));
-        assert!(
-            presets
-                .iter()
-                .all(|preset| preset.id != "gpt-5.1-code-max")
-        );
+        assert!(presets.iter().all(|preset| preset.id != "gpt-5.1-code-max"));
     }
 
     #[test]

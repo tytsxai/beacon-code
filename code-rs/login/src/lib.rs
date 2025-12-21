@@ -16,9 +16,9 @@ pub use code_core::CodeAuth;
 #[deprecated(note = "use CodeAuth")]
 pub use code_core::CodexAuth;
 pub use code_core::auth::AuthDotJson;
-pub use code_core::auth::CODE_API_KEY_ENV_VAR;
 pub use code_core::auth::BEACON_API_KEY_ENV_VAR;
 pub use code_core::auth::CLIENT_ID;
+pub use code_core::auth::CODE_API_KEY_ENV_VAR;
 pub use code_core::auth::CODEX_API_KEY_ENV_VAR;
 pub use code_core::auth::OPENAI_API_KEY_ENV_VAR;
 pub use code_core::auth::get_auth_file;

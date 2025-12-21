@@ -1060,8 +1060,7 @@ fn notice_hidden(notices: &Notice, key: &str) -> bool {
 }
 
 fn auth_allows_target(auth_mode: AuthMode, target: &ModelPreset) -> bool {
-    if matches!(auth_mode, AuthMode::ApiKey) && target.id.eq_ignore_ascii_case("gpt-5.1-code-max")
-    {
+    if matches!(auth_mode, AuthMode::ApiKey) && target.id.eq_ignore_ascii_case("gpt-5.1-code-max") {
         return false;
     }
     true
