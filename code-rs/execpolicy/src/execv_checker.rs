@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 use std::ffi::OsString;
+use std::io::ErrorKind;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -62,6 +63,8 @@ impl ExecvChecker {
             match arg_type {
                 ArgType::ReadableFile => {
                     let readable_file = ensure_absolute_path(&value, cwd)?;
+                    // Canonicalize to resolve symlinks and prevent bypass attacks
+                    let readable_file = canonicalize_existing_path(&readable_file)?;
                     check_file_in_folders!(
                         readable_file,
                         readable_folders,
@@ -70,6 +73,8 @@ impl ExecvChecker {
                 }
                 ArgType::WriteableFile => {
                     let writeable_file = ensure_absolute_path(&value, cwd)?;
+                    // Canonicalize parent directory (file may not exist yet) to prevent bypass
+                    let writeable_file = canonicalize_parent_and_join(&writeable_file)?;
                     check_file_in_folders!(
                         writeable_file,
                         writeable_folders,
@@ -96,6 +101,29 @@ impl ExecvChecker {
 
         Ok(program)
     }
+}
+
+/// Canonicalize an existing path to resolve symlinks
+fn canonicalize_existing_path(path: &Path) -> Result<PathBuf> {
+    std::fs::canonicalize(path).map_err(|error| CannotCanonicalizePath {
+        file: path.display().to_string(),
+        error: error.kind(),
+    })
+}
+
+/// Canonicalize the parent directory and join with the file name.
+/// Used for writeable files that may not exist yet.
+fn canonicalize_parent_and_join(path: &Path) -> Result<PathBuf> {
+    let file_name = path.file_name().ok_or(CannotCanonicalizePath {
+        file: path.display().to_string(),
+        error: ErrorKind::InvalidInput,
+    })?;
+    let parent = path.parent().ok_or(CannotCanonicalizePath {
+        file: path.display().to_string(),
+        error: ErrorKind::InvalidInput,
+    })?;
+    let parent = canonicalize_existing_path(parent)?;
+    Ok(parent.join(file_name))
 }
 
 fn ensure_absolute_path(path: &str, cwd: &Option<OsString>) -> Result<PathBuf> {
@@ -185,9 +213,12 @@ system_path=[{fake_cp:?}]
         }
 
         // Create root_path and reference to files under the root.
-        let root_path = temp_dir.path().to_path_buf();
+        let root_path = std::fs::canonicalize(temp_dir.path())?;
         let source_path = root_path.join("source");
         let dest_path = root_path.join("dest");
+
+        // Create the source file so canonicalize can resolve it
+        std::fs::write(&source_path, "test content")?;
 
         let cp = fake_cp.to_str().unwrap().to_string();
         let root = root_path.to_str().unwrap().to_string();
@@ -210,7 +241,7 @@ system_path=[{fake_cp:?}]
         assert_eq!(
             checker.check(valid_exec.clone(), &cwd, &[], &[]),
             Err(ReadablePathNotInReadableFolders {
-                file: source_path,
+                file: source_path.clone(),
                 folders: vec![]
             }),
         );
