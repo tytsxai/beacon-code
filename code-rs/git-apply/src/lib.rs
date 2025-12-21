@@ -136,6 +136,8 @@ fn write_temp_patch(diff: &str) -> io::Result<(tempfile::TempDir, PathBuf)> {
 
 fn run_git(cwd: &Path, git_cfg: &[String], args: &[String]) -> io::Result<(i32, String, String)> {
     let mut cmd = std::process::Command::new("git");
+    // Set LC_ALL=C to ensure English output for reliable parsing
+    cmd.env("LC_ALL", "C");
     for p in git_cfg {
         cmd.arg(p);
     }
@@ -177,19 +179,27 @@ fn render_command_for_log(cwd: &Path, git_cfg: &[String], args: &[String]) -> St
 }
 
 pub fn extract_paths_from_patch(diff_text: &str) -> Vec<String> {
+    // Support both unquoted and quoted paths:
+    // - diff --git a/foo b/foo
+    // - diff --git "a/foo bar" "b/foo bar"
     static RE: Lazy<Regex> = Lazy::new(|| {
-        Regex::new(r"(?m)^diff --git a/(.*?) b/(.*)$")
+        Regex::new(r#"(?m)^diff --git (?:"a/([^"]+)"|a/(\S+)) (?:"b/([^"]+)"|b/(\S+))$"#)
             .unwrap_or_else(|e| panic!("invalid regex: {e}"))
     });
     let mut set = std::collections::BTreeSet::new();
     for caps in RE.captures_iter(diff_text) {
-        if let Some(a) = caps.get(1).map(|m| m.as_str())
+        // Capture group 1 or 2 for 'a' path (quoted or unquoted)
+        let a = caps.get(1).or_else(|| caps.get(2)).map(|m| m.as_str());
+        // Capture group 3 or 4 for 'b' path (quoted or unquoted)
+        let b = caps.get(3).or_else(|| caps.get(4)).map(|m| m.as_str());
+
+        if let Some(a) = a
             && a != "/dev/null"
             && !a.trim().is_empty()
         {
             set.insert(a.to_string());
         }
-        if let Some(b) = caps.get(2).map(|m| m.as_str())
+        if let Some(b) = b
             && b != "/dev/null"
             && !b.trim().is_empty()
         {
