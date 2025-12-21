@@ -8,10 +8,13 @@ use walkdir::Error as WalkdirError;
 /// Errors returned while managing git worktree snapshots.
 #[derive(Debug, Error)]
 pub enum GitToolingError {
-    #[error("git command `{command}` failed with status {status}: {stderr}")]
+    #[error(
+        "git command `{command}` failed with status {status}: stdout: {stdout} stderr: {stderr}"
+    )]
     GitCommand {
         command: String,
         status: ExitStatus,
+        stdout: String,
         stderr: String,
     },
     #[error("git command `{command}` produced non-UTF-8 output")]

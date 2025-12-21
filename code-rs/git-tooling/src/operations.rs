@@ -187,10 +187,12 @@ where
     command.args(&args_vec);
     let output = command.output()?;
     if !output.status.success() {
+        let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
         let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
         return Err(GitToolingError::GitCommand {
             command: command_string,
             status: output.status,
+            stdout,
             stderr,
         });
     }
