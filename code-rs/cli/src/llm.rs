@@ -53,7 +53,7 @@ pub struct RequestArgs {
     pub format_strict: bool,
 
     /// Inline JSON for the schema (mutually exclusive with --schema-file)
-    #[arg(long = "schema-json")]
+    #[arg(long = "schema-json", conflicts_with = "schema_file")]
     pub schema_json: Option<String>,
 
     /// Path to a JSON schema file (mutually exclusive with --schema-json)
