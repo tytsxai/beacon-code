@@ -24,6 +24,8 @@ use std::io::SeekFrom;
 use std::io::Write;
 use std::path::PathBuf;
 
+use once_cell::sync::Lazy;
+use regex_lite::Regex;
 use serde::Deserialize;
 use serde::Serialize;
 use std::time::Duration;
@@ -45,6 +47,16 @@ const HISTORY_FILENAME: &str = "history.jsonl";
 
 const MAX_RETRIES: usize = 10;
 const RETRY_SLEEP: Duration = Duration::from_millis(100);
+
+static REDACT_PATTERNS: Lazy<[Regex; 3]> = Lazy::new(|| {
+    [
+        Regex::new(r"(?i)authorization:\s*bearer\s+[A-Za-z0-9._-]+")
+            .expect("valid auth header regex"),
+        Regex::new(r"(?i)\bbearer\s+[A-Za-z0-9._-]{10,}").expect("valid bearer regex"),
+        Regex::new(r"(?i)\b(sk|rk|pk|sk-proj|sk-live)-[A-Za-z0-9_-]{8,}")
+            .expect("valid api key regex"),
+    ]
+});
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct HistoryEntry {
@@ -73,7 +85,7 @@ pub(crate) async fn append_entry(text: &str, session_id: &Uuid, config: &Config)
         }
     }
 
-    // TODO: check `text` for sensitive patterns
+    let text = redact_history_text(text);
 
     // Resolve `~/.code/history.jsonl` and ensure the parent directory exists.
     let path = history_filepath(config);
@@ -91,7 +103,7 @@ pub(crate) async fn append_entry(text: &str, session_id: &Uuid, config: &Config)
     let entry = HistoryEntry {
         session_id: session_id.to_string(),
         ts,
-        text: text.to_string(),
+        text,
     };
     let mut line = serde_json::to_string(&entry)
         .map_err(|e| std::io::Error::other(format!("failed to serialise history entry: {e}")))?;
@@ -147,6 +159,16 @@ pub(crate) async fn append_entry(text: &str, session_id: &Uuid, config: &Config)
     .await??;
 
     Ok(())
+}
+
+fn redact_history_text(text: &str) -> String {
+    let mut redacted = text.to_string();
+    for pattern in REDACT_PATTERNS.iter() {
+        if pattern.is_match(&redacted) {
+            redacted = pattern.replace_all(&redacted, "<redacted>").to_string();
+        }
+    }
+    redacted
 }
 
 fn prune_history_if_needed(history_file: &mut File, max_bytes: usize) -> Result<()> {
@@ -452,5 +474,30 @@ mod tests {
         assert_eq!(entries.len(), 1);
         assert_eq!(entries[0].text, "second");
         assert!(std::fs::metadata(&path).expect("metadata").len() as usize <= first_size + 10);
+    }
+
+    #[tokio::test]
+    async fn history_redacts_sensitive_tokens() {
+        let temp = tempdir().expect("tempdir");
+        let config = test_config(temp.path());
+        let session_id = Uuid::new_v4();
+
+        append_entry(
+            "Authorization: Bearer sk-live-abc1234567890 and bearer token-1234567890",
+            &session_id,
+            &config,
+        )
+        .await
+        .expect("append entry");
+
+        let path = history_filepath(&config);
+        let contents = std::fs::read_to_string(&path).expect("read history");
+        let entries: Vec<HistoryEntry> = contents
+            .lines()
+            .map(|line| serde_json::from_str(line).expect("parse history entry"))
+            .collect();
+
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].text, "<redacted> and <redacted>");
     }
 }
