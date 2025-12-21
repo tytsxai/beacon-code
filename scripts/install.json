@@ -1,0 +1,93 @@
+{
+  "$schema": "./install.schema.json",
+  "version": "1.0",
+  "default_modules": ["cli"],
+  "install_dir": "~/.beacon-code",
+  "modules": {
+    "cli": {
+      "description": "Beacon Code CLI - 终端编程智能体",
+      "operations": [
+        {
+          "type": "run_command",
+          "command": "mkdir -p ${INSTALL_DIR}/bin",
+          "description": "创建 bin 目录"
+        },
+        {
+          "type": "copy_file",
+          "src": "beacon-cli/bin/beacon.js",
+          "dest": "${INSTALL_DIR}/bin/beacon.js",
+          "description": "复制 CLI 启动脚本"
+        },
+        {
+          "type": "copy_file",
+          "src": "beacon-cli/bin/coder.js",
+          "dest": "${INSTALL_DIR}/bin/coder.js",
+          "description": "复制兼容启动脚本"
+        }
+      ]
+    },
+    "sdk": {
+      "description": "Beacon Code TypeScript SDK",
+      "operations": [
+        {
+          "type": "run_command",
+          "command": "mkdir -p ${INSTALL_DIR}/sdk",
+          "description": "创建 SDK 目录"
+        },
+        {
+          "type": "copy_dir",
+          "src": "sdk/typescript/dist",
+          "dest": "${INSTALL_DIR}/sdk/dist",
+          "description": "复制 SDK 构建产物"
+        },
+        {
+          "type": "copy_file",
+          "src": "sdk/typescript/package.json",
+          "dest": "${INSTALL_DIR}/sdk/package.json",
+          "description": "复制 SDK package.json"
+        }
+      ]
+    },
+    "proxy": {
+      "description": "Responses API Proxy - API 代理服务",
+      "operations": [
+        {
+          "type": "run_command",
+          "command": "mkdir -p ${INSTALL_DIR}/proxy",
+          "description": "创建 proxy 目录"
+        },
+        {
+          "type": "copy_file",
+          "src": "code-rs/responses-api-proxy/npm/bin/code-responses-api-proxy.js",
+          "dest": "${INSTALL_DIR}/proxy/code-responses-api-proxy.js",
+          "description": "复制 proxy 启动脚本"
+        }
+      ]
+    },
+    "dev-tools": {
+      "description": "开发工具 - just, cargo-nextest, cargo-audit",
+      "operations": [
+        {
+          "type": "run_command",
+          "command": "command -v cargo >/dev/null || { echo 'cargo not found, install Rust first'; exit 1; }",
+          "description": "检查 cargo 是否存在"
+        },
+        {
+          "type": "run_command",
+          "command": "command -v just >/dev/null || cargo install --locked just",
+          "description": "安装 just"
+        },
+        {
+          "type": "run_command",
+          "command": "command -v cargo-nextest >/dev/null || cargo install --locked cargo-nextest",
+          "description": "安装 cargo-nextest"
+        },
+        {
+          "type": "run_command",
+          "command": "command -v cargo-audit >/dev/null || cargo install --locked cargo-audit",
+          "description": "安装 cargo-audit"
+        }
+      ]
+    }
+  }
+}
