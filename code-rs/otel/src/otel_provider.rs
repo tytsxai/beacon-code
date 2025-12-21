@@ -4,6 +4,7 @@ use crate::config::OtelSettings;
 use opentelemetry::KeyValue;
 use opentelemetry_appender_tracing::layer::OpenTelemetryTracingBridge;
 use opentelemetry_otlp::LogExporter;
+use opentelemetry_otlp::MetricExporter;
 use opentelemetry_otlp::Protocol;
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_otlp::WithHttpConfig;
@@ -11,6 +12,7 @@ use opentelemetry_otlp::WithTonicConfig;
 use opentelemetry_sdk::Resource;
 use opentelemetry_sdk::logs::SdkLogger;
 use opentelemetry_sdk::logs::SdkLoggerProvider;
+use opentelemetry_sdk::metrics::SdkMeterProvider;
 use opentelemetry_semantic_conventions as semconv;
 use reqwest::header::HeaderMap;
 use reqwest::header::HeaderName;
@@ -24,11 +26,15 @@ const ENV_ATTRIBUTE: &str = "env";
 
 pub struct OtelProvider {
     pub logger: SdkLoggerProvider,
+    pub meter: Option<SdkMeterProvider>,
 }
 
 impl OtelProvider {
     pub fn shutdown(&self) {
         let _ = self.logger.shutdown();
+        if let Some(ref meter) = self.meter {
+            let _ = meter.shutdown();
+        }
     }
 
     /// Expose a tracing layer that bridges tracing records into OTLP logs.
@@ -49,7 +55,8 @@ impl OtelProvider {
             ])
             .build();
 
-        let mut builder = SdkLoggerProvider::builder().with_resource(resource);
+        let mut log_builder = SdkLoggerProvider::builder().with_resource(resource.clone());
+        let mut meter_provider: Option<SdkMeterProvider> = None;
 
         match &settings.exporter {
             OtelExporter::None => {
@@ -72,13 +79,37 @@ impl OtelProvider {
                     }
                 }
 
-                let exporter = LogExporter::builder()
+                let log_exporter = LogExporter::builder()
+                    .with_tonic()
+                    .with_endpoint(endpoint)
+                    .with_metadata(MetadataMap::from_headers(header_map.clone()))
+                    .build()?;
+
+                log_builder = log_builder.with_batch_exporter(log_exporter);
+
+                // Initialize metrics exporter
+                match MetricExporter::builder()
                     .with_tonic()
                     .with_endpoint(endpoint)
                     .with_metadata(MetadataMap::from_headers(header_map))
-                    .build()?;
-
-                builder = builder.with_batch_exporter(exporter);
+                    .build()
+                {
+                    Ok(metric_exporter) => {
+                        let meter = SdkMeterProvider::builder()
+                            .with_resource(resource)
+                            .with_reader(
+                                opentelemetry_sdk::metrics::PeriodicReader::builder(
+                                    metric_exporter,
+                                )
+                                .build(),
+                            )
+                            .build();
+                        meter_provider = Some(meter);
+                    }
+                    Err(e) => {
+                        warn!("Failed to initialize metrics exporter: {}", e);
+                    }
+                }
             }
             OtelExporter::OtlpHttp {
                 endpoint,
@@ -92,19 +123,45 @@ impl OtelProvider {
                     OtelHttpProtocol::Json => Protocol::HttpJson,
                 };
 
-                let exporter = LogExporter::builder()
+                let log_exporter = LogExporter::builder()
                     .with_http()
                     .with_endpoint(endpoint)
                     .with_protocol(protocol)
                     .with_headers(headers.clone())
                     .build()?;
 
-                builder = builder.with_batch_exporter(exporter);
+                log_builder = log_builder.with_batch_exporter(log_exporter);
+
+                // Initialize metrics exporter
+                match MetricExporter::builder()
+                    .with_http()
+                    .with_endpoint(endpoint)
+                    .with_protocol(protocol)
+                    .with_headers(headers.clone())
+                    .build()
+                {
+                    Ok(metric_exporter) => {
+                        let meter = SdkMeterProvider::builder()
+                            .with_resource(resource)
+                            .with_reader(
+                                opentelemetry_sdk::metrics::PeriodicReader::builder(
+                                    metric_exporter,
+                                )
+                                .build(),
+                            )
+                            .build();
+                        meter_provider = Some(meter);
+                    }
+                    Err(e) => {
+                        warn!("Failed to initialize metrics exporter: {}", e);
+                    }
+                }
             }
         }
 
         Ok(Some(Self {
-            logger: builder.build(),
+            logger: log_builder.build(),
+            meter: meter_provider,
         }))
     }
 }
@@ -112,5 +169,8 @@ impl OtelProvider {
 impl Drop for OtelProvider {
     fn drop(&mut self) {
         let _ = self.logger.shutdown();
+        if let Some(ref meter) = self.meter {
+            let _ = meter.shutdown();
+        }
     }
 }
