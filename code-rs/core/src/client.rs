@@ -1786,7 +1786,7 @@ async fn stream_from_fixture(
     let rdr = std::io::Cursor::new(content);
     let stream = ReaderStream::new(rdr).map_err(CodexErr::Io);
     // Create a dummy debug logger for testing
-    let debug_logger = Arc::new(Mutex::new(DebugLogger::new(false).unwrap()));
+    let debug_logger = Arc::new(Mutex::new(DebugLogger::new(false)?));
     tokio::spawn(process_sse(
         stream,
         tx_event,
