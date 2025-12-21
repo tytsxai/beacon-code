@@ -16,19 +16,14 @@ RESPONSES_API_PROXY_NPM_ROOT = REPO_ROOT / "code-rs" / "responses-api-proxy" / "
 SDK_ROOT = REPO_ROOT / "sdk" / "typescript"
 
 PACKAGE_NATIVE_COMPONENTS: dict[str, list[str]] = {
-    "beacon-code": ["code", "rg"],
+    "beacon-code": ["code"],
     "beacon-code-responses-api-proxy": ["code-responses-api-proxy"],
     "beacon-code-sdk": ["code"],
 }
-WINDOWS_ONLY_COMPONENTS: dict[str, list[str]] = {
-    "beacon-code": ["code-windows-sandbox-setup", "code-command-runner"],
-}
+WINDOWS_ONLY_COMPONENTS: dict[str, list[str]] = {}
 COMPONENT_DEST_DIR: dict[str, str] = {
     "code": "code",
     "code-responses-api-proxy": "code-responses-api-proxy",
-    "code-windows-sandbox-setup": "code",
-    "code-command-runner": "code",
-    "rg": "path",
 }
 
 

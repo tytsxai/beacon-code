@@ -15,6 +15,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 BUILD_SCRIPT = REPO_ROOT / "beacon-cli" / "scripts" / "build_npm_package.py"
+BUILD_PLATFORM_PACKAGES = REPO_ROOT / "beacon-cli" / "scripts" / "build_platform_packages.py"
 INSTALL_NATIVE_DEPS = REPO_ROOT / "beacon-cli" / "scripts" / "install_native_deps.py"
 WORKFLOW_NAME = ".github/workflows/rust-release.yml"
 GITHUB_REPO = "tytsxai/beacon-code"
@@ -56,6 +57,11 @@ def parse_args() -> argparse.Namespace:
         "--keep-staging-dirs",
         action="store_true",
         help="Retain temporary staging directories instead of deleting them.",
+    )
+    parser.add_argument(
+        "--platform-packages",
+        action="store_true",
+        help="Also build the platform-specific @tytsxai/beacon-code-* tarballs.",
     )
     return parser.parse_args()
 
@@ -130,6 +136,8 @@ def main() -> int:
 
     packages = list(args.packages)
     native_components = collect_native_components(packages)
+    if args.platform_packages:
+        native_components.add("code")
 
     vendor_temp_root: Path | None = None
     vendor_src: Path | None = None
@@ -148,6 +156,22 @@ def main() -> int:
 
         if resolved_head_sha:
             print(f"should `git checkout {resolved_head_sha}`")
+
+        if args.platform_packages:
+            if vendor_src is None:
+                raise RuntimeError("--platform-packages requires --workflow-url or a resolvable rust-release run.")
+            run_command(
+                [
+                    str(BUILD_PLATFORM_PACKAGES),
+                    "--release-version",
+                    args.release_version,
+                    "--vendor-src",
+                    str(vendor_src),
+                    "--output-dir",
+                    str(output_dir),
+                ]
+                + (["--keep-staging-dirs"] if args.keep_staging_dirs else [])
+            )
 
         for package in packages:
             staging_dir = Path(tempfile.mkdtemp(prefix=f"npm-stage-{package}-", dir=runner_temp))

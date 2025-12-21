@@ -20,7 +20,7 @@ BEACON_CLI_ROOT=""
 # Until we start publishing stable GitHub releases, we have to grab the binaries
 # from the GitHub Action that created them. Update the URL below to point to the
 # appropriate workflow run:
-WORKFLOW_URL="" # Optional override; if empty, caller must pass --workflow-url
+WORKFLOW_URL="" # Required (pass --workflow-url)
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -65,6 +65,10 @@ mkdir -p "$BIN_DIR"
 # ----------------------------------------------------------------------------
 
 WORKFLOW_ID="${WORKFLOW_URL##*/}"
+if [ -z "${WORKFLOW_ID}" ]; then
+  echo "Error: missing --workflow-url (expected a GitHub Actions run URL)." >&2
+  exit 1
+fi
 
 ARTIFACTS_DIR="$(mktemp -d)"
 trap 'rm -rf "$ARTIFACTS_DIR"' EXIT

@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""Install Beacon Code native binaries (Rust CLI plus ripgrep helpers)."""
+"""Install Beacon Code native binaries (Rust CLI)."""
 
 import argparse
-import json
 import os
 import shutil
 import subprocess
@@ -13,14 +12,11 @@ from dataclasses import dataclass
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Iterable, Sequence
-from urllib.parse import urlparse
-from urllib.request import urlopen
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 BEACON_CLI_ROOT = SCRIPT_DIR.parent
-DEFAULT_WORKFLOW_URL = "https://github.com/tytsxai/beacon-code/actions/runs/17952349351"  # rust-v0.40.0
+DEFAULT_WORKFLOW_URL = ""
 VENDOR_DIR_NAME = "vendor"
-RG_MANIFEST = BEACON_CLI_ROOT / "bin" / "rg"
 BINARY_TARGETS = (
     "x86_64-unknown-linux-musl",
     "aarch64-unknown-linux-musl",
@@ -52,31 +48,7 @@ BINARY_COMPONENTS = {
         dest_dir="code-responses-api-proxy",
         binary_basename="code-responses-api-proxy",
     ),
-    "code-windows-sandbox-setup": BinaryComponent(
-        artifact_prefix="code-windows-sandbox-setup",
-        dest_dir="code",
-        binary_basename="code-windows-sandbox-setup",
-        targets=WINDOWS_TARGETS,
-    ),
-    "code-command-runner": BinaryComponent(
-        artifact_prefix="code-command-runner",
-        dest_dir="code",
-        binary_basename="code-command-runner",
-        targets=WINDOWS_TARGETS,
-    ),
 }
-
-RG_TARGET_PLATFORM_PAIRS: list[tuple[str, str]] = [
-    ("x86_64-unknown-linux-musl", "linux-x86_64"),
-    ("aarch64-unknown-linux-musl", "linux-aarch64"),
-    ("x86_64-apple-darwin", "macos-x86_64"),
-    ("aarch64-apple-darwin", "macos-aarch64"),
-    ("x86_64-pc-windows-msvc", "windows-x86_64"),
-    ("aarch64-pc-windows-msvc", "windows-aarch64"),
-]
-RG_TARGET_TO_PLATFORM = {target: platform for target, platform in RG_TARGET_PLATFORM_PAIRS}
-DEFAULT_RG_TARGETS = [target for target, _ in RG_TARGET_PLATFORM_PAIRS]
-
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -85,19 +57,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--workflow-url",
         help=(
-            "GitHub Actions workflow URL that produced the artifacts. Defaults to a "
-            "known good run when omitted."
+            "GitHub Actions workflow URL that produced the artifacts."
         ),
     )
     parser.add_argument(
         "--component",
         dest="components",
         action="append",
-        choices=tuple(list(BINARY_COMPONENTS) + ["rg"]),
+        choices=tuple(BINARY_COMPONENTS),
         help=(
             "Limit installation to the specified components."
-            " May be repeated. Defaults to code (Beacon Code CLI),"
-            " code-windows-sandbox-setup, code-command-runner, and rg."
+            " May be repeated. Defaults to code (Beacon Code CLI)."
         ),
     )
     parser.add_argument(
@@ -121,14 +91,13 @@ def main() -> int:
 
     components = args.components or [
         "code",
-        "code-windows-sandbox-setup",
-        "code-command-runner",
-        "rg",
     ]
 
     workflow_url = (args.workflow_url or DEFAULT_WORKFLOW_URL).strip()
     if not workflow_url:
-        workflow_url = DEFAULT_WORKFLOW_URL
+        raise RuntimeError(
+            "Missing --workflow-url (expected a GitHub Actions run URL that contains the build artifacts)."
+        )
 
     workflow_id = workflow_url.rstrip("/").split("/")[-1]
     print(f"Downloading native artifacts from workflow {workflow_id}...")
@@ -142,73 +111,8 @@ def main() -> int:
             [BINARY_COMPONENTS[name] for name in components if name in BINARY_COMPONENTS],
         )
 
-    if "rg" in components:
-        print("Fetching ripgrep binaries...")
-        fetch_rg(vendor_dir, DEFAULT_RG_TARGETS, manifest_path=RG_MANIFEST)
-
     print(f"Installed native dependencies into {vendor_dir}")
     return 0
-
-
-def fetch_rg(
-    vendor_dir: Path,
-    targets: Sequence[str] | None = None,
-    *,
-    manifest_path: Path,
-) -> list[Path]:
-    """Download ripgrep binaries described by the DotSlash manifest."""
-
-    if targets is None:
-        targets = DEFAULT_RG_TARGETS
-
-    if not manifest_path.exists():
-        raise FileNotFoundError(f"DotSlash manifest not found: {manifest_path}")
-
-    manifest = _load_manifest(manifest_path)
-    platforms = manifest.get("platforms", {})
-
-    vendor_dir.mkdir(parents=True, exist_ok=True)
-
-    targets = list(targets)
-    if not targets:
-        return []
-
-    task_configs: list[tuple[str, str, dict]] = []
-    for target in targets:
-        platform_key = RG_TARGET_TO_PLATFORM.get(target)
-        if platform_key is None:
-            raise ValueError(f"Unsupported ripgrep target '{target}'.")
-
-        platform_info = platforms.get(platform_key)
-        if platform_info is None:
-            raise RuntimeError(f"Platform '{platform_key}' not found in manifest {manifest_path}.")
-
-        task_configs.append((target, platform_key, platform_info))
-
-    results: dict[str, Path] = {}
-    max_workers = min(len(task_configs), max(1, (os.cpu_count() or 1)))
-
-    print("Installing ripgrep binaries for targets: " + ", ".join(targets))
-
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        future_map = {
-            executor.submit(
-                _fetch_single_rg,
-                vendor_dir,
-                target,
-                platform_key,
-                platform_info,
-                manifest_path,
-            ): target
-            for target, platform_key, platform_info in task_configs
-        }
-
-        for future in as_completed(future_map):
-            target = future_map[future]
-            results[target] = future.result()
-            print(f"  installed ripgrep for {target}")
-
-    return [results[target] for target in targets]
 
 
 def _download_artifacts(workflow_id: str, dest_dir: Path) -> None:
@@ -289,49 +193,6 @@ def _archive_name_for_target(artifact_prefix: str, target: str) -> str:
     return f"{artifact_prefix}-{target}.zst"
 
 
-def _fetch_single_rg(
-    vendor_dir: Path,
-    target: str,
-    platform_key: str,
-    platform_info: dict,
-    manifest_path: Path,
-) -> Path:
-    providers = platform_info.get("providers", [])
-    if not providers:
-        raise RuntimeError(f"No providers listed for platform '{platform_key}' in {manifest_path}.")
-
-    url = providers[0]["url"]
-    archive_format = platform_info.get("format", "zst")
-    archive_member = platform_info.get("path")
-
-    dest_dir = vendor_dir / target / "path"
-    dest_dir.mkdir(parents=True, exist_ok=True)
-
-    is_windows = platform_key.startswith("win")
-    binary_name = "rg.exe" if is_windows else "rg"
-    dest = dest_dir / binary_name
-
-    with tempfile.TemporaryDirectory() as tmp_dir_str:
-        tmp_dir = Path(tmp_dir_str)
-        archive_filename = os.path.basename(urlparse(url).path)
-        download_path = tmp_dir / archive_filename
-        _download_file(url, download_path)
-
-        dest.unlink(missing_ok=True)
-        extract_archive(download_path, archive_format, archive_member, dest)
-
-    if not is_windows:
-        dest.chmod(0o755)
-
-    return dest
-
-
-def _download_file(url: str, dest: Path) -> None:
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    with urlopen(url) as response, open(dest, "wb") as out:
-        shutil.copyfileobj(response, out)
-
-
 def extract_archive(
     archive_path: Path,
     archive_format: str,
@@ -377,22 +238,6 @@ def extract_archive(
         return
 
     raise RuntimeError(f"Unsupported archive format '{archive_format}'.")
-
-
-def _load_manifest(manifest_path: Path) -> dict:
-    cmd = ["dotslash", "--", "parse", str(manifest_path)]
-    stdout = subprocess.check_output(cmd, text=True)
-    try:
-        manifest = json.loads(stdout)
-    except json.JSONDecodeError as exc:
-        raise RuntimeError(f"Invalid DotSlash manifest output from {manifest_path}.") from exc
-
-    if not isinstance(manifest, dict):
-        raise RuntimeError(
-            f"Unexpected DotSlash manifest structure for {manifest_path}: {type(manifest)!r}"
-        )
-
-    return manifest
 
 
 if __name__ == "__main__":
