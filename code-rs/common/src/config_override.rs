@@ -5,7 +5,7 @@
 //! of `-c key=value` (or `--config key=value`) will be collected as a raw
 //! string. Helper methods are provided to convert the raw strings into
 //! key/value pairs as well as to apply them onto a mutable
-//! `serde_json::Value` representing the configuration tree.
+//! `toml::Value` representing the configuration tree.
 
 use clap::ArgAction;
 use clap::Parser;
@@ -19,8 +19,8 @@ use toml::Value;
 pub struct CliConfigOverrides {
     /// Override a configuration value that would otherwise be loaded from
     /// `~/.code/config.toml` (Code also reads legacy `~/.codex/config.toml`). Use a dotted path (`foo.bar.baz`) to override
-    /// nested values. The `value` portion is parsed as JSON. If it fails to
-    /// parse as JSON, the raw string is used as a literal.
+    /// nested values. The `value` portion is parsed as TOML. If it fails to
+    /// parse as TOML, the raw string is used as a literal.
     ///
     /// Examples:
     ///   - `-c model="o3"`
@@ -38,7 +38,7 @@ pub struct CliConfigOverrides {
 
 impl CliConfigOverrides {
     /// Parse the raw strings captured from the CLI into a list of `(path,
-    /// value)` tuples where `value` is a `serde_json::Value`.
+    /// value)` tuples where `value` is a `toml::Value`.
     pub fn parse_overrides(&self) -> Result<Vec<(String, Value)>, String> {
         self.raw_overrides
             .iter()
