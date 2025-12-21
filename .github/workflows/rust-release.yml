@@ -1,0 +1,247 @@
+name: rust-release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (e.g., 0.6.0)"
+        required: false
+        type: string
+      dry_run:
+        description: "Dry run (skip actual publish)"
+        required: false
+        type: boolean
+        default: false
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build:
+    name: build (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            use_cross: true
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            use_cross: true
+          - os: macos-13
+            target: x86_64-apple-darwin
+            use_cross: false
+          - os: macos-14
+            target: aarch64-apple-darwin
+            use_cross: false
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            use_cross: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install zstd (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y zstd
+
+      - name: Install zstd (macOS)
+        if: runner.os == 'macOS'
+        run: brew install zstd
+
+      - name: Install zstd (Windows)
+        if: runner.os == 'Windows'
+        run: choco install -y zstd
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: code-rs
+
+      - uses: taiki-e/install-action@v2
+        if: matrix.use_cross
+        with:
+          tool: cross
+
+      - name: Build binaries
+        shell: bash
+        working-directory: code-rs
+        run: |
+          set -euo pipefail
+          if [[ "${{ matrix.use_cross }}" == "true" ]]; then
+            cross build --locked --profile release-prod -p code-cli --bin code --target "${{ matrix.target }}"
+            cross build --locked --profile release-prod -p code-responses-api-proxy --bin code-responses-api-proxy --target "${{ matrix.target }}"
+          else
+            cargo build --locked --profile release-prod -p code-cli --bin code --target "${{ matrix.target }}"
+            cargo build --locked --profile release-prod -p code-responses-api-proxy --bin code-responses-api-proxy --target "${{ matrix.target }}"
+          fi
+
+      - name: Package artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="${{ matrix.target }}"
+          out_dir="dist/${target}"
+          mkdir -p "${out_dir}"
+
+          base_dir="code-rs/target/${target}/release-prod"
+          if [[ "${RUNNER_OS}" == "Windows" ]]; then
+            code_src="${base_dir}/code.exe"
+            proxy_src="${base_dir}/code-responses-api-proxy.exe"
+            code_name="code-${target}.exe"
+            proxy_name="code-responses-api-proxy-${target}.exe"
+          else
+            code_src="${base_dir}/code"
+            proxy_src="${base_dir}/code-responses-api-proxy"
+            code_name="code-${target}"
+            proxy_name="code-responses-api-proxy-${target}"
+          fi
+
+          cp "${code_src}" "${out_dir}/${code_name}"
+          cp "${proxy_src}" "${out_dir}/${proxy_name}"
+
+          zstd -f -19 -T0 -o "${out_dir}/${code_name}.zst" "${out_dir}/${code_name}"
+          zstd -f -19 -T0 -o "${out_dir}/${proxy_name}.zst" "${out_dir}/${proxy_name}"
+
+          if [[ "${RUNNER_OS}" == "Windows" ]]; then
+            powershell -NoProfile -Command "Compress-Archive -Path '${out_dir}\\${code_name}' -DestinationPath '${out_dir}\\${code_name}.zip' -Force"
+            powershell -NoProfile -Command "Compress-Archive -Path '${out_dir}\\${proxy_name}' -DestinationPath '${out_dir}\\${proxy_name}.zip' -Force"
+          else
+            tar -C "${out_dir}" -czf "${out_dir}/${code_name}.tar.gz" "${code_name}"
+            tar -C "${out_dir}" -czf "${out_dir}/${proxy_name}.tar.gz" "${proxy_name}"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: dist/${{ matrix.target }}
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.version != ''
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Determine version
+        id: version
+        run: |
+          if [[ -n "${{ github.event.inputs.version }}" ]]; then
+            echo "version=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            # Extract version from tag (v0.6.0 -> 0.6.0)
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare release assets
+        run: |
+          mkdir -p release-assets
+          for target_dir in artifacts/*/; do
+            target=$(basename "$target_dir")
+            # Copy compressed archives to release assets
+            cp "$target_dir"/*.zst release-assets/ 2>/dev/null || true
+            cp "$target_dir"/*.tar.gz release-assets/ 2>/dev/null || true
+            cp "$target_dir"/*.zip release-assets/ 2>/dev/null || true
+          done
+          ls -la release-assets/
+
+      - name: Generate checksums
+        working-directory: release-assets
+        run: |
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Create GitHub Release
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('v{0}', steps.version.outputs.version) }}
+          name: Beacon Code v${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.version, '-') }}
+          files: release-assets/*
+          generate_release_notes: true
+
+  npm-publish:
+    name: Publish to npm
+    needs: release
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.dry_run != 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install zstd
+        run: sudo apt-get update && sudo apt-get install -y zstd
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare vendor directory
+        run: |
+          mkdir -p vendor
+          for target_dir in artifacts/*/; do
+            target=$(basename "$target_dir")
+            mkdir -p "vendor/${target}/code"
+            # Extract code binary from zst
+            if [[ -f "${target_dir}/code-${target}.zst" ]]; then
+              zstd -d "${target_dir}/code-${target}.zst" -o "vendor/${target}/code/code"
+              chmod +x "vendor/${target}/code/code"
+            elif [[ -f "${target_dir}/code-${target}.exe.zst" ]]; then
+              zstd -d "${target_dir}/code-${target}.exe.zst" -o "vendor/${target}/code/code.exe"
+            fi
+          done
+          find vendor -type f | head -20
+
+      - name: Build platform packages
+        run: |
+          python3 beacon-cli/scripts/build_platform_packages.py \
+            --release-version "${{ needs.release.outputs.version }}" \
+            --vendor-src vendor \
+            --output-dir dist/npm
+
+      - name: Build main package
+        run: |
+          python3 beacon-cli/scripts/build_npm_package.py \
+            --package beacon-code \
+            --release-version "${{ needs.release.outputs.version }}" \
+            --vendor-src vendor \
+            --staging-dir dist/beacon-code-staged
+
+      - name: Publish platform packages
+        working-directory: dist/npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          for tgz in *.tgz; do
+            echo "Publishing $tgz..."
+            npm publish "$tgz" --access public || echo "Failed to publish $tgz"
+          done
+
+      - name: Publish main package
+        working-directory: dist/beacon-code-staged
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public
+

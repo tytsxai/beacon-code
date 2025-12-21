@@ -7,6 +7,21 @@ on:
   pull_request:
 
 jobs:
+  js:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Enable corepack (pnpm)
+        run: corepack enable
+      - name: Install JS tooling
+        run: pnpm -w install --frozen-lockfile
+      - name: prettier check
+        run: pnpm -w run format
+
   check:
     runs-on: ubuntu-latest
     steps:
@@ -15,6 +30,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: code-rs
+      - name: upstream path dependency guard
+        run: scripts/check-upstream-path-deps.sh
       - name: cargo fmt
         run: cargo fmt --all -- --check
         working-directory: code-rs
@@ -33,6 +50,8 @@ jobs:
       - name: cargo test
         run: cargo test --all-features
         working-directory: code-rs
+      - name: CLI smokes
+        run: bash scripts/ci-tests.sh
 
   audit:
     runs-on: ubuntu-latest

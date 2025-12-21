@@ -55,30 +55,6 @@
           "path": "code-responses-api-proxy.exe"
         }
       }
-    },
-    "code-command-runner": {
-      "platforms": {
-        "windows-x86_64": {
-          "regex": "^code-command-runner-x86_64-pc-windows-msvc\\.exe\\.zst$",
-          "path": "code-command-runner.exe"
-        },
-        "windows-aarch64": {
-          "regex": "^code-command-runner-aarch64-pc-windows-msvc\\.exe\\.zst$",
-          "path": "code-command-runner.exe"
-        }
-      }
-    },
-    "code-windows-sandbox-setup": {
-      "platforms": {
-        "windows-x86_64": {
-          "regex": "^code-windows-sandbox-setup-x86_64-pc-windows-msvc\\.exe\\.zst$",
-          "path": "code-windows-sandbox-setup.exe"
-        },
-        "windows-aarch64": {
-          "regex": "^code-windows-sandbox-setup-aarch64-pc-windows-msvc\\.exe\\.zst$",
-          "path": "code-windows-sandbox-setup.exe"
-        }
-      }
     }
   }
 }
