@@ -578,13 +578,16 @@ pub fn apply_hunks(
         Err(err) => {
             let msg = err.to_string();
             writeln!(stderr, "{msg}").map_err(ApplyPatchError::from)?;
-            if let Some(io) = err.downcast_ref::<std::io::Error>() {
-                Err(ApplyPatchError::from(io))
-            } else {
-                Err(ApplyPatchError::IoError(IoError {
-                    context: msg,
-                    source: std::io::Error::other(err),
-                }))
+            // First check if it's already an ApplyPatchError (e.g., ComputeReplacements)
+            match err.downcast::<ApplyPatchError>() {
+                Ok(apply_err) => Err(apply_err),
+                Err(err) => match err.downcast::<std::io::Error>() {
+                    Ok(io_err) => Err(ApplyPatchError::from(io_err)),
+                    Err(err) => Err(ApplyPatchError::IoError(IoError {
+                        context: msg,
+                        source: std::io::Error::other(err),
+                    })),
+                },
             }
         }
     }
