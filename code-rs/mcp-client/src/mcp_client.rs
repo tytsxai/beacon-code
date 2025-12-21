@@ -167,6 +167,11 @@ impl McpClient {
                         }
                     }
                 }
+
+                // The child process stdout closed (or the read loop errored). Any pending
+                // requests would otherwise wait forever (especially when `timeout=None`),
+                // so fail them all explicitly.
+                Self::fail_all_pending_connection_closed(&pending).await;
             })
         };
 
@@ -391,6 +396,28 @@ impl McpClient {
         };
         if let Some(tx) = tx_opt {
             let _ = tx.send(JSONRPCMessage::Error(err));
+        }
+    }
+
+    /// Fail all pending requests when the connection closes unexpectedly.
+    async fn fail_all_pending_connection_closed(pending: &Arc<Mutex<HashMap<i64, PendingSender>>>) {
+        let drained = {
+            let mut guard = pending.lock().await;
+            std::mem::take(&mut *guard)
+        };
+
+        for (id, tx) in drained {
+            let error = mcp_types::JSONRPCError {
+                id: RequestId::Integer(id),
+                jsonrpc: JSONRPC_VERSION.to_string(),
+                error: mcp_types::JSONRPCErrorError {
+                    code: -32000,
+                    message: "connection closed".to_string(),
+                    data: None,
+                },
+            };
+
+            let _ = tx.send(JSONRPCMessage::Error(error));
         }
     }
 }
