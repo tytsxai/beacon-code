@@ -14,6 +14,24 @@ If you want to add a new feature or change the behavior of an existing one, plea
 - Keep your changes focused. Multiple unrelated fixes should be opened as separate PRs.
 - Ensure your change is free of lint warnings and test failures.
 
+### Local setup
+
+```bash
+# Install Rust components + common Cargo tools used by the repo (just/nextest/audit).
+./scripts/bootstrap.sh
+
+# Build the CLI/TUI/exec bins.
+make build-dev
+```
+
+### Common commands
+
+- Format Rust: `just fmt`
+- Repo-wide formatting (Rust + Prettier): `just fmt-all`
+- Lint (fix): `just fix -p <crate-you-touched>`
+- Tests (fast, scoped): `cargo test -p <crate>`
+- Tests (full): `just test` (requires `cargo-nextest`) or `cargo test --all-features`
+
 ### Writing high-impact code changes
 
 1. **Start with an issue.** Open a new one or comment on an existing discussion so we can agree on the solution before code is written.
@@ -25,7 +43,7 @@ If you want to add a new feature or change the behavior of an existing one, plea
 
 - Fill in the PR template (or include similar information) - **What? Why? How?**
 - Include a link to a bug report or enhancement request in the issue tracker
-- Run **all** checks locally. Use the root `just` helpers so you stay consistent with the rest of the workspace: `just fmt`, `just fix -p <crate>` for the crate you touched, and the relevant tests (e.g., `cargo test -p code-tui` or `just test` if you need a full sweep). CI failures that could have been caught locally slow down the process.
+- Run **all** checks locally. Prefer `just fmt`, `just fix -p <crate>`, and the relevant tests (e.g., `cargo test -p code-tui` or `just test` if you need a full sweep). CI failures that could have been caught locally slow down the process.
 - Make sure your branch is up-to-date with `main` and that you have resolved merge conflicts.
 - Mark the PR as **Ready for review** only when you believe it is in a merge-able state.
 

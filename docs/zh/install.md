@@ -60,3 +60,19 @@ code exec "echo hello"
 - **字体/对齐异常**：选择包含中文的等宽字体（如 JetBrains Mono Nerd Font），并在终端关闭字形连字。
 
 更多排查见 `faq.md`。
+
+## 从源码构建（开发者）
+
+```bash
+git clone https://github.com/tytsxai/beacon-code.git
+cd beacon-code
+
+# 安装 Rust 组件 + 常用 Cargo 工具（just/nextest/audit 等）
+./scripts/bootstrap.sh
+
+# 构建
+make build-dev
+
+# 运行（TUI）
+just tui -- "explain this codebase to me"
+```

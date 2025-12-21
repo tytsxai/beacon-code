@@ -199,6 +199,12 @@ code --read-only "analyze code quality and generate report"
 code --config output_format=json "list all TODO comments"
 ```
 
+## 从源码构建（开发者）
+
+- 安装依赖：`./scripts/bootstrap.sh`
+- 构建：`make build-dev`（或 `./build-fast.sh`）
+- 运行：`just tui -- "explain this codebase to me"`
+
 &ensp;
 
 ## Model Context Protocol (MCP)

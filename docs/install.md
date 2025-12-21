@@ -17,23 +17,16 @@ The GitHub Release also contains a [DotSlash](https://dotslash-cli.com/) file fo
 ```bash
 # Clone the repository and navigate to the root of the Cargo workspace.
 git clone https://github.com/tytsxai/beacon-code.git
-cd code/code-rs
+cd beacon-code
 
-# Install the Rust toolchain, if necessary.
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-source "$HOME/.cargo/env"
-rustup component add rustfmt
-rustup component add clippy
-# Install helper tools used by the workspace justfile:
-cargo install just
-# Optional: install nextest for the `just test` helper (or use `cargo test --all-features` as a fallback)
-cargo install cargo-nextest
+# Bootstrap local prerequisites (Rust components + common Cargo tools).
+./scripts/bootstrap.sh
 
-# Build Beacon.
-cargo build
+# Build Beacon (Rust workspace).
+make build-dev
 
 # Launch the TUI with a sample prompt.
-cargo run --bin code -- "explain this codebase to me"
+just tui -- "explain this codebase to me"
 
 # After making changes, use the workspace justfile helpers:
 just fmt
