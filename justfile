@@ -46,3 +46,16 @@ test:
 # Run the MCP server
 mcp-server-run *args:
     cargo run -p code-mcp-server -- "$@"
+
+# Bootstrap local dev dependencies (runs from repo root).
+bootstrap *args:
+    python3 ../scripts/bootstrap.py "$@"
+
+# Repo-wide formatter (Rust + Prettier)
+fmt-all:
+    cargo fmt -- --config imports_granularity=Item
+    bash -lc 'cd .. && pnpm -w run format:fix'
+
+# Stage npm tarballs (requires a rust-release workflow run for the version unless --workflow-url is passed).
+stage-npm version *packages:
+    python3 ../scripts/stage_npm_packages.py --release-version "{{version}}" {{packages}}
