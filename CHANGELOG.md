@@ -21,6 +21,10 @@
 ## [Unreleased]
 
 - Agents: this fork is Beacon-only; disable external agent CLIs (Claude/Gemini/Qwen) and update defaults/docs accordingly.
+- Auto Drive: add task topology module for dependency-based parallel execution with cycle detection. (task_topology.rs)
+- Auto Drive: implement progressive compaction with 4 levels (None/Light/Medium/Full) based on context usage thresholds.
+- Auto Drive: lower compaction trigger threshold from 70% to 50% for earlier context management intervention.
+- Docs: clean up external video references and update production checklist naming (codex → beacon).
 
 ## [0.5.15] - 2025-11-28
 
