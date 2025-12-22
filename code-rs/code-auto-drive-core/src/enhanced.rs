@@ -713,6 +713,15 @@ impl EnhancedCoordinator {
             .should_compact(current_tokens, context_limit)
     }
 
+    /// Determines the appropriate compaction level based on context usage.
+    pub fn compaction_level(
+        &self,
+        current_tokens: u64,
+        context_limit: u64,
+    ) -> crate::compaction::CompactionLevel {
+        self.compaction.compaction_level(current_tokens, context_limit)
+    }
+
     /// Performs compaction on history items.
     pub fn compact_history(
         &mut self,

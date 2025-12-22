@@ -44,8 +44,12 @@ pub struct CompactionConfig {
     pub target_tokens: u64,
     /// Minimum tokens to preserve (floor).
     pub min_tokens: u64,
-    /// Maximum percentage of context to use (0.0-1.0).
+    /// Maximum percentage of context to use before full compaction (0.0-1.0).
+    /// Lowered from 0.7 to 0.5 for earlier intervention.
     pub max_context_ratio: f32,
+    /// Threshold for progressive (light) compaction (0.0-1.0).
+    /// When context usage exceeds this, light compaction begins.
+    pub progressive_threshold: f32,
     /// Whether to preserve all errors.
     pub preserve_errors: bool,
     /// Whether to preserve all decisions.
@@ -54,12 +58,28 @@ pub struct CompactionConfig {
     pub keep_recent: usize,
 }
 
+/// Level of compaction to apply based on context usage.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CompactionLevel {
+    /// No compaction needed.
+    None,
+    /// Light compaction: remove only Low importance items.
+    Light,
+    /// Medium compaction: remove Low and Normal importance items.
+    Medium,
+    /// Full compaction: aggressive removal, keep only Critical and High.
+    Full,
+}
+
 impl Default for CompactionConfig {
     fn default() -> Self {
         Self {
             target_tokens: 50000,
             min_tokens: 10000,
-            max_context_ratio: 0.7,
+            // Lowered from 0.7 to 0.5 for earlier full compaction
+            max_context_ratio: 0.5,
+            // Start light compaction at 30% usage
+            progressive_threshold: 0.3,
             preserve_errors: true,
             preserve_decisions: true,
             keep_recent: 5,
@@ -131,6 +151,119 @@ impl CompactionEngine {
     pub fn should_compact(&self, current_tokens: u64, context_limit: u64) -> bool {
         let threshold = (context_limit as f32 * self.config.max_context_ratio) as u64;
         current_tokens > threshold
+    }
+
+    /// Determines the appropriate compaction level based on context usage.
+    ///
+    /// Returns:
+    /// - `None` if usage < progressive_threshold (30%)
+    /// - `Light` if usage >= progressive_threshold but < 40%
+    /// - `Medium` if usage >= 40% but < max_context_ratio (50%)
+    /// - `Full` if usage >= max_context_ratio (50%)
+    pub fn compaction_level(&self, current_tokens: u64, context_limit: u64) -> CompactionLevel {
+        if context_limit == 0 {
+            return CompactionLevel::None;
+        }
+
+        let usage_ratio = current_tokens as f32 / context_limit as f32;
+
+        if usage_ratio >= self.config.max_context_ratio {
+            CompactionLevel::Full
+        } else if usage_ratio >= 0.4 {
+            CompactionLevel::Medium
+        } else if usage_ratio >= self.config.progressive_threshold {
+            CompactionLevel::Light
+        } else {
+            CompactionLevel::None
+        }
+    }
+
+    /// Performs progressive compaction based on the current context usage level.
+    ///
+    /// This method applies different compaction strategies based on how full
+    /// the context window is:
+    /// - Light: Only remove Low importance items
+    /// - Medium: Remove Low and Normal importance items
+    /// - Full: Aggressive removal, keep only Critical and High
+    pub fn progressive_compact(
+        &self,
+        items: &[ItemClassification],
+        level: CompactionLevel,
+    ) -> CompactionResult {
+        if items.is_empty() || level == CompactionLevel::None {
+            return CompactionResult {
+                keep_indices: items.iter().map(|i| i.index).collect(),
+                remove_indices: Vec::new(),
+                tokens_before: items.iter().map(|i| i.tokens).sum(),
+                tokens_after: items.iter().map(|i| i.tokens).sum(),
+                removal_summary: "No compaction needed".to_string(),
+                goal_preserved: true,
+            };
+        }
+
+        let min_importance = match level {
+            CompactionLevel::None => return self.compact(items), // fallback
+            CompactionLevel::Light => ItemImportance::Normal,    // keep Normal and above
+            CompactionLevel::Medium => ItemImportance::High,     // keep High and above
+            CompactionLevel::Full => ItemImportance::Critical,   // keep only Critical
+        };
+
+        let tokens_before: u64 = items.iter().map(|i| i.tokens).sum();
+        let goal_index = items.iter().find(|i| i.is_goal).map(|i| i.index);
+
+        // Recent items are always kept
+        let recent_start = items.len().saturating_sub(self.config.keep_recent);
+        let recent_indices: std::collections::HashSet<usize> =
+            items[recent_start..].iter().map(|i| i.index).collect();
+
+        let mut keep_indices = Vec::new();
+        let mut remove_indices = Vec::new();
+        let mut removed_summaries = Vec::new();
+
+        for item in items {
+            let should_keep = item.is_goal
+                || recent_indices.contains(&item.index)
+                || item.importance >= min_importance
+                || (self.config.preserve_errors && item.is_error)
+                || (self.config.preserve_decisions && item.is_decision);
+
+            if should_keep {
+                keep_indices.push(item.index);
+            } else {
+                remove_indices.push(item.index);
+                if let Some(summary) = &item.summary {
+                    removed_summaries.push(summary.clone());
+                }
+            }
+        }
+
+        let tokens_after: u64 = items
+            .iter()
+            .filter(|i| keep_indices.contains(&i.index))
+            .map(|i| i.tokens)
+            .sum();
+
+        let removal_summary = if removed_summaries.is_empty() {
+            format!("Progressive compaction ({level:?}): no items removed")
+        } else {
+            format!(
+                "Progressive compaction ({level:?}): removed {} items",
+                removed_summaries.len()
+            )
+        };
+
+        let goal_preserved = goal_index
+            .map(|i| !remove_indices.contains(&i))
+            .unwrap_or(true);
+
+        CompactionResult {
+            keep_indices,
+            remove_indices,
+            tokens_before,
+            tokens_after,
+            removal_summary,
+            goal_preserved,
+        }
     }
 
     /// Performs compaction on classified items.
@@ -343,10 +476,39 @@ mod tests {
     fn test_should_compact() {
         let engine = CompactionEngine::new();
 
-        // Default max_context_ratio is 0.7
-        // With context_limit of 100000, threshold is 70000
-        assert!(!engine.should_compact(50000, 100000));
-        assert!(engine.should_compact(80000, 100000));
+        // Default max_context_ratio is 0.5 (lowered from 0.7)
+        // With context_limit of 100000, threshold is 50000
+        assert!(!engine.should_compact(40000, 100000));
+        assert!(engine.should_compact(60000, 100000));
+    }
+
+    #[test]
+    fn test_compaction_level() {
+        let engine = CompactionEngine::new();
+
+        // Below progressive_threshold (30%)
+        assert_eq!(
+            engine.compaction_level(20000, 100000),
+            CompactionLevel::None
+        );
+
+        // At progressive_threshold (30%) - Light
+        assert_eq!(
+            engine.compaction_level(35000, 100000),
+            CompactionLevel::Light
+        );
+
+        // At 40% - Medium
+        assert_eq!(
+            engine.compaction_level(45000, 100000),
+            CompactionLevel::Medium
+        );
+
+        // At max_context_ratio (50%) - Full
+        assert_eq!(
+            engine.compaction_level(55000, 100000),
+            CompactionLevel::Full
+        );
     }
 
     #[test]

@@ -25,6 +25,7 @@ pub mod scheduler;
 pub mod selective_tests;
 pub mod session_pool;
 pub mod task_pipeline;
+pub mod task_topology;
 pub mod telemetry;
 
 #[cfg(feature = "dev-faults")]
@@ -74,3 +75,8 @@ pub use coordinator_router::route_user_message;
 pub use coordinator_user_schema::parse_user_turn_reply;
 pub use coordinator_user_schema::user_turn_schema;
 pub use session_metrics::SessionMetrics;
+
+pub use task_topology::topological_sort;
+pub use task_topology::TaskLayers;
+pub use task_topology::TopologicalTask;
+pub use task_topology::TopologyError;

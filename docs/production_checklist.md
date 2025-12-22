@@ -14,7 +14,7 @@
 - [ ] **Environment Variables**:
     - [ ] `RUST_LOG=info` (or structured JSON logging config).
     - [ ] `CODE_SECURE_MODE=1` (if applicable for hardening; `CODEX_SECURE_MODE` is legacy).
-- [ ] **Service Mode**: `codex-app-server` speaks JSON-RPC over stdin/stdout; run it under a supervisor that keeps stdin open, and treat liveness as process + responsiveness to a basic request (e.g., Initialize).
+- [ ] **Service Mode**: `beacon-app-server` speaks JSON-RPC over stdin/stdout; run it under a supervisor that keeps stdin open, and treat liveness as process + responsiveness to a basic request (e.g., Initialize).
 - [ ] **Health Check**: If you expose an HTTP wrapper, `/health` returns 200 OK.
 
 ## 3. Rollback Procedure
@@ -28,39 +28,39 @@
 ### 3.1 Docker Rollback Commands
 ```bash
 # List recent image tags
-docker images | grep codex-app-server | head -5
+docker images | grep beacon-app-server | head -5
 
 # Rollback to previous stable tag
-docker stop codex-app-server
-docker rm codex-app-server
-docker run -d --name codex-app-server \
+docker stop beacon-app-server
+docker rm beacon-app-server
+docker run -d --name beacon-app-server \
   --restart unless-stopped \
   -e RUST_LOG=info \
   -e CODE_SECURE_MODE=1 \
-  your-registry/codex-app-server:v1.2.3-stable
+  your-registry/beacon-app-server:v1.2.3-stable
 
 # Verify rollback
-docker logs -f codex-app-server
+docker logs -f beacon-app-server
 curl http://localhost:8080/health
 ```
 
 ### 3.2 Kubernetes Rollback Commands
 ```bash
 # Check deployment history
-kubectl rollout history deployment/codex-app-server -n production
+kubectl rollout history deployment/beacon-app-server -n production
 
 # Rollback to previous revision
-kubectl rollout undo deployment/codex-app-server -n production
+kubectl rollout undo deployment/beacon-app-server -n production
 
 # Rollback to specific revision
-kubectl rollout undo deployment/codex-app-server -n production --to-revision=5
+kubectl rollout undo deployment/beacon-app-server -n production --to-revision=5
 
 # Monitor rollback status
-kubectl rollout status deployment/codex-app-server -n production
+kubectl rollout status deployment/beacon-app-server -n production
 
 # Verify pods are healthy
-kubectl get pods -n production -l app=codex-app-server
-kubectl logs -n production -l app=codex-app-server --tail=100
+kubectl get pods -n production -l app=beacon-app-server
+kubectl logs -n production -l app=beacon-app-server --tail=100
 ```
 
 ### 3.3 Database Rollback Script Template
@@ -87,13 +87,13 @@ COMMIT;
 Apply with:
 ```bash
 # Backup first
-pg_dump -h localhost -U postgres -d codex_db > backup_before_rollback.sql
+pg_dump -h localhost -U postgres -d beacon_db > backup_before_rollback.sql
 
 # Apply down migration
-psql -h localhost -U postgres -d codex_db -f down_migration_v2.sql
+psql -h localhost -U postgres -d beacon_db -f down_migration_v2.sql
 
 # Verify
-psql -h localhost -U postgres -d codex_db -c "\d sessions"
+psql -h localhost -U postgres -d beacon_db -c "\d sessions"
 ```
 
 ## 4. Post-Deployment Observability
@@ -133,11 +133,11 @@ psql -h localhost -U postgres -d codex_db -c "\d sessions"
 ### 5.4 Panic Detection
 - **Critical**: Any panic in logs
   - Action: Page on-call engineer immediately
-  - Query: `count_over_time({job="codex-app-server"} |= "Panic occurred"[5m]) > 0`
+  - Query: `count_over_time({job="beacon-app-server"} |= "Panic occurred"[5m]) > 0`
 
 - **Critical**: Crash loop (>3 restarts in 10 minutes)
   - Action: Page on-call engineer
-  - Query: `rate(kube_pod_container_status_restarts_total{pod=~"codex-app-server.*"}[10m]) > 0.3`
+  - Query: `rate(kube_pod_container_status_restarts_total{pod=~"beacon-app-server.*"}[10m]) > 0.3`
 
 ## 6. On-Call Procedures
 
@@ -170,13 +170,13 @@ psql -h localhost -U postgres -d codex_db -c "\d sessions"
 3. **Gather Context** (within 15 minutes)
    ```bash
    # Check recent deployments
-   kubectl rollout history deployment/codex-app-server -n production
+   kubectl rollout history deployment/beacon-app-server -n production
 
    # Review logs for errors
-   kubectl logs -n production -l app=codex-app-server --tail=500 | grep -i error
+   kubectl logs -n production -l app=beacon-app-server --tail=500 | grep -i error
 
    # Check resource usage
-   kubectl top pods -n production -l app=codex-app-server
+   kubectl top pods -n production -l app=beacon-app-server
 
    # Verify dependencies
    curl http://internal-api/health
@@ -226,14 +226,14 @@ export OTEL_EXPORTER_OTLP_PROTOCOL="http/protobuf"
 export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer your-token-here"
 
 # Service identification
-export OTEL_SERVICE_NAME="codex-app-server"
+export OTEL_SERVICE_NAME="beacon-app-server"
 export OTEL_SERVICE_VERSION="1.2.3"
 export OTEL_ENVIRONMENT="production"
 ```
 
 **Rust Code Configuration** (already supported in `otel/src/config.rs`):
 ```rust
-use codex_otel::config::{OtelSettings, OtelExporter, OtelHttpProtocol};
+use code_otel::config::{OtelSettings, OtelExporter, OtelHttpProtocol};
 use std::collections::HashMap;
 
 let mut headers = HashMap::new();
@@ -241,7 +241,7 @@ headers.insert("x-api-key".to_string(), "your-api-key".to_string());
 
 let settings = OtelSettings {
     environment: "production".to_string(),
-    service_name: "codex-app-server".to_string(),
+    service_name: "beacon-app-server".to_string(),
     service_version: env!("CARGO_PKG_VERSION").to_string(),
     code_home: PathBuf::from("/app"),
     exporter: OtelExporter::OtlpGrpc {
@@ -256,11 +256,11 @@ let settings = OtelSettings {
 **Structured Logging Configuration**:
 ```bash
 # JSON format for machine parsing
-export RUST_LOG="info,codex_core=debug,codex_app_server=debug"
+export RUST_LOG="info,code_core=debug,beacon_app_server=debug"
 export RUST_LOG_FORMAT="json"  # If supported by your logger
 
 # Example log output
-{"timestamp":"2025-12-21T10:30:45Z","level":"ERROR","target":"codex_core::client","message":"API request failed","error":"Connection timeout","request_id":"req-123"}
+{"timestamp":"2025-12-21T10:30:45Z","level":"ERROR","target":"code_core::client","message":"API request failed","error":"Connection timeout","request_id":"req-123"}
 ```
 
 **Log Collection** (Fluent Bit example):
@@ -268,9 +268,9 @@ export RUST_LOG_FORMAT="json"  # If supported by your logger
 # fluent-bit.conf
 [INPUT]
     Name              tail
-    Path              /var/log/containers/codex-app-server*.log
+    Path              /var/log/containers/beacon-app-server*.log
     Parser            docker
-    Tag               kube.codex-app-server
+    Tag               kube.beacon-app-server
     Refresh_Interval  5
 
 [FILTER]
@@ -282,10 +282,10 @@ export RUST_LOG_FORMAT="json"  # If supported by your logger
 
 [OUTPUT]
     Name  es
-    Match kube.codex-app-server
+    Match kube.beacon-app-server
     Host  elasticsearch.monitoring.svc
     Port  9200
-    Index codex-logs
+    Index beacon-logs
 ```
 
 ### 7.3 Dashboard Recommendations
@@ -314,7 +314,7 @@ export RUST_LOG_FORMAT="json"  # If supported by your logger
 ```json
 {
   "dashboard": {
-    "title": "Codex App Server - Production",
+    "title": "Beacon App Server - Production",
     "panels": [
       {
         "title": "Request Rate",
@@ -337,7 +337,7 @@ export RUST_LOG_FORMAT="json"  # If supported by your logger
 ```yaml
 # prometheus.yml
 scrape_configs:
-  - job_name: 'codex-app-server'
+  - job_name: 'beacon-app-server'
     kubernetes_sd_configs:
       - role: pod
         namespaces:
@@ -345,7 +345,7 @@ scrape_configs:
     relabel_configs:
       - source_labels: [__meta_kubernetes_pod_label_app]
         action: keep
-        regex: codex-app-server
+        regex: beacon-app-server
       - source_labels: [__meta_kubernetes_pod_name]
         target_label: pod
     scrape_interval: 15s

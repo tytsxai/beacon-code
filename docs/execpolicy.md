@@ -8,8 +8,6 @@ Beacon can enforce your own rules-based execution policy before it runs shell co
 
 Beacon CLI will present the option to whitelist commands when a command causes a prompt.
 
-<img width="513" height="168" alt="Screenshot 2025-12-04 at 9 23 54 AM" src="https://github.com/user-attachments/assets/4c8ee8ea-3101-4a81-bb13-3f4a9aa02502" />
-
 Whitelisted commands will no longer require your permission to run in current and subsequent sessions.
 
 Under the hood, when you approve and whitelist a command, Beacon will edit `~/.code/rules/default.rules`.

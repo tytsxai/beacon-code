@@ -35,28 +35,6 @@
 
 &ensp;
 
-## AI 视频
-
-&ensp;
-
-<p align="center">
-  <a href="https://youtu.be/UOASHZPruQk">
-    <img src="docs/images/video-auto-drive-new-play.jpg" alt="播放 Auto Drive 介绍视频" width="100%">
-  </a><br>
-  <strong>Auto Drive 概览</strong>
-</p>
-
-&ensp;
-
-<p align="center">
-  <a href="https://youtu.be/sV317OhiysQ">
-    <img src="docs/images/video-v03-play.jpg" alt="播放多智能体宣传视频" width="100%">
-  </a><br>
-  <strong>多智能体演示</strong>
-</p>
-
-&ensp;
-
 ## 快速开始
 
 ### 直接运行
