@@ -74,6 +74,8 @@ use rand::Rng;
 
 const RATE_LIMIT_BUFFER: Duration = Duration::from_secs(5);
 const RATE_LIMIT_JITTER_MAX: Duration = Duration::from_secs(3);
+const EPOCH_RESET_THRESHOLD_SECS: f64 = 1_000_000_000.0;
+const EPOCH_RESET_THRESHOLD_MILLIS: f64 = 1_000_000_000_000.0;
 const MAX_RETRY_ELAPSED: Duration = Duration::from_secs(7 * 24 * 60 * 60);
 const MAX_DECISION_RECOVERY_ATTEMPTS: u32 = 3;
 const MESSAGE_LIMIT_FALLBACK: usize = 120;
@@ -557,6 +559,42 @@ mod tests {
             }
             other => panic!("expected retry, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn rate_limit_epoch_seconds_are_not_treated_as_relative() {
+        let epoch_seconds = Utc::now().timestamp() + 5;
+        let body = json!({
+            "error": {
+                "x-ratelimit-reset": epoch_seconds,
+            }
+        })
+        .to_string();
+        let start = Instant::now();
+        let wait_until = parse_rate_limit_hint(&body).expect("rate limit hint");
+        let wait = wait_until.saturating_duration_since(start);
+        assert!(
+            wait < Duration::from_secs(60),
+            "epoch wait should be short, got {wait:?}"
+        );
+    }
+
+    #[test]
+    fn rate_limit_seconds_hint_respects_buffer() {
+        let body = json!({
+            "error": {
+                "resets_in_seconds": 10,
+            }
+        })
+        .to_string();
+        let start = Instant::now();
+        let wait_until = parse_rate_limit_hint(&body).expect("rate limit hint");
+        let wait = wait_until.saturating_duration_since(start);
+        let min_wait = Duration::from_secs(10) + RATE_LIMIT_BUFFER;
+        assert!(
+            wait >= min_wait,
+            "expected at least {min_wait:?} wait, got {wait:?}"
+        );
     }
 
     #[test]
@@ -2422,6 +2460,10 @@ fn parse_rate_limit_hint(body: &str) -> Option<Instant> {
     let value: serde_json::Value = serde_json::from_str(body).ok()?;
     let error_obj = value.get("error").unwrap_or(&value);
 
+    if let Some(reset_at) = extract_epoch_reset(error_obj) {
+        return Some(reset_at);
+    }
+
     if let Some(seconds) = extract_seconds(error_obj) {
         return Some(compute_rate_limit_wait(seconds));
     }
@@ -2430,6 +2472,44 @@ fn parse_rate_limit_hint(body: &str) -> Option<Instant> {
         return Some(reset_at);
     }
 
+    None
+}
+
+fn parse_rate_limit_number(value: &serde_json::Value) -> Option<f64> {
+    if let Some(num) = value.as_f64() {
+        return Some(num);
+    }
+    value.as_str().and_then(|text| text.parse::<f64>().ok())
+}
+
+fn extract_epoch_reset(value: &serde_json::Value) -> Option<Instant> {
+    let fields = ["x-ratelimit-reset", "x-ratelimit-reset-requests"];
+    for key in fields {
+        let Some(raw) = value.get(key) else {
+            continue;
+        };
+        let Some(num) = parse_rate_limit_number(raw) else {
+            continue;
+        };
+        if num.is_sign_negative() {
+            continue;
+        }
+        let epoch_secs = if num >= EPOCH_RESET_THRESHOLD_MILLIS {
+            num / 1000.0
+        } else if num >= EPOCH_RESET_THRESHOLD_SECS {
+            num
+        } else {
+            continue;
+        };
+        let now_epoch = Utc::now().timestamp_millis() as f64 / 1000.0;
+        let delta = epoch_secs - now_epoch;
+        let base = if delta > 0.0 {
+            Duration::from_secs_f64(delta)
+        } else {
+            Duration::ZERO
+        };
+        return Some(compute_rate_limit_wait(base));
+    }
     None
 }
 
@@ -2442,21 +2522,11 @@ fn extract_seconds(value: &serde_json::Value) -> Option<Duration> {
         "x-ratelimit-reset-requests",
     ];
     for key in fields {
-        if let Some(seconds) = value.get(key) {
-            if let Some(num) = seconds.as_f64() {
-                if num.is_sign_negative() {
-                    continue;
-                }
-                return Some(Duration::from_secs_f64(num));
+        if let Some(num) = value.get(key).and_then(parse_rate_limit_number) {
+            if num.is_sign_negative() {
+                continue;
             }
-            if let Some(text) = seconds.as_str()
-                && let Ok(num) = text.parse::<f64>()
-            {
-                if num.is_sign_negative() {
-                    continue;
-                }
-                return Some(Duration::from_secs_f64(num));
-            }
+            return Some(Duration::from_secs_f64(num));
         }
     }
     None

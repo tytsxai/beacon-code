@@ -104,16 +104,7 @@ impl AutoRunPhase {
     }
 
     pub fn is_running(&self) -> bool {
-        matches!(
-            self,
-            Self::Launching
-                | Self::Active
-                | Self::PausedManual { .. }
-                | Self::AwaitingCoordinator { .. }
-                | Self::AwaitingDiagnostics { .. }
-                | Self::AwaitingReview { .. }
-                | Self::TransientRecovery { .. }
-        )
+        self.is_active()
     }
 
     pub fn awaiting_coordinator_submit(&self) -> bool {
