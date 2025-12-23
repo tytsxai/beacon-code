@@ -866,41 +866,41 @@ export async function runPostinstall(options = {}) {
   // Create platform-specific symlink/copy for main binary
   const mainBinary = `code-${targetTriple}${binaryExt}`;
   const mainBinaryPath = join(binDir, mainBinary);
+  const cachedMainBinaryPath = getCachedBinaryPath(
+    version,
+    targetTriple,
+    platform() === "win32",
+  );
+  const resolvedMainBinaryPath = existsSync(mainBinaryPath)
+    ? mainBinaryPath
+    : existsSync(cachedMainBinaryPath)
+      ? cachedMainBinaryPath
+      : null;
 
-  if (
-    existsSync(mainBinaryPath) ||
-    existsSync(
-      getCachedBinaryPath(version, targetTriple, platform() === "win32"),
-    )
-  ) {
-    try {
-      const probePath = existsSync(mainBinaryPath)
-        ? mainBinaryPath
-        : getCachedBinaryPath(version, targetTriple, platform() === "win32");
-      const stats = statSync(probePath);
-      if (!stats.size)
-        throw new Error("binary is empty (download likely failed)");
-      const valid = validateDownloadedBinary(probePath);
-      if (!valid.ok) {
-        console.warn(`⚠ Main code binary appears invalid: ${valid.reason}`);
-        console.warn(
-          "  Try reinstalling or check your network/proxy settings.",
-        );
-      }
-    } catch (e) {
-      console.warn(`⚠ Main code binary appears invalid: ${e.message}`);
-      console.warn("  Try reinstalling or check your network/proxy settings.");
-    }
-    console.log("Setting up main code binary...");
-
-    // On Windows, we can't use symlinks easily, so update the JS wrapper
-    // On Unix, the JS wrapper will find the correct binary
-    console.log("✓ Installation complete!");
-  } else {
-    console.warn(
-      "⚠ Main code binary not found. You may need to build from source.",
+  if (!resolvedMainBinaryPath) {
+    throw new Error(
+      `Main code binary not found after install (${mainBinary}).`,
     );
   }
+
+  const stats = statSync(resolvedMainBinaryPath);
+  if (!stats.size) {
+    throw new Error("Main code binary is empty (download likely failed).");
+  }
+  const valid = validateDownloadedBinary(resolvedMainBinaryPath);
+  if (!valid.ok) {
+    throw new Error(`Main code binary invalid: ${valid.reason}`);
+  }
+  const checksum = verifyBinaryChecksum(resolvedMainBinaryPath, mainBinary);
+  if (!checksum.ok) {
+    throw new Error(checksum.reason);
+  }
+
+  console.log("Setting up main code binary...");
+
+  // On Windows, we can't use symlinks easily, so update the JS wrapper
+  // On Unix, the JS wrapper will find the correct binary
+  console.log("✓ Installation complete!");
 
   // Handle collisions (e.g., VS Code) and add wrappers. We no longer publish a
   // `code` bin in package.json. Instead, for global installs we create a `code`
