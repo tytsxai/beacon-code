@@ -1130,7 +1130,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "unicode-segmentation",
- "unicode-width 0.1.14",
+ "unicode-width 0.2.1",
 ]
 
 [[package]]
@@ -1591,7 +1591,7 @@ dependencies = [
  "tui-input",
  "tui-markdown",
  "unicode-segmentation",
- "unicode-width 0.1.14",
+ "unicode-width 0.2.1",
  "url",
  "urlencoding",
  "uuid",
