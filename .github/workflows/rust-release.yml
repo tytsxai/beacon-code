@@ -17,9 +17,62 @@ on:
       - "v*"
 
 jobs:
+  gate:
+    name: Verify CI for commit
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - name: Check CI status
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const sha = context.sha;
+            const workflowId = "ci.yml";
+            const pollIntervalMs = 30000;
+            const timeoutMs = 30 * 60 * 1000;
+            const start = Date.now();
+            while (true) {
+              const runs = await github.rest.actions.listWorkflowRuns({
+                owner,
+                repo,
+                workflow_id: workflowId,
+                head_sha: sha,
+                per_page: 10,
+              });
+              const run = runs.data.workflow_runs.find((candidate) => candidate.head_sha === sha);
+              if (!run) {
+                if (Date.now() - start > timeoutMs) {
+                  core.setFailed(`CI workflow '${workflowId}' has not run for ${sha}.`);
+                  return;
+                }
+                core.info(`CI run not found yet for ${sha}; waiting...`);
+                await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+                continue;
+              }
+              if (run.status !== "completed") {
+                if (Date.now() - start > timeoutMs) {
+                  core.setFailed(`CI run ${run.id} is still ${run.status} after waiting.`);
+                  return;
+                }
+                core.info(`CI run ${run.id} is ${run.status}; waiting...`);
+                await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
+                continue;
+              }
+              if (run.conclusion !== "success") {
+                core.setFailed(`CI run ${run.id} concluded ${run.conclusion}.`);
+                return;
+              }
+              core.info(`CI run ${run.id} succeeded for ${sha}.`);
+              return;
+            }
+
   build:
     name: build (${{ matrix.target }})
     runs-on: ${{ matrix.os }}
+    needs: gate
     strategy:
       fail-fast: false
       matrix:
@@ -235,8 +288,14 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
+          shopt -s nullglob
+          packages=( *.tgz )
+          if [[ "${#packages[@]}" -eq 0 ]]; then
+            echo "No platform packages found to publish."
+            exit 1
+          fi
           failures=0
-          for tgz in *.tgz; do
+          for tgz in "${packages[@]}"; do
             echo "Publishing $tgz..."
             if ! npm publish "$tgz" --access public; then
               echo "Failed to publish $tgz"
