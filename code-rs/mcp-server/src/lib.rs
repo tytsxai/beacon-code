@@ -18,6 +18,7 @@ use tokio::sync::mpsc;
 use tracing::debug;
 use tracing::error;
 use tracing::info;
+use tracing::warn;
 use tracing_subscriber::EnvFilter;
 
 mod acp_tool_runner;
@@ -61,7 +62,7 @@ pub async fn run_main(
 
     // Set up channels.
     let (incoming_tx, mut incoming_rx) = mpsc::channel::<JSONRPCMessage>(CHANNEL_CAPACITY);
-    let (outgoing_tx, mut outgoing_rx) = mpsc::unbounded_channel::<OutgoingMessage>();
+    let (outgoing_tx, mut outgoing_rx) = mpsc::channel::<OutgoingMessage>(CHANNEL_CAPACITY);
 
     // Task: read from stdin, push to `incoming_tx`.
     let stdin_reader_handle = tokio::spawn({
@@ -98,6 +99,24 @@ pub async fn run_main(
         .map_err(|e| {
             std::io::Error::new(ErrorKind::InvalidData, format!("error loading config: {e}"))
         })?;
+    let _code_home_lock =
+        match code_core::code_home_lock::try_acquire_code_home_lock(&config.code_home) {
+            Ok(Some(lock)) => Some(lock),
+            Ok(None) => {
+                warn!(
+                    code_home = %config.code_home.display(),
+                    "code home already in use; set CODE_HOME to isolate state per instance"
+                );
+                None
+            }
+            Err(err) => {
+                warn!(
+                    code_home = %config.code_home.display(),
+                    "failed to lock code home: {err}"
+                );
+                None
+            }
+        };
 
     // Task: process incoming messages.
     let processor_handle = tokio::spawn({

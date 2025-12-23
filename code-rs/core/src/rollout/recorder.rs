@@ -3,6 +3,8 @@
 use std::fs::File;
 use std::fs::{self};
 use std::io::Error as IoError;
+#[cfg(unix)]
+use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -474,10 +476,18 @@ fn create_log_file(
     let filename = format!("rollout-{date_str}-{conversation_id}.jsonl");
 
     let path = dir.join(filename);
-    let file = std::fs::OpenOptions::new()
-        .append(true)
-        .create(true)
-        .open(&path)?;
+    let mut options = std::fs::OpenOptions::new();
+    options.append(true).create(true);
+    #[cfg(unix)]
+    {
+        options.mode(0o600);
+    }
+    let file = options.open(&path)?;
+    #[cfg(unix)]
+    {
+        let perms = std::fs::Permissions::from_mode(0o600);
+        std::fs::set_permissions(&path, perms)?;
+    }
 
     Ok(LogFileInfo {
         file,
@@ -567,7 +577,13 @@ async fn rollout_writer(
 async fn write_snapshot(path: &Path, snapshot: &serde_json::Value) -> std::io::Result<()> {
     let json = serde_json::to_vec(snapshot)
         .map_err(|e| IoError::other(format!("failed to serialize history snapshot: {e}")))?;
-    tokio::fs::write(path, json).await
+    tokio::fs::write(path, json).await?;
+    #[cfg(unix)]
+    {
+        let perms = std::fs::Permissions::from_mode(0o600);
+        tokio::fs::set_permissions(path, perms).await?;
+    }
+    Ok(())
 }
 
 struct JsonlWriter {

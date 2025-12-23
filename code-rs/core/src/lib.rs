@@ -15,6 +15,7 @@ mod chat_completions;
 mod client;
 mod client_common;
 mod code_conversation;
+pub mod code_home_lock;
 pub mod codex;
 pub mod token_data;
 pub use code_conversation::BeaconConversation;

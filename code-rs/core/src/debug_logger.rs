@@ -5,9 +5,16 @@ use std::collections::HashMap;
 use std::fs::OpenOptions;
 use std::fs::{self};
 use std::io::Write;
+use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Mutex;
 use uuid::Uuid;
+
+#[cfg(unix)]
+use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
+
+#[cfg(unix)]
+const PRIVATE_FILE_MODE: u32 = 0o600;
 
 #[derive(Debug)]
 struct StreamInfo {
@@ -62,6 +69,45 @@ impl DebugLogger {
             turn_latency_dir,
             turn_latency_file: Mutex::new(None),
         })
+    }
+
+    fn write_private_file(path: &Path, contents: impl AsRef<[u8]>) -> Result<(), std::io::Error> {
+        #[cfg(unix)]
+        {
+            let mut options = OpenOptions::new();
+            options
+                .write(true)
+                .create(true)
+                .truncate(true)
+                .mode(PRIVATE_FILE_MODE);
+            let mut file = options.open(path)?;
+            file.write_all(contents.as_ref())?;
+            file.flush()?;
+            let perms = std::fs::Permissions::from_mode(PRIVATE_FILE_MODE);
+            std::fs::set_permissions(path, perms)?;
+            return Ok(());
+        }
+        #[cfg(not(unix))]
+        {
+            fs::write(path, contents)?;
+            Ok(())
+        }
+    }
+
+    fn open_private_append(path: &Path) -> Result<std::fs::File, std::io::Error> {
+        let mut options = OpenOptions::new();
+        options.create(true).append(true);
+        #[cfg(unix)]
+        {
+            options.mode(PRIVATE_FILE_MODE);
+        }
+        let file = options.open(path)?;
+        #[cfg(unix)]
+        {
+            let perms = std::fs::Permissions::from_mode(PRIVATE_FILE_MODE);
+            std::fs::set_permissions(path, perms)?;
+        }
+        Ok(file)
     }
 
     fn ensure_log_dir(&self, tag: Option<&str>) -> Result<PathBuf, std::io::Error> {
@@ -135,7 +181,7 @@ impl DebugLogger {
 
         // Write pretty-printed JSON to request file
         let formatted_request = serde_json::to_string_pretty(&request_entry)?;
-        fs::write(&request_file_path, formatted_request)?;
+        Self::write_private_file(&request_file_path, formatted_request)?;
 
         // Prepare response file path
         let response_filename = format!(
@@ -210,7 +256,7 @@ impl DebugLogger {
 
             // Write pretty-printed JSON to response file
             let formatted_response = serde_json::to_string_pretty(&response_data)?;
-            fs::write(&stream_info.response_file, formatted_response)?;
+            Self::write_private_file(&stream_info.response_file, formatted_response)?;
         }
 
         Ok(())
@@ -239,7 +285,7 @@ impl DebugLogger {
         entries.push(usage);
 
         let formatted = serde_json::to_string_pretty(&entries)?;
-        fs::write(path, formatted)?;
+        Self::write_private_file(&path, formatted)?;
         Ok(())
     }
 
@@ -262,7 +308,7 @@ impl DebugLogger {
         }
 
         if !path.exists() {
-            fs::write(&path, "[]")?;
+            Self::write_private_file(&path, "[]")?;
         }
 
         let mut guard = self.session_usage_file.lock().expect("usage lock poisoned");
@@ -284,7 +330,7 @@ impl DebugLogger {
         }
 
         // Ensure file exists so tail -f works immediately.
-        OpenOptions::new().create(true).append(true).open(&path)?;
+        let _ = Self::open_private_append(&path)?;
 
         let mut guard = self
             .turn_latency_file
@@ -327,7 +373,7 @@ impl DebugLogger {
             }),
         };
 
-        let mut file = OpenOptions::new().create(true).append(true).open(&path)?;
+        let mut file = Self::open_private_append(&path)?;
         writeln!(file, "{}", serde_json::to_string(&entry)?)?;
         Ok(())
     }
@@ -375,7 +421,7 @@ impl DebugLogger {
         });
 
         let formatted = serde_json::to_string_pretty(&log_entry)?;
-        fs::write(file_path, formatted)?;
+        Self::write_private_file(&file_path, formatted)?;
 
         Ok(())
     }
@@ -404,7 +450,7 @@ impl DebugLogger {
         });
 
         let formatted = serde_json::to_string_pretty(&log_entry)?;
-        fs::write(file_path, formatted)?;
+        Self::write_private_file(&file_path, formatted)?;
 
         Ok(())
     }
@@ -432,7 +478,7 @@ impl DebugLogger {
             chunk
         );
 
-        fs::write(file_path, log_entry)?;
+        Self::write_private_file(&file_path, log_entry)?;
 
         Ok(())
     }
@@ -460,7 +506,7 @@ impl DebugLogger {
             error
         );
 
-        fs::write(file_path, log_entry)?;
+        Self::write_private_file(&file_path, log_entry)?;
 
         Ok(())
     }
@@ -494,7 +540,7 @@ impl DebugLogger {
         });
 
         let formatted = serde_json::to_string_pretty(&log_entry)?;
-        fs::write(file_path, formatted)?;
+        Self::write_private_file(&file_path, formatted)?;
 
         Ok(())
     }

@@ -15,6 +15,7 @@ use std::time::Duration;
 use std::time::Instant;
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::info;
+use tracing::warn;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::filter::filter_fn;
 use tracing_subscriber::prelude::*;
@@ -170,6 +171,24 @@ pub async fn run_main(cli: Cli, _code_linux_sandbox_exe: Option<PathBuf>) -> any
         cli_kv_overrides,
         code_core::config::ConfigOverrides::default(),
     )?;
+    let _code_home_lock =
+        match code_core::code_home_lock::try_acquire_code_home_lock(&config.code_home) {
+            Ok(Some(lock)) => Some(lock),
+            Ok(None) => {
+                warn!(
+                    code_home = %config.code_home.display(),
+                    "code home already in use; set CODE_HOME to isolate state per instance"
+                );
+                None
+            }
+            Err(err) => {
+                warn!(
+                    code_home = %config.code_home.display(),
+                    "failed to lock code home: {err}"
+                );
+                None
+            }
+        };
 
     let env_filter = EnvFilter::try_from_default_env()
         .or_else(|_| EnvFilter::try_new(default_level))

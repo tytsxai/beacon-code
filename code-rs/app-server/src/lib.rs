@@ -103,6 +103,24 @@ pub async fn run_main(
         }
         None => tracing_subscriber::registry().with(fmt_layer).try_init(),
     };
+    let _code_home_lock =
+        match code_core::code_home_lock::try_acquire_code_home_lock(&config.code_home) {
+            Ok(Some(lock)) => Some(lock),
+            Ok(None) => {
+                warn!(
+                    code_home = %config.code_home.display(),
+                    "code home already in use; set CODE_HOME to isolate state per instance"
+                );
+                None
+            }
+            Err(err) => {
+                warn!(
+                    code_home = %config.code_home.display(),
+                    "failed to lock code home: {err}"
+                );
+                None
+            }
+        };
     let housekeeping_home = config.code_home.clone();
     tokio::task::spawn_blocking(move || {
         if let Err(err) = code_core::run_housekeeping_if_due(&housekeeping_home) {

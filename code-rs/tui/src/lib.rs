@@ -641,6 +641,24 @@ pub async fn run_main(
             .try_init(),
     };
 
+    let _code_home_lock = match code_core::code_home_lock::try_acquire_code_home_lock(&code_home) {
+        Ok(Some(lock)) => Some(lock),
+        Ok(None) => {
+            tracing::warn!(
+                code_home = %code_home.display(),
+                "code home already in use; set CODE_HOME to isolate state per instance"
+            );
+            None
+        }
+        Err(err) => {
+            tracing::warn!(
+                code_home = %code_home.display(),
+                "failed to lock code home: {err}"
+            );
+            None
+        }
+    };
+
     let latest_upgrade_version = if crate::updates::upgrade_ui_enabled() {
         updates::get_upgrade_version(&config)
     } else {

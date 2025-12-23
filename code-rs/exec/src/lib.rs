@@ -283,6 +283,24 @@ pub async fn run_main(mut cli: Cli, code_linux_sandbox_exe: Option<PathBuf>) -> 
             .try_init(),
         None => tracing_subscriber::registry().with(fmt_layer).try_init(),
     };
+    let _code_home_lock =
+        match code_core::code_home_lock::try_acquire_code_home_lock(&config.code_home) {
+            Ok(Some(lock)) => Some(lock),
+            Ok(None) => {
+                warn!(
+                    code_home = %config.code_home.display(),
+                    "code home already in use; set CODE_HOME to isolate state per instance"
+                );
+                None
+            }
+            Err(err) => {
+                warn!(
+                    code_home = %config.code_home.display(),
+                    "failed to lock code home: {err}"
+                );
+                None
+            }
+        };
     if let Err(err) = code_core::run_housekeeping_if_due(&config.code_home) {
         warn!("code home housekeeping failed: {err}");
     }

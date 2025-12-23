@@ -32,9 +32,14 @@ mod imp {
 
     /// Shim metrics recorder when OTEL feature is disabled.
     /// All recording operations are no-ops with zero runtime cost.
+    #[derive(Clone)]
     pub struct MetricsRecorder;
 
     impl MetricsRecorder {
+        pub fn global() -> Self {
+            Self
+        }
+
         pub fn new(_meter: &()) -> Self {
             Self
         }

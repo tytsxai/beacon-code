@@ -1,4 +1,5 @@
 use opentelemetry::KeyValue;
+use opentelemetry::global;
 use opentelemetry::metrics::Counter;
 use opentelemetry::metrics::Histogram;
 use opentelemetry::metrics::Meter;
@@ -9,6 +10,7 @@ use opentelemetry::metrics::Meter;
 /// - API request counts (by endpoint and method)
 /// - Request latency distribution
 /// - Error counts (by error type)
+#[derive(Clone)]
 pub struct MetricsRecorder {
     api_request_counter: Counter<u64>,
     request_latency_histogram: Histogram<f64>,
@@ -16,6 +18,12 @@ pub struct MetricsRecorder {
 }
 
 impl MetricsRecorder {
+    /// Create a metrics recorder using the global meter provider.
+    pub fn global() -> Self {
+        let meter = global::meter("code");
+        Self::new(&meter)
+    }
+
     /// Create a new metrics recorder from a meter.
     ///
     /// # Arguments

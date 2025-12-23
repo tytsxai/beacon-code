@@ -85,7 +85,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_send_event_as_notification() {
-        let (outgoing_tx, mut outgoing_rx) = mpsc::unbounded_channel::<OutgoingMessage>();
+        let (outgoing_tx, mut outgoing_rx) = mpsc::channel::<OutgoingMessage>(1);
         let outgoing_message_sender = OutgoingMessageSender::new(outgoing_tx);
 
         let conversation_id = ConversationId::new();
@@ -120,7 +120,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_send_event_as_notification_with_meta() {
-        let (outgoing_tx, mut outgoing_rx) = mpsc::unbounded_channel::<OutgoingMessage>();
+        let (outgoing_tx, mut outgoing_rx) = mpsc::channel::<OutgoingMessage>(1);
         let outgoing_message_sender = OutgoingMessageSender::new(outgoing_tx);
 
         let conversation_id = ConversationId::new();

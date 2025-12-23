@@ -5,11 +5,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use std::env;
 use std::fs::File;
-use std::fs::OpenOptions;
 use std::io::Read;
-use std::io::Write;
-#[cfg(unix)]
-use std::os::unix::fs::OpenOptionsExt;
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -18,6 +14,7 @@ use std::time::Duration;
 use tracing::warn;
 
 use code_app_server_protocol::AuthMode;
+use tempfile::NamedTempFile;
 
 use crate::config::resolve_code_path_for_read;
 use crate::token_data::KnownPlan;
@@ -499,15 +496,16 @@ pub fn try_read_auth_json(auth_file: &Path) -> std::io::Result<AuthDotJson> {
 
 pub fn write_auth_json(auth_file: &Path, auth_dot_json: &AuthDotJson) -> std::io::Result<()> {
     let json_data = serde_json::to_string_pretty(auth_dot_json)?;
-    let mut options = OpenOptions::new();
-    options.truncate(true).write(true).create(true);
+    let parent = auth_file.parent().unwrap_or_else(|| Path::new("."));
+    std::fs::create_dir_all(parent)?;
+    let tmp_file = NamedTempFile::new_in(parent)?;
     #[cfg(unix)]
     {
-        options.mode(0o600);
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(tmp_file.path(), std::fs::Permissions::from_mode(0o600))?;
     }
-    let mut file = options.open(auth_file)?;
-    file.write_all(json_data.as_bytes())?;
-    file.flush()?;
+    std::fs::write(tmp_file.path(), json_data)?;
+    tmp_file.persist(auth_file).map_err(|err| err.error)?;
     Ok(())
 }
 

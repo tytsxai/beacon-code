@@ -719,7 +719,8 @@ impl EnhancedCoordinator {
         current_tokens: u64,
         context_limit: u64,
     ) -> crate::compaction::CompactionLevel {
-        self.compaction.compaction_level(current_tokens, context_limit)
+        self.compaction
+            .compaction_level(current_tokens, context_limit)
     }
 
     /// Performs compaction on history items.

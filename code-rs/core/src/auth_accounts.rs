@@ -4,15 +4,14 @@ use code_app_server_protocol::AuthMode;
 use serde::Deserialize;
 use serde::Serialize;
 use std::fs::File;
-use std::fs::OpenOptions;
 use std::io::Read;
-use std::io::Write;
 use std::io::{self};
 use std::path::Path;
 use std::path::PathBuf;
 use uuid::Uuid;
 
 use crate::token_data::TokenData;
+use tempfile::NamedTempFile;
 
 const ACCOUNTS_FILE_NAME: &str = "auth_accounts.json";
 
@@ -84,23 +83,17 @@ fn read_accounts_file(path: &Path) -> io::Result<AccountsFile> {
 }
 
 fn write_accounts_file(path: &Path, data: &AccountsFile) -> io::Result<()> {
-    if let Some(parent) = path.parent()
-        && !parent.exists()
-    {
-        std::fs::create_dir_all(parent)?;
-    }
-
     let json = serde_json::to_string_pretty(data)?;
-    let mut options = OpenOptions::new();
-    options.truncate(true).write(true).create(true);
+    let parent = path.parent().unwrap_or_else(|| Path::new("."));
+    std::fs::create_dir_all(parent)?;
+    let tmp_file = NamedTempFile::new_in(parent)?;
     #[cfg(unix)]
     {
-        use std::os::unix::fs::OpenOptionsExt;
-        options.mode(0o600);
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(tmp_file.path(), std::fs::Permissions::from_mode(0o600))?;
     }
-    let mut file = options.open(path)?;
-    file.write_all(json.as_bytes())?;
-    file.flush()?;
+    std::fs::write(tmp_file.path(), json)?;
+    tmp_file.persist(path).map_err(|err| err.error)?;
     Ok(())
 }
 
