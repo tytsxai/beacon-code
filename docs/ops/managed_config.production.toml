@@ -1,0 +1,19 @@
+# Production managed config baseline (example).
+# Place at /etc/code/managed_config.toml (Unix) or $CODE_HOME/managed_config.toml.
+
+approval_policy = "untrusted"
+sandbox_mode = "workspace-write"
+auto_upgrade_enabled = false
+
+# Optional: enforce login method for production.
+# forced_login_method = "chatgpt" # or "api"
+
+[sandbox_workspace_write]
+network_access = false
+
+# Optional: Auto Drive guardrails (uncomment if enabling Auto Drive).
+# [auto_drive]
+# token_budget = 100000
+# turn_limit = 50
+# duration_limit_seconds = 3600
+# parallel_instances = 1

@@ -5,16 +5,72 @@ gateway (`code-app-server`) used by MCP clients. There is **no database** in
 this project; state lives under `$CODE_HOME` (default `~/.code`).
 
 ## 1. Pre-Deployment Verification
-- [ ] **CI Pipeline**: The target commit passed JS (format), Rust (fmt/clippy),
-      tests, and `cargo audit` checks.
+- [ ] **CI Pipeline**: The target commit passed JS (format + dependency audit),
+      Rust (fmt/clippy), tests, and `cargo audit` checks.
+    - [ ] If CI does not run JS auditing, run `pnpm audit --prod` (or your SCA tool)
+          before release.
+- [ ] **Readiness sweep**: run `bash scripts/prod_ready_sweep.sh` and confirm the
+      summary reports `result: ok`.
+- [ ] **Config sanity**:
+    - [ ] `beacon doctor` (or `code doctor`) completes without errors.
+    - [ ] `config.toml` and `managed_config.toml` (if used) are valid and in the
+          expected location (`$CODE_HOME` or `/etc/code/managed_config.toml` on Unix).
+- [ ] **Security baseline (required)**:
+    - [ ] Enforce a managed config baseline (recommended for production).
+          Use `docs/ops/managed_config.production.toml` as a starting point:
+      ```toml
+      # /etc/code/managed_config.toml (Unix) or $CODE_HOME/managed_config.toml
+      approval_policy = "untrusted"
+      sandbox_mode = "workspace-write"
+      auto_upgrade_enabled = false
+      forced_login_method = "chatgpt" # or "api"
+
+      [sandbox_workspace_write]
+      network_access = false
+      ```
+    - [ ] For long-running services, set `CODE_SECURE_MODE=1` in the environment.
+- [ ] **Runtime guardrails**:
+    - [ ] Pin `auto_upgrade_enabled` explicitly (recommended: `false` for production).
+    - [ ] If Auto Drive is enabled, set `[auto_drive]` limits for `token_budget`,
+          `turn_limit`, and `duration_limit_seconds`, plus `parallel_instances`.
 - [ ] **Release Inputs**:
     - [ ] All platform binaries were built by `rust-release` (Linux/macOS/Windows).
     - [ ] `beacon-cli/scripts/build_npm_package.py` generated `checksums.json`
           from the release binaries (npm installs verify these checksums).
+- [ ] **Secrets & auth**:
+    - [ ] `OPENAI_API_KEY` / ChatGPT auth is stored in the intended secret store.
+    - [ ] Avoid committing secrets into `config.toml` or `managed_config.toml`.
 - [ ] **State & Backup**:
-    - [ ] If you need to preserve auth/session history, back up
-          `$CODE_HOME/auth.json`, `$CODE_HOME/sessions/`, `$CODE_HOME/log/`, and
-          `$CODE_HOME/logs/`.
+    - [ ] If you need to preserve state, back up at least:
+      - `$CODE_HOME/config.toml`, plus `/etc/code/managed_config.toml` (if used on Unix)
+      - `$CODE_HOME/auth.json`
+      - `$CODE_HOME/auth_accounts.json`
+      - `$CODE_HOME/history.jsonl`
+      - `$CODE_HOME/sessions/`
+      - `$CODE_HOME/log/` and `$CODE_HOME/logs/`
+    - [ ] Optional (if you rely on them): `$CODE_HOME/.env`, `$CODE_HOME/prompts/`,
+          `$CODE_HOME/rules/`, `cache.json`, `$CODE_HOME/checkpoints/`, or `working/` worktrees.
+    - [ ] Use `scripts/code-home-backup.sh` to capture/restore snapshots:
+      - `scripts/code-home-backup.sh backup --out /path/backup.tgz`
+      - `scripts/code-home-backup.sh restore --in /path/backup.tgz --code-home /tmp/code-restore`
+      - Verify `code --version` and `code resume --last` after restore.
+      - Add `--include-worktrees` if you need to preserve `working/` worktrees.
+    - [ ] Housekeeping can prune sessions/worktrees/logs. Defaults: sessions 7d,
+          worktrees 3d, logs 14d, log size 50 MiB. Set `CODE_CLEANUP_*` (or
+          `CODE_CLEANUP_DISABLE=1`) to meet retention requirements.
+    - [ ] Review `docs/ops/production.env.example` for a baseline env template.
+
+## 1.5 Functional & Failure-Mode Validation
+- [ ] **Auth happy path**: login succeeds (ChatGPT or API key), CLI completes a
+      short session, and history writes under `$CODE_HOME`.
+- [ ] **Auth failure path**: invalid/expired credentials return a clear error
+      and do not crash the CLI or app-server.
+- [ ] **Sandbox enforcement**: read-only mode blocks writes, and workspace-write
+      blocks network when `network_access = false`.
+- [ ] **State isolation**: starting a second instance with the same `CODE_HOME`
+      fails fast with a clear error; parallel instances use distinct `CODE_HOME`.
+- [ ] **Auto Drive guardrails** (if enabled): token/turn/time limits halt runs
+      predictably and can be resumed safely.
 
 ## 2. Deployment
 
@@ -24,6 +80,7 @@ this project; state lives under `$CODE_HOME` (default `~/.code`).
 - [ ] **Smoke checks**:
   - `beacon --version`
   - `beacon doctor`
+  - `scripts/ops/healthcheck-cli.sh` (optional automation)
 - [ ] **Container**: `beacon-cli/Dockerfile` is supported for container builds.
   It sets `BEACON_UNSAFE_ALLOW_NO_SANDBOX=1` because the container is expected
   to provide its own isolation.
@@ -32,16 +89,32 @@ this project; state lives under `$CODE_HOME` (default `~/.code`).
   - Required Docker flags: `--cap-add=NET_ADMIN --cap-add=NET_RAW`.
   - Provide allowed domains via `/etc/beacon-code/allowed_domains.txt` or
     `OPENAI_ALLOWED_DOMAINS`.
+  - Ensure `CODE_HOME` is on a persistent volume if state must survive restarts.
+  - IPv6 must be controlled: ensure `ip6tables` is available or disable IPv6 in
+    the container. Do not rely on IPv4-only rules.
+  - Do not run the container without an explicit network policy or firewall.
+  - Runtime guard: the CLI refuses to start when sandboxing is disabled unless
+    `/etc/beacon-code/firewall.ready` exists. Create it by running
+    `beacon-cli/scripts/init_firewall.sh` (or `run_in_container.sh`).
+    Emergency bypass: `BEACON_ALLOW_UNSAFE_NO_FIREWALL=1` (not recommended).
 
 ### 2.2 App-server (optional)
 - [ ] **Binary name**: `code-app-server` (service name can be anything, e.g.
   `beacon-app-server`).
 - [ ] **Runtime**: JSON-RPC over stdin/stdout; run under a supervisor that keeps
   stdin open.
+- [ ] **Access control**: treat stdin/stdout as privileged. Do not expose this
+  service directly on a network socket; the app-server has no built-in auth. If
+  you wrap it with HTTP, add authn/z and restrict clients to trusted callers.
 - [ ] **Liveness**: treat a successful `Initialize` response as a health check.
+  - Optional script: `scripts/ops/healthcheck-app-server.sh /path/to/socket`.
+- [ ] **Runbook**: follow `docs/ops/app-server-runbook.md` for supervisor and
+  socket activation examples.
 - [ ] **Environment**:
   - `RUST_LOG=info` (or your preferred filter)
   - `CODE_SECURE_MODE=1` (hardening; `CODEX_SECURE_MODE` is legacy)
+- [ ] **State isolation**: run one app-server per `CODE_HOME`; use distinct
+  `CODE_HOME` paths if you need parallel instances.
 
 ## 3. Rollback Procedure
 - [ ] **Trigger**: Crash loop, critical regression, or unacceptable error rate.
@@ -50,13 +123,20 @@ this project; state lives under `$CODE_HOME` (default `~/.code`).
   - For Homebrew: reinstall the prior version if applicable.
 - [ ] **App-server rollback**:
   - Redeploy the previous `code-app-server` binary or image.
+  - Restore `$CODE_HOME` from the last known good backup if state loss is part
+    of the incident.
 
 ## 4. Observability
 - [ ] **CLI logs**:
   - `~/.code/log/code-tui.log` (general)
   - `~/.code/logs/critical.log` (errors)
 - [ ] **App-server logs**: stderr (capture via systemd/Docker/K8s).
-- [ ] **OTEL**: configure exporter in `config.toml` when you need metrics.
+- [ ] **OTEL**: configure exporter in `config.toml` for telemetry log export and
+  set `environment = "production"`. Keep `log_user_prompt = false` unless your
+  compliance rules allow prompt capture. Metrics are not emitted by default;
+  use log-based metrics unless you add instrumentation.
+- [ ] **Retention**: confirm housekeeping is enabled and `CODE_CLEANUP_*`
+  matches your ops retention policy.
 
 ## 5. Alerting (only if running app-server)
 - **Critical**: any `"Panic occurred"` log line.

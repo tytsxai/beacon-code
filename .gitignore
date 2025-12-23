@@ -120,6 +120,7 @@ apply_patch/
 
 # generated reports
 reports/
+.prod_ready_logs/
 
 # coverage
 coverage/
