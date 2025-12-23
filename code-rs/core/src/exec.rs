@@ -240,8 +240,8 @@ pub async fn process_exec_tool_call(
 /// We don't have a fully deterministic way to tell if our command failed
 /// because of the sandbox - a command in the user's zshrc file might hit an
 /// error, but the command itself might fail or succeed for other reasons.
-/// For now, we conservatively check for 'command not found' (exit code 127),
-/// and can add additional cases as necessary.
+/// For now, we conservatively treat exit code 126 (found but not executable)
+/// as a sandbox denial signal, and can add additional cases as necessary.
 fn is_likely_sandbox_denied(sandbox_type: SandboxType, exit_code: i32) -> bool {
     if sandbox_type == SandboxType::None {
         return false;
@@ -488,32 +488,32 @@ async fn read_capped<R: AsyncRead + Unpin + Send + 'static>(
             break;
         }
 
-        if let Some(stream) = &stream
-            && emitted_deltas < MAX_EXEC_OUTPUT_DELTAS_PER_CALL
-        {
-            let chunk = tmp[..n].to_vec();
-            let msg = EventMsg::ExecCommandOutputDelta(ExecCommandOutputDeltaEvent {
-                call_id: stream.call_id.clone(),
-                stream: if is_stderr {
-                    ExecOutputStream::Stderr
+        if let Some(stream) = &stream {
+            if emitted_deltas < MAX_EXEC_OUTPUT_DELTAS_PER_CALL {
+                let chunk = tmp[..n].to_vec();
+                let msg = EventMsg::ExecCommandOutputDelta(ExecCommandOutputDeltaEvent {
+                    call_id: stream.call_id.clone(),
+                    stream: if is_stderr {
+                        ExecOutputStream::Stderr
+                    } else {
+                        ExecOutputStream::Stdout
+                    },
+                    chunk: ByteBuf::from(chunk),
+                });
+                let event = if let Some(sess) = &stream.session {
+                    sess.make_event(&stream.sub_id, msg)
                 } else {
-                    ExecOutputStream::Stdout
-                },
-                chunk: ByteBuf::from(chunk),
-            });
-            let event = if let Some(sess) = &stream.session {
-                sess.make_event(&stream.sub_id, msg)
-            } else {
-                Event {
-                    id: stream.sub_id.clone(),
-                    event_seq: 0,
-                    msg,
-                    order: stream.order.clone(),
-                }
-            };
-            #[allow(clippy::let_unit_value)]
-            let _ = stream.tx_event.send(event).await;
-            emitted_deltas += 1;
+                    Event {
+                        id: stream.sub_id.clone(),
+                        event_seq: 0,
+                        msg,
+                        order: stream.order.clone(),
+                    }
+                };
+                #[allow(clippy::let_unit_value)]
+                let _ = stream.tx_event.send(event).await;
+                emitted_deltas += 1;
+            }
 
             // Update tail buffer if present (keep last ~8 KiB)
             if let Some(buf_arc) = &stream.tail_buf {

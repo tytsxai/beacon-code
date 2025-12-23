@@ -388,6 +388,7 @@ pub async fn run_main(mut cli: Cli, code_linux_sandbox_exe: Option<PathBuf>) -> 
             conversation,
             event_processor,
             last_message_file,
+            json_mode,
         )
         .await;
     }
@@ -613,6 +614,14 @@ struct TurnResult {
     error_seen: bool,
 }
 
+fn auto_println(json_mode: bool, args: std::fmt::Arguments<'_>) {
+    if json_mode {
+        eprintln!("{args}");
+    } else {
+        println!("{args}");
+    }
+}
+
 async fn run_auto_drive_session(
     goal: String,
     images: Vec<PathBuf>,
@@ -620,6 +629,7 @@ async fn run_auto_drive_session(
     conversation: Arc<BeaconConversation>,
     mut event_processor: Box<dyn EventProcessor>,
     last_message_path: Option<PathBuf>,
+    json_mode: bool,
 ) -> anyhow::Result<()> {
     let mut final_last_message: Option<String> = None;
     let mut error_seen = false;
@@ -671,10 +681,10 @@ async fn run_auto_drive_session(
     while let Some(event) = auto_rx.recv().await {
         match event {
             AutoCoordinatorEvent::Thinking { delta, .. } => {
-                println!("[auto] {delta}");
+                auto_println(json_mode, format_args!("[auto] {delta}"));
             }
             AutoCoordinatorEvent::Action { message } => {
-                println!("[auto] {message}");
+                auto_println(json_mode, format_args!("[auto] {message}"));
             }
             AutoCoordinatorEvent::TokenMetrics {
                 total_usage,
@@ -682,11 +692,14 @@ async fn run_auto_drive_session(
                 turn_count,
                 ..
             } => {
-                println!(
-                    "[auto] turn {} tokens (turn/total): {}/{}",
-                    turn_count,
-                    last_turn_usage.blended_total(),
-                    total_usage.blended_total()
+                auto_println(
+                    json_mode,
+                    format_args!(
+                        "[auto] turn {} tokens (turn/total): {}/{}",
+                        turn_count,
+                        last_turn_usage.blended_total(),
+                        total_usage.blended_total()
+                    ),
                 );
             }
             AutoCoordinatorEvent::CompactedHistory { conversation, .. } => {
@@ -740,13 +753,13 @@ async fn run_auto_drive_session(
                 let _ = handle.send(AutoCoordinatorCommand::AckDecision { seq });
 
                 if let Some(title) = status_title.filter(|s| !s.trim().is_empty()) {
-                    println!("[auto] status: {title}");
+                    auto_println(json_mode, format_args!("[auto] status: {title}"));
                 }
                 if let Some(sent) = status_sent_to_user.filter(|s| !s.trim().is_empty()) {
-                    println!("[auto] update: {sent}");
+                    auto_println(json_mode, format_args!("[auto] update: {sent}"));
                 }
                 if let Some(goal_text) = maybe_goal.filter(|s| !s.trim().is_empty()) {
-                    println!("[auto] goal: {goal_text}");
+                    auto_println(json_mode, format_args!("[auto] goal: {goal_text}"));
                 }
 
                 let Some(cli_action) = cli else {
@@ -786,25 +799,40 @@ async fn run_auto_drive_session(
             }
             // Enhanced Auto Drive events
             AutoCoordinatorEvent::CheckpointSaved { session_id, turns } => {
-                println!("[auto] checkpoint saved: {session_id} ({turns} turns)");
+                auto_println(
+                    json_mode,
+                    format_args!("[auto] checkpoint saved: {session_id} ({turns} turns)"),
+                );
             }
             AutoCoordinatorEvent::CheckpointRestored { session_id, turns } => {
-                println!("[auto] checkpoint restored: {session_id} ({turns} turns)");
+                auto_println(
+                    json_mode,
+                    format_args!("[auto] checkpoint restored: {session_id} ({turns} turns)"),
+                );
             }
             AutoCoordinatorEvent::DiagnosticAlert {
                 alert_type,
                 message,
             } => {
-                println!("[auto] diagnostic alert ({alert_type:?}): {message}");
+                auto_println(
+                    json_mode,
+                    format_args!("[auto] diagnostic alert ({alert_type:?}): {message}"),
+                );
             }
             AutoCoordinatorEvent::BudgetAlert {
                 alert_type,
                 message,
             } => {
-                println!("[auto] budget alert ({alert_type:?}): {message}");
+                auto_println(
+                    json_mode,
+                    format_args!("[auto] budget alert ({alert_type:?}): {message}"),
+                );
             }
             AutoCoordinatorEvent::InterventionRequired { reason } => {
-                println!("[auto] intervention required: {reason}");
+                auto_println(
+                    json_mode,
+                    format_args!("[auto] intervention required: {reason}"),
+                );
             }
         }
     }
