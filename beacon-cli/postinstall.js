@@ -871,29 +871,72 @@ export async function runPostinstall(options = {}) {
     targetTriple,
     platform() === "win32",
   );
-  const resolvedMainBinaryPath = existsSync(mainBinaryPath)
-    ? mainBinaryPath
-    : existsSync(cachedMainBinaryPath)
-      ? cachedMainBinaryPath
-      : null;
+  const candidatePaths = [
+    { label: "local", path: mainBinaryPath },
+    { label: "cache", path: cachedMainBinaryPath },
+  ].filter(({ path }) => existsSync(path));
+  let resolvedMainBinaryPath = null;
+  const errors = [];
+
+  const validateMainBinary = (path) => {
+    const stats = statSync(path);
+    if (!stats.size) {
+      throw new Error("Main code binary is empty (download likely failed).");
+    }
+    const valid = validateDownloadedBinary(path);
+    if (!valid.ok) {
+      throw new Error(`Main code binary invalid: ${valid.reason}`);
+    }
+    const checksum = verifyBinaryChecksum(path, mainBinary);
+    if (!checksum.ok) {
+      throw new Error(checksum.reason);
+    }
+  };
+
+  for (const candidate of candidatePaths) {
+    try {
+      validateMainBinary(candidate.path);
+      resolvedMainBinaryPath = candidate.path;
+      break;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : `${error}`;
+      errors.push(`${candidate.label}: ${message}`);
+    }
+  }
 
   if (!resolvedMainBinaryPath) {
+    if (!candidatePaths.length) {
+      throw new Error(
+        `Main code binary not found after install (${mainBinary}).`,
+      );
+    }
     throw new Error(
-      `Main code binary not found after install (${mainBinary}).`,
+      `Main code binary invalid (${mainBinary}): ${errors.join("; ")}`,
     );
   }
 
-  const stats = statSync(resolvedMainBinaryPath);
-  if (!stats.size) {
-    throw new Error("Main code binary is empty (download likely failed).");
-  }
-  const valid = validateDownloadedBinary(resolvedMainBinaryPath);
-  if (!valid.ok) {
-    throw new Error(`Main code binary invalid: ${valid.reason}`);
-  }
-  const checksum = verifyBinaryChecksum(resolvedMainBinaryPath, mainBinary);
-  if (!checksum.ok) {
-    throw new Error(checksum.reason);
+  if (resolvedMainBinaryPath === cachedMainBinaryPath) {
+    const detectedWSL = isWSL();
+    const binDirReal = (() => {
+      try {
+        return realpathSync(binDir);
+      } catch {
+        return binDir;
+      }
+    })();
+    const mirrorToLocal = !(
+      isWindows ||
+      (detectedWSL && isPathOnWindowsFs(binDirReal))
+    );
+    if (mirrorToLocal) {
+      try {
+        copyFileSync(cachedMainBinaryPath, mainBinaryPath);
+        chmodSync(mainBinaryPath, 0o755);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : `${error}`;
+        console.warn(`⚠ Failed to mirror main binary: ${message}`);
+      }
+    }
   }
 
   console.log("Setting up main code binary...");
