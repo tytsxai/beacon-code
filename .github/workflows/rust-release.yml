@@ -234,14 +234,22 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
+          set -euo pipefail
+          failures=0
           for tgz in *.tgz; do
             echo "Publishing $tgz..."
-            npm publish "$tgz" --access public || echo "Failed to publish $tgz"
+            if ! npm publish "$tgz" --access public; then
+              echo "Failed to publish $tgz"
+              failures=1
+            fi
           done
+          if [[ "$failures" -ne 0 ]]; then
+            echo "One or more platform packages failed to publish."
+            exit 1
+          fi
 
       - name: Publish main package
         working-directory: dist/beacon-code-staged
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --access public
-
