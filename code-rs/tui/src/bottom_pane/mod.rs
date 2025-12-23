@@ -5,7 +5,6 @@ use crate::app_event_sender::AppEventSender;
 use crate::auto_drive_style::AutoDriveVariant;
 use crate::bottom_pane::chat_composer::ComposerRenderMode;
 use crate::chatwidget::BackgroundOrderTicket;
-use crate::thread_spawner;
 use crate::user_approval_widget::ApprovalRequest;
 use crate::user_approval_widget::UserApprovalWidget;
 use crate::util::buffer::fill_rect;
@@ -20,9 +19,12 @@ use crossterm::event::KeyEventKind;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::widgets::WidgetRef;
+use std::sync::OnceLock;
 use std::sync::atomic::AtomicI64;
 use std::sync::atomic::Ordering;
+use std::sync::mpsc;
 use std::time::Duration;
+use std::time::Instant;
 
 pub(crate) mod agent_editor_view;
 mod approval_modal_view;
@@ -69,6 +71,13 @@ pub(crate) mod review_settings_view;
 pub mod settings_panel;
 
 static ACCESS_HINT_TIMER_ID: AtomicI64 = AtomicI64::new(0);
+static ACCESS_HINT_SCHEDULER: OnceLock<mpsc::Sender<AccessHintSchedule>> = OnceLock::new();
+
+struct AccessHintSchedule {
+    timer_id: i64,
+    deadline: Instant,
+    tx: AppEventSender,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum CancellationEvent {
@@ -159,33 +168,66 @@ pub(crate) struct BottomPaneParams {
     pub(crate) auto_drive_variant: AutoDriveVariant,
 }
 
-fn schedule_access_hint_redraw(
-    label: &'static str,
-    dur: Duration,
-    tx: AppEventSender,
-    fallback_tx: AppEventSender,
-) {
+fn schedule_access_hint_redraw(dur: Duration, tx: AppEventSender) {
     let timer_id = ACCESS_HINT_TIMER_ID
         .fetch_add(1, Ordering::SeqCst)
         .saturating_add(1);
     let delayed = dur + Duration::from_millis(120);
+    let deadline = Instant::now() + delayed;
 
-    if thread_spawner::spawn_lightweight(label, move || {
-        std::thread::sleep(delayed);
-        if ACCESS_HINT_TIMER_ID.load(Ordering::SeqCst) == timer_id {
-            tx.send(AppEvent::RequestRedraw);
+    let schedule = AccessHintSchedule {
+        timer_id,
+        deadline,
+        tx,
+    };
+    let _ = access_hint_scheduler().send(schedule);
+}
+
+fn access_hint_scheduler() -> mpsc::Sender<AccessHintSchedule> {
+    ACCESS_HINT_SCHEDULER
+        .get_or_init(|| {
+            let (tx, rx) = mpsc::channel();
+            let _ = std::thread::Builder::new()
+                .name("access-hint-scheduler".to_string())
+                .spawn(move || {
+                    run_access_hint_scheduler(rx);
+                });
+            tx
+        })
+        .clone()
+}
+
+fn run_access_hint_scheduler(rx: mpsc::Receiver<AccessHintSchedule>) {
+    let mut pending: Option<AccessHintSchedule> = None;
+    loop {
+        let next = match pending.take() {
+            Some(schedule) => schedule,
+            None => match rx.recv() {
+                Ok(schedule) => schedule,
+                Err(_) => return,
+            },
+        };
+
+        let now = Instant::now();
+        if next.deadline <= now {
+            send_access_hint_if_current(next);
+            continue;
         }
-    })
-    .is_none()
-    {
-        let _ = std::thread::Builder::new()
-            .name(label.to_string())
-            .spawn(move || {
-                std::thread::sleep(delayed);
-                if ACCESS_HINT_TIMER_ID.load(Ordering::SeqCst) == timer_id {
-                    fallback_tx.send(AppEvent::RequestRedraw);
-                }
-            });
+
+        let timeout = next.deadline - now;
+        match rx.recv_timeout(timeout) {
+            Ok(schedule) => pending = Some(schedule),
+            Err(mpsc::RecvTimeoutError::Timeout) => {
+                send_access_hint_if_current(next);
+            }
+            Err(mpsc::RecvTimeoutError::Disconnected) => return,
+        }
+    }
+}
+
+fn send_access_hint_if_current(schedule: AccessHintSchedule) {
+    if ACCESS_HINT_TIMER_ID.load(Ordering::SeqCst) == schedule.timer_id {
+        schedule.tx.send_quietly(AppEvent::RequestRedraw);
     }
 }
 
@@ -1068,8 +1110,7 @@ impl BottomPane<'_> {
         let dur = Duration::from_secs(4);
         self.composer.set_access_mode_hint_for(dur);
         let tx = self.app_event_tx.clone();
-        let fallback_tx = self.app_event_tx.clone();
-        schedule_access_hint_redraw("access-hint", dur, tx, fallback_tx);
+        schedule_access_hint_redraw(dur, tx);
         self.request_redraw();
     }
 
@@ -1077,8 +1118,7 @@ impl BottomPane<'_> {
         self.composer.set_access_mode_label_ephemeral(label, dur);
         // Schedule a redraw after expiry without blocking other scheduled frames.
         let tx = self.app_event_tx.clone();
-        let fallback_tx = self.app_event_tx.clone();
-        schedule_access_hint_redraw("access-hint-ephemeral", dur, tx, fallback_tx);
+        schedule_access_hint_redraw(dur, tx);
         self.request_redraw();
     }
 

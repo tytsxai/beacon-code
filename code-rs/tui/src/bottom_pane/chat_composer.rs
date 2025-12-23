@@ -317,7 +317,8 @@ impl ChatComposer {
                             thread::sleep(sleep_dur);
                         } else {
                             // If we're late (system busy), request a redraw immediately.
-                            app_event_tx_clone.send(crate::app_event::AppEvent::RequestRedraw);
+                            app_event_tx_clone
+                                .send_quietly(crate::app_event::AppEvent::RequestRedraw);
                             // Step the schedule forward by whole periods to avoid
                             // bursty catch‑up redraws.
                             let mut target = next;
@@ -335,7 +336,7 @@ impl ChatComposer {
                 .is_none()
                 {
                     animation_flag.store(false, Ordering::Relaxed);
-                    fallback_tx.send(crate::app_event::AppEvent::RequestRedraw);
+                    fallback_tx.send_quietly(crate::app_event::AppEvent::RequestRedraw);
                 } else {
                     self.animation_running = Some(animation_flag);
                 }

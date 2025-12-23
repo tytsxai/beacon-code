@@ -155,7 +155,7 @@ impl FrameTimer {
                 state.deadlines.clear();
                 drop(state);
                 for _ in 0..drained.max(1) {
-                    tx.send(AppEvent::RequestRedraw);
+                    tx.send_quietly(AppEvent::RequestRedraw);
                 }
                 tracing::warn!(
                     drained_deadlines = drained,
@@ -180,7 +180,7 @@ impl FrameTimer {
             if deadline <= now {
                 state.deadlines.pop();
                 drop(state);
-                tx.send(AppEvent::RequestRedraw);
+                tx.send_quietly(AppEvent::RequestRedraw);
                 state = self.state.lock().unwrap();
                 continue;
             }
@@ -1269,7 +1269,7 @@ impl App<'_> {
                         if thread_spawner::spawn_lightweight("commit-anim", move || {
                             while running_for_thread.load(Ordering::Relaxed) {
                                 thread::sleep(Duration::from_millis(tick_ms));
-                                tx.send(AppEvent::CommitTick);
+                                tx.send_quietly(AppEvent::CommitTick);
                             }
                         })
                         .is_none()

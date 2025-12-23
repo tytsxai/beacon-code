@@ -44,19 +44,7 @@ impl AppEventSender {
         if !matches!(event, AppEvent::BeaconOp(_)) {
             session_log::log_inbound_app_event(&event);
         }
-        let is_high = matches!(
-            event,
-            AppEvent::KeyEvent(_)
-                | AppEvent::MouseEvent(_)
-                | AppEvent::Paste(_)
-                | AppEvent::RequestRedraw
-                | AppEvent::Redraw
-                | AppEvent::ExitRequest
-                | AppEvent::SetTerminalTitle { .. }
-                | AppEvent::EmitTuiNotification { .. }
-        );
-
-        let tx = if is_high {
+        let tx = if is_high_priority(&event) {
             &self.high_tx
         } else {
             &self.bulk_tx
@@ -64,10 +52,23 @@ impl AppEventSender {
         match tx.send(event) {
             Ok(()) => true,
             Err(e) => {
-                tracing::error!("failed to send event: {e}");
+                tracing::debug!("failed to send event: {e}");
                 false
             }
         }
+    }
+
+    /// Send an event without logging if the channel is closed.
+    pub(crate) fn send_quietly(&self, event: AppEvent) -> bool {
+        if !matches!(event, AppEvent::BeaconOp(_)) {
+            session_log::log_inbound_app_event(&event);
+        }
+        let tx = if is_high_priority(&event) {
+            &self.high_tx
+        } else {
+            &self.bulk_tx
+        };
+        tx.send(event).is_ok()
     }
 
     pub(crate) fn send_background_event_with_placement_and_order(
@@ -120,4 +121,18 @@ impl AppEventSender {
             Some(order),
         );
     }
+}
+
+fn is_high_priority(event: &AppEvent) -> bool {
+    matches!(
+        event,
+        AppEvent::KeyEvent(_)
+            | AppEvent::MouseEvent(_)
+            | AppEvent::Paste(_)
+            | AppEvent::RequestRedraw
+            | AppEvent::Redraw
+            | AppEvent::ExitRequest
+            | AppEvent::SetTerminalTitle { .. }
+            | AppEvent::EmitTuiNotification { .. }
+    )
 }

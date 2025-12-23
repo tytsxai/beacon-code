@@ -12026,11 +12026,12 @@ impl ChatWidget<'_> {
                             let fallback_tx = tx.clone();
                             if thread_spawner::spawn_lightweight("exec-flush", move || {
                                 std::thread::sleep(std::time::Duration::from_millis(120));
-                                tx.send(crate::app_event::AppEvent::FlushPendingExecEnds);
+                                tx.send_quietly(crate::app_event::AppEvent::FlushPendingExecEnds);
                             })
                             .is_none()
                             {
-                                fallback_tx.send(crate::app_event::AppEvent::FlushPendingExecEnds);
+                                fallback_tx
+                                    .send_quietly(crate::app_event::AppEvent::FlushPendingExecEnds);
                             }
                         }
                     },
@@ -16140,7 +16141,7 @@ Have we met every part of this goal and is there no further work to do?"#
             while remaining > 0 {
                 std::thread::sleep(std::time::Duration::from_secs(1));
                 remaining -= 1;
-                if !tx.send_with_result(AppEvent::AutoCoordinatorCountdown {
+                if !tx.send_quietly(AppEvent::AutoCoordinatorCountdown {
                     countdown_id,
                     seconds_left: remaining,
                 }) {
@@ -16150,7 +16151,7 @@ Have we met every part of this goal and is there no further work to do?"#
         })
         .is_none()
         {
-            fallback_tx.send(AppEvent::AutoCoordinatorCountdown {
+            fallback_tx.send_quietly(AppEvent::AutoCoordinatorCountdown {
                 countdown_id,
                 seconds_left: 0,
             });
