@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   less \
   man-db \
   procps \
+  sudo \
   unzip \
   ripgrep \
   zsh \
@@ -50,11 +51,23 @@ RUN npm install -g beacon-code.tgz \
 # down, therefore instruct Beacon Code CLI to allow running without sandboxing.
 # Ensure you enforce container-level isolation (e.g., init_firewall.sh).
 ENV BEACON_UNSAFE_ALLOW_NO_SANDBOX=1
+ENV BEACON_CONTAINER=1
 
 # Copy and set up firewall script as root.
 USER root
 COPY scripts/init_firewall.sh /usr/local/bin/
 RUN chmod 500 /usr/local/bin/init_firewall.sh
 
+# Allow node user to invoke the firewall init script via sudo without a password.
+RUN echo 'Defaults:node !requiretty' > /etc/sudoers.d/beacon-firewall && \
+  echo 'node ALL=(root) NOPASSWD: /usr/local/bin/init_firewall.sh' >> /etc/sudoers.d/beacon-firewall && \
+  chmod 440 /etc/sudoers.d/beacon-firewall
+
+# Install container entrypoint to enforce firewall initialization.
+COPY scripts/container-entrypoint.sh /usr/local/bin/
+RUN chmod 555 /usr/local/bin/container-entrypoint.sh
+
 # Drop back to non-root.
 USER node
+
+ENTRYPOINT ["/usr/local/bin/container-entrypoint.sh"]

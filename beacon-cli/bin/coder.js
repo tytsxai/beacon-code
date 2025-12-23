@@ -588,6 +588,28 @@ if (!checksum.ok) {
   process.exit(1);
 }
 
+const FIREWALL_READY_FILE = "/etc/beacon-code/firewall.ready";
+const requiresContainerFirewall =
+  process.env.BEACON_UNSAFE_ALLOW_NO_SANDBOX === "1" &&
+  process.env.BEACON_CONTAINER === "1" &&
+  process.env.BEACON_ALLOW_UNSAFE_NO_FIREWALL !== "1";
+
+if (requiresContainerFirewall && !existsSync(FIREWALL_READY_FILE)) {
+  console.error(
+    "Container hardening is required when BEACON_UNSAFE_ALLOW_NO_SANDBOX=1.",
+  );
+  console.error(
+    `Initialize the firewall first (missing ${FIREWALL_READY_FILE}).`,
+  );
+  console.error(
+    "Recommended: use beacon-cli/scripts/run_in_container.sh or run /usr/local/bin/init_firewall.sh as root.",
+  );
+  console.error(
+    "To bypass (not recommended), set BEACON_ALLOW_UNSAFE_NO_FIREWALL=1.",
+  );
+  process.exit(1);
+}
+
 // If running under npx/npm, emit a concise notice about which binary path is used
 try {
   const ua = process.env.npm_config_user_agent || "";

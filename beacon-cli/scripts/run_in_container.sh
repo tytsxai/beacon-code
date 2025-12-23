@@ -7,11 +7,15 @@ set -e
 #   Examples:
 #     ./run_in_container.sh --work_dir project/code "ls -la"
 #     ./run_in_container.sh "echo Hello, world!"
+#
+#   Optional env:
+#     CODE_HOME=/path/to/.code  # Persist auth/sessions/logs on the host
 
 # Default the work directory to WORKSPACE_ROOT_DIR if not provided.
 WORK_DIR="${WORKSPACE_ROOT_DIR:-$(pwd)}"
 # Default allowed domains - can be overridden with OPENAI_ALLOWED_DOMAINS env var
 OPENAI_ALLOWED_DOMAINS="${OPENAI_ALLOWED_DOMAINS:-api.openai.com}"
+CODE_HOME_DIR="${CODE_HOME:-$HOME/.code}"
 
 # Parse optional flag.
 if [ "$1" = "--work_dir" ]; then
@@ -24,6 +28,8 @@ if [ "$1" = "--work_dir" ]; then
 fi
 
 WORK_DIR=$(realpath "$WORK_DIR")
+mkdir -p "$CODE_HOME_DIR"
+CODE_HOME_DIR=$(realpath "$CODE_HOME_DIR")
 
 # Generate a unique container name based on the normalized work directory
 CONTAINER_NAME="beacon_$(echo "$WORK_DIR" | sed 's/\//_/g' | sed 's/[^a-zA-Z0-9_-]//g')"
@@ -52,6 +58,13 @@ if [ -z "$OPENAI_ALLOWED_DOMAINS" ]; then
   echo "Error: OPENAI_ALLOWED_DOMAINS is empty."
   exit 1
 fi
+for domain in $OPENAI_ALLOWED_DOMAINS; do
+  # Validate domain format to prevent injection
+  if [[ ! "$domain" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
+    echo "Error: Invalid domain format: $domain"
+    exit 1
+  fi
+done
 
 # Kill any existing container for the working directory using cleanup(), centralizing removal logic.
 cleanup
@@ -59,31 +72,37 @@ cleanup
 # Run the container with the specified directory mounted at the same path inside the container.
 docker run --name "$CONTAINER_NAME" -d \
   -e OPENAI_API_KEY \
+  -e OPENAI_ALLOWED_DOMAINS="$OPENAI_ALLOWED_DOMAINS" \
+  -e CODE_HOME=/home/node/.code \
   --cap-add=NET_ADMIN \
   --cap-add=NET_RAW \
   -v "$WORK_DIR:/app$WORK_DIR" \
+  -v "$CODE_HOME_DIR:/home/node/.code" \
   beacon-code \
   sleep infinity
 
-# Write the allowed domains to a file in the container
-docker exec --user root "$CONTAINER_NAME" bash -c "mkdir -p /etc/beacon-code"
-for domain in $OPENAI_ALLOWED_DOMAINS; do
-  # Validate domain format to prevent injection
-  if [[ ! "$domain" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
-    echo "Error: Invalid domain format: $domain"
+# Wait for the entrypoint to finish firewall initialization.
+READY_FILE="/etc/beacon-code/firewall.ready"
+max_attempts=200
+attempt=0
+while true; do
+  if docker exec "$CONTAINER_NAME" test -f "$READY_FILE"; then
+    break
+  fi
+  running="$(docker inspect -f '{{.State.Running}}' "$CONTAINER_NAME" 2>/dev/null || echo false)"
+  if [ "$running" != "true" ]; then
+    echo "Error: container exited before firewall initialization."
+    docker logs "$CONTAINER_NAME" || true
     exit 1
   fi
-  echo "$domain" | docker exec --user root -i "$CONTAINER_NAME" bash -c "cat >> /etc/beacon-code/allowed_domains.txt"
+  attempt=$((attempt + 1))
+  if [ "$attempt" -ge "$max_attempts" ]; then
+    echo "Error: firewall initialization timed out."
+    docker logs "$CONTAINER_NAME" || true
+    exit 1
+  fi
+  sleep 0.1
 done
-
-# Set proper permissions on the domains file
-docker exec --user root "$CONTAINER_NAME" bash -c "chmod 444 /etc/beacon-code/allowed_domains.txt && chown root:root /etc/beacon-code/allowed_domains.txt"
-
-# Initialize the firewall inside the container as root user
-docker exec --user root "$CONTAINER_NAME" bash -c "/usr/local/bin/init_firewall.sh"
-
-# Remove the firewall script after running it
-docker exec --user root "$CONTAINER_NAME" bash -c "rm -f /usr/local/bin/init_firewall.sh"
 
 # Execute the provided command in the container, ensuring it runs in the work directory.
 # We use a parameterized bash command to safely handle the command and directory.
