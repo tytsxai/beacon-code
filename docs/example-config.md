@@ -7,7 +7,7 @@ Use this example configuration as a starting point. For an explanation of each f
 #
 # This file lists all keys Beacon reads from config.toml, their default values,
 # and concise explanations. Values here mirror the effective defaults compiled
-# into the CLI. Adjust as needed.
+# into the CLI unless noted; some defaults (like `model`) depend on auth.
 #
 # Notes
 # - Root keys must appear before tables in TOML.
@@ -18,11 +18,12 @@ Use this example configuration as a starting point. For an explanation of each f
 # Core Model Selection
 ################################################################################
 
-# Primary model used by Beacon. Default: "gpt-5.2" on all platforms.
-model = "gpt-5.2"
+# Primary model used by Beacon. Default: "gpt-5.1-code-max" with ChatGPT auth;
+# "gpt-5.1-code" with API keys.
+model = "gpt-5.1-code-max"
 
-# Model used by the /review feature (code reviews). Default: "gpt-5.2".
-review_model = "gpt-5.2"
+# Model used by the /review feature (code reviews). Default: "gpt-5.1-code-mini".
+review_model = "gpt-5.1-code-mini"
 
 # Provider id selected from [model_providers]. Default: "openai".
 model_provider = "openai"

@@ -10,7 +10,7 @@ Code CLI 支持在输入框开头输入的斜杠命令，用于快捷操作、�
 
 ## 导航与会话
 
-- `/browser`：打开内置浏览器。
+- `/browser`：打开内置浏览器；支持 `/browser <url>`、`/browser status`、`/browser off`、`/browser fullpage [on|off]`、`/browser config <key> <value>`。
 - `/chrome`：连接到你的 Chrome 浏览器。
 - `/new`：在对话中开始新聊天。
 - `/resume`：恢复此文件夹的过去会话。

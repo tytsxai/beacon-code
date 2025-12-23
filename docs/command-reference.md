@@ -19,7 +19,7 @@ code exec "任务描述"          # 非交互模式执行
 | `-m, --model <name>` | 指定模型 | `code -m gpt-5.1` |
 | `-a, --ask-for-approval` | 审批策略 | `code -a never` |
 | `--read-only` | 只读模式 | `code --read-only "..."` |
-| `--full-auto` | Auto 预设（`workspace-write` + `on-failure`，默认禁网） | `code exec --full-auto "..."` |
+| `--full-auto` | Auto 预设（交互：`workspace-write` + `on-failure`；exec：审批始终 `never`，默认禁网） | `code exec --full-auto "..."` |
 | `--sandbox <mode>` | 沙箱级别 | `code --sandbox danger-full-access` |
 | `-i, --image <path>` | 附加图片 | `code -i img.png "解释这个"` |
 | `-C, --cd <dir>` | 指定工作目录 | `code -C /path/to/project` |
@@ -56,6 +56,10 @@ code exec "任务描述"          # 非交互模式执行
 |------|------|
 | `/browser` | 打开内置浏览器 |
 | `/browser <url>` | 在内置浏览器打开 URL |
+| `/browser status` | 查看当前浏览器状态 |
+| `/browser off` | 关闭内置浏览器 |
+| `/browser fullpage [on\|off]` | 切换全页截图模式 |
+| `/browser config <key> <value>` | 更新浏览器配置（viewport、segments_max） |
 | `/chrome` | 连接外部 Chrome（自动检测端口） |
 | `/chrome 9222` | 连接指定端口的 Chrome |
 

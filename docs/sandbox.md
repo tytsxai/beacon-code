@@ -30,9 +30,10 @@
 | 安全只读浏览                       | `--sandbox read-only --ask-for-approval on-request`                                       | Code 可读文件并回答问题；修改、运行命令或联网需审批。                                                            |
 | 只读的非交互（CI）                 | `--sandbox read-only --ask-for-approval never`                                            | 仅读取，从不升级。                                                                                               |
 | 允许改动仓库，风险时再询问         | `--sandbox workspace-write --ask-for-approval on-request`                                 | 工作区内可读写并运行命令；工作区外或联网需审批。                                                                  |
-| Auto 预设                          | `--full-auto`（等同 `--sandbox workspace-write` + `--ask-for-approval on-failure`）       | 工作区内可读写并运行；沙箱命令失败或需升级时才请求审批。                                                          |
+| Auto 预设                          | `--full-auto`（交互式：等同 `--sandbox workspace-write` + `--ask-for-approval on-failure`；exec：审批固定 `never`） | 工作区内可读写并运行；沙箱命令失败或需升级时才请求审批。                                                          |
 | YOLO（不推荐）                     | `--dangerously-bypass-approvals-and-sandbox`（别名 `--yolo`）                             | 无沙箱、无提示。                                                                                                  |
 
+> 注意：`code exec` 无交互，审批策略始终为 `never`，`--full-auto` 只改变 sandbox。
 > 注意：在 `workspace-write` 下默认禁用网络，除非在配置中开启（`[sandbox_workspace_write].network_access = true`）。
 
 #### 在 `config.toml` 微调

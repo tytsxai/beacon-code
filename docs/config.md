@@ -80,7 +80,7 @@ Notes:
 The model that Beacon should use.
 
 ```toml
-model = "gpt-5.2"  # overrides the default ("gpt-5.2" across platforms)
+model = "gpt-5.2"  # overrides the default (ChatGPT auth: "gpt-5.1-code-max"; API key: "gpt-5.1-code")
 ```
 
 ### model_providers
@@ -840,7 +840,7 @@ Users can specify config values at multiple levels. Order of precedence is as fo
 1. custom command-line argument, e.g., `--model o3`
 2. as part of a profile, where the `--profile` is specified via a CLI (or in the config file itself)
 3. as an entry in `config.toml`, e.g., `model = "o3"`
-4. the default value that comes with Beacon CLI (i.e., Beacon CLI defaults to `gpt-5.1-code-max`)
+4. the default value that comes with Beacon CLI (ChatGPT auth: `gpt-5.1-code-max`; API key: `gpt-5.1-code`)
 
 ### history
 
