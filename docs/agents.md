@@ -27,13 +27,13 @@ instructions = "添加到该智能体提示的前言"
 ```toml
 [[subagents.commands]]
 name = "plan"                     # 斜杠命令（/plan、/solve、/code 或自定义）
-read-only = true                  # plan/solve 默认 true，code 默认 false
+read-only = true                  # 可选；省略则沿用默认（plan/solve=true，code=false）
 agents = ["code-gpt-5.1-code-max", "code-gpt-5.1-code-mini"]  # 为空则回退到已启用智能体或内置列表
 orchestrator-instructions = "编排器在启动智能体前的指导"
 agent-instructions = "附加到每个子智能体提示的前言"
 ```
 - `name`：创建/覆盖的斜杠命令。
-- `read-only`：为 true 时强制子智能体只读。
+- `read-only`：为 true 时强制子智能体只读；省略则沿用内置默认。
 - `agents`：显式列表；为空 → 启用的 `[[agents]]`；若未配置则使用内置 roster。
 - `orchestrator-instructions`：在发出 `agent.create` 前附加到 Code 侧提示。
 - `agent-instructions`：附加到每个子智能体提示。

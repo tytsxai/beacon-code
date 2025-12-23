@@ -362,10 +362,10 @@ pub struct SubagentCommandConfig {
     /// Name of the command (e.g., "plan", "solve", "code", or custom)
     pub name: String,
 
-    /// Whether agents launched for this command should run in read-only mode
-    /// Defaults: plan/solve=true, code=false (applied if not specified here)
-    #[serde(default)]
-    pub read_only: bool,
+    /// Whether agents launched for this command should run in read-only mode.
+    /// When unset, defaults to plan/solve=true and code=false.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub read_only: Option<bool>,
 
     /// Agent names to enable for this command. If empty, falls back to
     /// enabled agents from `[[agents]]`, or built-in defaults.

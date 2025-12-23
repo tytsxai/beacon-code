@@ -75,7 +75,9 @@ impl SubagentEditorView {
         // Seed from existing config if present
         if let Some(cfg) = existing.iter().find(|c| c.name.eq_ignore_ascii_case(name)) {
             me.name_field.set_text(&cfg.name);
-            me.read_only = cfg.read_only;
+            me.read_only = cfg
+                .read_only
+                .unwrap_or_else(|| code_core::slash_commands::default_read_only_for(&cfg.name));
             me.orch_field
                 .set_text(&cfg.orchestrator_instructions.clone().unwrap_or_default());
             let set: std::collections::HashSet<String> = cfg.agents.iter().cloned().collect();
@@ -133,7 +135,7 @@ impl SubagentEditorView {
         };
         let cfg = code_core::config_types::SubagentCommandConfig {
             name: self.name_field.text().to_string(),
-            read_only: self.read_only,
+            read_only: Some(self.read_only),
             agents,
             orchestrator_instructions: {
                 let t = self.orch_field.text().trim().to_string();

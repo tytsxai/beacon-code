@@ -113,7 +113,7 @@ pub fn format_subagent_command(
 
     let (read_only, models, orch_extra, agent_extra) = match user_cmd {
         Some(cfg) => (
-            cfg.read_only, // User-provided read_only (defaults to false unless set)
+            cfg.read_only.unwrap_or(read_only_default),
             resolve_models(&cfg.agents, agents),
             cfg.orchestrator_instructions,
             cfg.agent_instructions,
@@ -387,5 +387,31 @@ mod tests {
         let prompt = result.unwrap();
         assert!(prompt.contains("code-gpt-5.1-code-max"));
         assert!(!prompt.contains("code-gpt-5.1-code-mini"));
+    }
+
+    #[test]
+    fn test_subagent_read_only_defaults() {
+        let commands = vec![
+            SubagentCommandConfig {
+                name: "plan".to_string(),
+                read_only: None,
+                agents: Vec::new(),
+                orchestrator_instructions: None,
+                agent_instructions: None,
+            },
+            SubagentCommandConfig {
+                name: "code".to_string(),
+                read_only: None,
+                agents: Vec::new(),
+                orchestrator_instructions: None,
+                agent_instructions: None,
+            },
+        ];
+
+        let plan = format_subagent_command("plan", "test task", None, Some(&commands));
+        let code = format_subagent_command("code", "test task", None, Some(&commands));
+
+        assert!(plan.read_only);
+        assert!(!code.read_only);
     }
 }

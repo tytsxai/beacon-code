@@ -13691,7 +13691,10 @@ impl ChatWidget<'_> {
             ));
         } else {
             for cmd in &self.config.subagent_commands {
-                let mode = if cmd.read_only { "read-only" } else { "write" };
+                let read_only = cmd
+                    .read_only
+                    .unwrap_or_else(|| code_core::slash_commands::default_read_only_for(&cmd.name));
+                let mode = if read_only { "read-only" } else { "write" };
                 let agents = if cmd.agents.is_empty() {
                     "<inherit>".to_string()
                 } else {

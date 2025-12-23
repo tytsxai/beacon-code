@@ -135,7 +135,11 @@ pub async fn upsert_subagent_command(code_home: &Path, cmd: &SubagentCommandConf
             if same {
                 // Update fields
                 tbl["name"] = toml_edit::value(cmd.name.clone());
-                tbl["read-only"] = toml_edit::value(cmd.read_only);
+                if let Some(read_only) = cmd.read_only {
+                    tbl["read-only"] = toml_edit::value(read_only);
+                } else {
+                    tbl.remove("read-only");
+                }
                 let agents = toml_edit::Array::from_iter(cmd.agents.iter().cloned());
                 tbl["agents"] = toml_edit::Item::Value(toml_edit::Value::Array(agents));
                 if let Some(s) = &cmd.orchestrator_instructions {
@@ -157,7 +161,9 @@ pub async fn upsert_subagent_command(code_home: &Path, cmd: &SubagentCommandConf
         let mut t = toml_edit::Table::new();
         t.set_implicit(true);
         t["name"] = toml_edit::value(cmd.name.clone());
-        t["read-only"] = toml_edit::value(cmd.read_only);
+        if let Some(read_only) = cmd.read_only {
+            t["read-only"] = toml_edit::value(read_only);
+        }
         let agents = toml_edit::Array::from_iter(cmd.agents.iter().cloned());
         t["agents"] = toml_edit::Item::Value(toml_edit::Value::Array(agents));
         if let Some(s) = &cmd.orchestrator_instructions {
