@@ -106,8 +106,8 @@ exclude_slash_tmp = false
 [shell_environment_policy]
 # inherit: all (default) | core | none
 inherit = "all"
-# Skip default excludes for names containing KEY/SECRET/TOKEN (case-insensitive). Default: true
-ignore_default_excludes = true
+# Skip default excludes for names containing KEY/SECRET/TOKEN (case-insensitive). Default: false
+ignore_default_excludes = false
 # Case-insensitive glob patterns to remove (e.g., "AWS_*", "AZURE_*"). Default: []
 exclude = []
 # Explicit key/value overrides (always win). Default: {}
@@ -134,8 +134,11 @@ file_opener = "vscode"
 # UI, Notifications, and Misc
 ################################################################################
 
+# Automatically install updates on startup. Default: false
+auto_upgrade_enabled = false
+
 [tui]
-# Desktop notifications from the TUI: boolean or filtered list. Default: true
+# Desktop notifications from the TUI: boolean or filtered list. Default: false
 # Examples: false | ["agent-turn-complete", "approval-requested"]
 notifications = false
 
@@ -167,9 +170,6 @@ windows_wsl_setup_acknowledged = false
 # Authentication & Login
 ################################################################################
 
-# Where to persist CLI login credentials: file (default) | keyring | auto
-cli_auth_credentials_store = "file"
-
 # Base URL for ChatGPT auth flow (not OpenAI API). Default:
 chatgpt_base_url = "https://chatgpt.com/backend-api/"
 
@@ -179,9 +179,6 @@ chatgpt_base_url = "https://chatgpt.com/backend-api/"
 # Force login mechanism when Beacon would normally auto-select. Default: unset.
 # Allowed values: chatgpt | api
 # forced_login_method = "chatgpt"
-
-# Preferred store for MCP OAuth credentials: auto (default) | file | keyring
-mcp_oauth_credentials_store = "auto"
 
 ################################################################################
 # Project Documentation Controls

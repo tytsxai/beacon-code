@@ -17,7 +17,7 @@ sandbox_mode = "workspace-write"       # 仅允许当前工作区可写，限制
 ui_locale = "en-US"                    # 默认英文；设为 "zh-CN" 可切换为中文
 
 # 性能设置 (Performance Settings)
-enable_compaction = true               # 自动压缩长对话
+# model_auto_compact_token_limit = 0   # 可选：覆盖自动压缩阈值（0 表示禁用；默认按模型）
 disable_response_storage = true        # 不存储响应（节省空间）
 
 # Auto Drive 设置 (Auto Drive Settings)
@@ -126,7 +126,7 @@ set = { EDITOR = "vim", PAGER = "less" }
 # History Configuration
 [history]
 persistence = "save-all"
-max-bytes = 10485760  # 10MB
+max_bytes = 10485760  # 10MB
 
 # Notice acknowledgement flags
 [notice]

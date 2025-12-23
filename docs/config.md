@@ -397,11 +397,12 @@ You can further customize how Beacon runs at the command line using the `--ask-f
 Beacon spawns subprocesses (e.g. when executing a `local_shell` tool-call suggested by the assistant). By default it now passes **your full environment** to those subprocesses. You can tune this behavior via the **`shell_environment_policy`** block in `config.toml`:
 
 ```toml
+# Example:
 [shell_environment_policy]
 # inherit can be "all" (default), "core", or "none"
 inherit = "core"
 # set to true to *skip* the filter for `"*KEY*"`, `"*SECRET*"`, and `"*TOKEN*"`
-ignore_default_excludes = true
+ignore_default_excludes = false
 # exclude patterns (case-insensitive globs)
 exclude = ["AWS_*", "AZURE_*"]
 # force-set / override values
@@ -413,7 +414,7 @@ include_only = ["PATH", "HOME"]
 | Field                     | Type                 | Default | Description                                                                                                                                     |
 | ------------------------- | -------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | `inherit`                 | string               | `all`   | Starting template for the environment:<br>`all` (clone full parent env), `core` (`HOME`, `PATH`, `USER`, …), or `none` (start empty).           |
-| `ignore_default_excludes` | boolean              | `true`  | When `false`, Beacon removes any var whose **name** contains `KEY`, `SECRET`, or `TOKEN` (case-insensitive) before other rules run.              |
+| `ignore_default_excludes` | boolean              | `false` | When `false`, Beacon removes any var whose **name** contains `KEY`, `SECRET`, or `TOKEN` (case-insensitive) before other rules run.              |
 | `exclude`                 | array<string>        | `[]`    | Case-insensitive glob patterns to drop after the default filter.<br>Examples: `"AWS_*"`, `"AZURE_*"`.                                           |
 | `set`                     | table<string,string> | `{}`    | Explicit key/value overrides or additions – always win over inherited values.                                                                   |
 | `include_only`            | array<string>        | `[]`    | If non-empty, a whitelist of patterns; only variables that match _one_ pattern survive the final step. (Generally used with `inherit = "all"`.) |
@@ -896,7 +897,7 @@ Options that are specific to the TUI.
 ```toml
 [tui]
 # Send desktop notifications when approvals are required or a turn completes.
-# Defaults to true.
+# Defaults to false; set to true to enable.
 notifications = true
 
 # You can optionally filter to specific notification types.
@@ -931,21 +932,10 @@ If the active credentials don't match the config, the user will be logged out an
 
 If `forced_chatgpt_workspace_id` is set but `forced_login_method` is not set, API key login will still work.
 
-### Control where login credentials are stored
+### Credential storage
 
-```toml
-cli_auth_credentials_store = "keyring"
-```
-
-Valid values:
-
-- `file` (default) – Store credentials in `auth.json` under `$CODE_HOME`.
-- `keyring` – Store credentials in the operating system keyring via the [`keyring` crate](https://crates.io/crates/keyring); the CLI reports an error if secure storage is unavailable. Backends by OS:
-  - macOS: macOS Keychain
-  - Windows: Windows Credential Manager
-  - Linux: DBus‑based Secret Service, the kernel keyutils, or a combination
-  - FreeBSD/OpenBSD: DBus‑based Secret Service
-- `auto` – Save credentials to the operating system keyring when available; otherwise, fall back to `auth.json` under `$CODE_HOME`.
+Beacon stores credentials in `$CODE_HOME/auth.json` (created with mode `0600` on
+Unix). This fork does not currently expose a configurable credential store.
 
 ## Config reference
 
@@ -995,9 +985,9 @@ Valid values:
 | `history.max_bytes`                              | number                                                            | Maximum size of `history.jsonl` in bytes; when exceeded, history is compacted to ~80% of this limit by dropping oldest entries. |
 | `file_opener`                                    | `vscode` \| `vscode-insiders` \| `windsurf` \| `cursor` \| `none` | URI scheme for clickable citations (default: `vscode`).                                                                         |
 | `tui`                                            | table                                                             | TUI‑specific options.                                                                                                           |
-| `tui.notifications`                              | boolean \| array<string>                                          | Enable desktop notifications in the tui (default: true).                                                                        |
+| `tui.notifications`                              | boolean \| array<string>                                          | Enable desktop notifications in the tui (default: false).                                                                       |
+| `auto_upgrade_enabled`                           | boolean                                                           | Automatically install updates on startup (default: false).                                                                       |
 | `hide_agent_reasoning`                           | boolean                                                           | Hide model reasoning events.                                                                                                    |
-| `check_for_update_on_startup`                    | boolean                                                           | Check for Beacon updates on startup (default: true). Set to `false` only if updates are centrally managed.                       |
 | `show_raw_agent_reasoning`                       | boolean                                                           | Show raw reasoning (when available).                                                                                            |
 | `model_reasoning_effort`                         | `minimal` \| `low` \| `medium` \| `high`\|`xhigh`                 | Responses API reasoning effort.                                                                                                 |
 | `model_reasoning_summary`                        | `auto` \| `concise` \| `detailed` \| `none`                       | Reasoning summaries.                                                                                                            |
@@ -1012,4 +1002,3 @@ Valid values:
 | `tools.view_image`                               | boolean                                                           | Enable or disable the `view_image` tool so Beacon can attach local image files from the workspace (default: true).               |
 | `forced_login_method`                            | `chatgpt` \| `api`                                                | Only allow Beacon to be used with ChatGPT or API keys.                                                                           |
 | `forced_chatgpt_workspace_id`                    | string (uuid)                                                     | Only allow Beacon to be used with the specified ChatGPT workspace.                                                               |
-| `cli_auth_credentials_store`                     | `file` \| `keyring` \| `auto`                                     | Where to store CLI login credentials (default: `file`).                                                                         |

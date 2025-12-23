@@ -1,143 +1,63 @@
 # Production Readiness Checklist
 
+This repository ships a **local CLI** (primary) and an optional stdio JSON-RPC
+gateway (`code-app-server`) used by MCP clients. There is **no database** in
+this project; state lives under `$CODE_HOME` (default `~/.code`).
+
 ## 1. Pre-Deployment Verification
-- [ ] **CI Pipeline**: Ensure the latest commit has passed all CI checks (Lint, Test, Build).
-- [ ] **Security Audit**:
-    - [ ] `cargo audit` returns no high-severity vulnerabilities.
-    - [ ] No secrets committed in source code (check `.env` and config files).
-- [ ] **Data Migration**:
-    - [ ] DB migrations tested on staging/pre-prod.
-    - [ ] Backup created before applying migrations.
+- [ ] **CI Pipeline**: The target commit passed JS (format), Rust (fmt/clippy),
+      tests, and `cargo audit` checks.
+- [ ] **Release Inputs**:
+    - [ ] All platform binaries were built by `rust-release` (Linux/macOS/Windows).
+    - [ ] `beacon-cli/scripts/build_npm_package.py` generated `checksums.json`
+          from the release binaries (npm installs verify these checksums).
+- [ ] **State & Backup**:
+    - [ ] If you need to preserve auth/session history, back up
+          `$CODE_HOME/auth.json`, `$CODE_HOME/sessions/`, `$CODE_HOME/log/`, and
+          `$CODE_HOME/logs/`.
 
 ## 2. Deployment
-- [ ] **Container Image**: Built with `release` profile (optimized, stripped symbols).
-- [ ] **Environment Variables**:
-    - [ ] `RUST_LOG=info` (or structured JSON logging config).
-    - [ ] `CODE_SECURE_MODE=1` (if applicable for hardening; `CODEX_SECURE_MODE` is legacy).
-- [ ] **Service Mode**: `beacon-app-server` speaks JSON-RPC over stdin/stdout; run it under a supervisor that keeps stdin open, and treat liveness as process + responsiveness to a basic request (e.g., Initialize).
-- [ ] **Health Check**: If you expose an HTTP wrapper, `/health` returns 200 OK.
+
+### 2.1 CLI (npm/Homebrew/archives)
+- [ ] **npm**: `npm install -g @tytsxai/beacon-code@<version>`
+- [ ] **Homebrew**: `brew install code` (if using the formula)
+- [ ] **Smoke checks**:
+  - `beacon --version`
+  - `beacon doctor`
+- [ ] **Container**: `beacon-cli/Dockerfile` is supported for container builds.
+  It sets `BEACON_UNSAFE_ALLOW_NO_SANDBOX=1` because the container is expected
+  to provide its own isolation.
+
+### 2.2 App-server (optional)
+- [ ] **Binary name**: `code-app-server` (service name can be anything, e.g.
+  `beacon-app-server`).
+- [ ] **Runtime**: JSON-RPC over stdin/stdout; run under a supervisor that keeps
+  stdin open.
+- [ ] **Liveness**: treat a successful `Initialize` response as a health check.
+- [ ] **Environment**:
+  - `RUST_LOG=info` (or your preferred filter)
+  - `CODE_SECURE_MODE=1` (hardening; `CODEX_SECURE_MODE` is legacy)
 
 ## 3. Rollback Procedure
-- [ ] **Trigger**: High error rate (>1%), crash loop, or critical functional regression.
-- [ ] **Steps**:
-    1.  Revert to the previous stable Docker image tag.
-    2.  If DB migration occurred and is backward-incompatible, run the down-migration script (carefully!).
-    3.  Restart services.
-    4.  Verify health check.
+- [ ] **Trigger**: Crash loop, critical regression, or unacceptable error rate.
+- [ ] **CLI rollback**:
+  - `npm install -g @tytsxai/beacon-code@<previous>`
+  - For Homebrew: reinstall the prior version if applicable.
+- [ ] **App-server rollback**:
+  - Redeploy the previous `code-app-server` binary or image.
 
-### 3.1 Docker Rollback Commands
-```bash
-# List recent image tags
-docker images | grep beacon-app-server | head -5
+## 4. Observability
+- [ ] **CLI logs**:
+  - `~/.code/log/code-tui.log` (general)
+  - `~/.code/logs/critical.log` (errors)
+- [ ] **App-server logs**: stderr (capture via systemd/Docker/K8s).
+- [ ] **OTEL**: configure exporter in `config.toml` when you need metrics.
 
-# Rollback to previous stable tag
-docker stop beacon-app-server
-docker rm beacon-app-server
-docker run -d --name beacon-app-server \
-  --restart unless-stopped \
-  -e RUST_LOG=info \
-  -e CODE_SECURE_MODE=1 \
-  your-registry/beacon-app-server:v1.2.3-stable
-
-# Verify rollback
-docker logs -f beacon-app-server
-curl http://localhost:8080/health
-```
-
-### 3.2 Kubernetes Rollback Commands
-```bash
-# Check deployment history
-kubectl rollout history deployment/beacon-app-server -n production
-
-# Rollback to previous revision
-kubectl rollout undo deployment/beacon-app-server -n production
-
-# Rollback to specific revision
-kubectl rollout undo deployment/beacon-app-server -n production --to-revision=5
-
-# Monitor rollback status
-kubectl rollout status deployment/beacon-app-server -n production
-
-# Verify pods are healthy
-kubectl get pods -n production -l app=beacon-app-server
-kubectl logs -n production -l app=beacon-app-server --tail=100
-```
-
-### 3.3 Database Rollback Script Template
-```sql
--- down_migration_v2.sql
--- CAUTION: Test on staging first!
-
-BEGIN;
-
--- Example: Revert column addition
-ALTER TABLE sessions DROP COLUMN IF EXISTS new_feature_flag;
-
--- Example: Restore old schema
-ALTER TABLE users RENAME COLUMN email_v2 TO email;
-
--- Verify row count before commit
-SELECT COUNT(*) FROM sessions;
-SELECT COUNT(*) FROM users;
-
--- If counts look correct, commit; otherwise ROLLBACK manually
-COMMIT;
-```
-
-Apply with:
-```bash
-# Backup first
-pg_dump -h localhost -U postgres -d beacon_db > backup_before_rollback.sql
-
-# Apply down migration
-psql -h localhost -U postgres -d beacon_db -f down_migration_v2.sql
-
-# Verify
-psql -h localhost -U postgres -d beacon_db -c "\d sessions"
-```
-
-## 4. Post-Deployment Observability
-- [ ] **Logs**: Verify `app-server` logs are flowing to the aggregation system.
-- [ ] **Errors**: Monitor for "Panic occurred" or unhandled exceptions in stderr.
-- [ ] **Metrics**: Check CPU/Memory usage is within baseline.
-
-## 5. Alert Thresholds
-
-### 5.1 Error Rate Alerts
-- **Critical**: Error rate >1% over 5-minute window
-  - Action: Page on-call engineer immediately
-  - Query: `sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m])) > 0.01`
-
-- **Warning**: Error rate >0.5% over 10-minute window
-  - Action: Notify team channel
-  - Query: `sum(rate(http_requests_total{status=~"5.."}[10m])) / sum(rate(http_requests_total[10m])) > 0.005`
-
-### 5.2 Latency Alerts
-- **Critical**: P99 latency >5s for 5 minutes
-  - Action: Page on-call engineer
-  - Query: `histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) > 5`
-
-- **Warning**: P95 latency >2s for 10 minutes
-  - Action: Notify team channel
-  - Query: `histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[10m])) > 2`
-
-### 5.3 Resource Alerts
-- **Critical**: Memory usage >90% for 5 minutes
-  - Action: Page on-call engineer (potential OOM)
-  - Query: `(container_memory_usage_bytes / container_spec_memory_limit_bytes) > 0.9`
-
-- **Warning**: CPU usage >80% for 15 minutes
-  - Action: Notify team channel
-  - Query: `rate(container_cpu_usage_seconds_total[5m]) > 0.8`
-
-### 5.4 Panic Detection
-- **Critical**: Any panic in logs
-  - Action: Page on-call engineer immediately
-  - Query: `count_over_time({job="beacon-app-server"} |= "Panic occurred"[5m]) > 0`
-
-- **Critical**: Crash loop (>3 restarts in 10 minutes)
-  - Action: Page on-call engineer
-  - Query: `rate(kube_pod_container_status_restarts_total{pod=~"beacon-app-server.*"}[10m]) > 0.3`
+## 5. Alerting (only if running app-server)
+- **Critical**: any `"Panic occurred"` log line.
+- **Critical**: crash loop (>3 restarts in 10 minutes).
+- If you wrap stdio JSON-RPC with an HTTP gateway, use standard 5xx/latency
+  alerts for that gateway (queries in Section 7.3).
 
 ## 6. On-Call Procedures
 
@@ -162,37 +82,28 @@ psql -h localhost -U postgres -d beacon_db -c "\d sessions"
    - Mark incident in PagerDuty/Opsgenie
    - Post in #incidents Slack channel
 
-2. **Assess Impact** (within 10 minutes)
-   - Check error rate dashboard
-   - Verify affected services/regions
-   - Estimate user impact percentage
-
-3. **Gather Context** (within 15 minutes)
+2. **Gather Context** (within 15 minutes)
    ```bash
-   # Check recent deployments
-   kubectl rollout history deployment/beacon-app-server -n production
+   # Check recent deployments (if applicable)
+   kubectl rollout history deployment/code-app-server -n production
 
    # Review logs for errors
-   kubectl logs -n production -l app=beacon-app-server --tail=500 | grep -i error
+   kubectl logs -n production -l app=code-app-server --tail=500 | grep -i error
 
    # Check resource usage
-   kubectl top pods -n production -l app=beacon-app-server
-
-   # Verify dependencies
-   curl http://internal-api/health
+   kubectl top pods -n production -l app=code-app-server
    ```
 
-4. **Decide Action** (within 20 minutes)
-   - If recent deployment: Rollback (see Section 3)
-   - If resource exhaustion: Scale up or restart
-   - If external dependency: Engage vendor
-   - If unknown: Escalate to L2
+3. **Decide Action** (within 20 minutes)
+   - If recent deployment: rollback (see Section 3)
+   - If resource exhaustion: scale up or restart
+   - If unknown: escalate to L2
 
 ### 6.3 Communication Templates
 
 **Initial Incident Post** (Slack #incidents):
 ```
-🚨 INCIDENT: [CRITICAL/WARNING] - [Brief Description]
+INCIDENT: [CRITICAL/WARNING] - [Brief Description]
 - Time: [HH:MM UTC]
 - Impact: [% users affected / services down]
 - Status: Investigating
@@ -202,7 +113,7 @@ psql -h localhost -U postgres -d beacon_db -c "\d sessions"
 
 **Resolution Post**:
 ```
-✅ RESOLVED: [Brief Description]
+RESOLVED: [Brief Description]
 - Duration: [X minutes]
 - Root Cause: [1-2 sentences]
 - Resolution: [Action taken]
@@ -213,54 +124,25 @@ psql -h localhost -U postgres -d beacon_db -c "\d sessions"
 
 ### 7.1 OTLP Endpoint Setup
 
-**Environment Variables**:
-```bash
-# gRPC endpoint (recommended for production)
-export OTEL_EXPORTER_OTLP_ENDPOINT="https://otlp.your-monitoring.com:4317"
-export OTEL_EXPORTER_OTLP_PROTOCOL="grpc"
-export OTEL_EXPORTER_OTLP_HEADERS="x-api-key=your-api-key-here"
+Configure OTEL in `$CODE_HOME/config.toml`:
 
-# HTTP endpoint (alternative)
-export OTEL_EXPORTER_OTLP_ENDPOINT="https://otlp.your-monitoring.com:4318"
-export OTEL_EXPORTER_OTLP_PROTOCOL="http/protobuf"
-export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer your-token-here"
+```toml
+[otel]
+environment = "production"
+log_user_prompt = false
 
-# Service identification
-export OTEL_SERVICE_NAME="beacon-app-server"
-export OTEL_SERVICE_VERSION="1.2.3"
-export OTEL_ENVIRONMENT="production"
-```
+[otel.exporter."otlp-grpc"]
+endpoint = "https://otlp.your-monitoring.com:4317"
 
-**Rust Code Configuration** (already supported in `otel/src/config.rs`):
-```rust
-use code_otel::config::{OtelSettings, OtelExporter, OtelHttpProtocol};
-use std::collections::HashMap;
-
-let mut headers = HashMap::new();
-headers.insert("x-api-key".to_string(), "your-api-key".to_string());
-
-let settings = OtelSettings {
-    environment: "production".to_string(),
-    service_name: "beacon-app-server".to_string(),
-    service_version: env!("CARGO_PKG_VERSION").to_string(),
-    code_home: PathBuf::from("/app"),
-    exporter: OtelExporter::OtlpGrpc {
-        endpoint: "https://otlp.your-monitoring.com:4317".to_string(),
-        headers,
-    },
-};
+[otel.exporter."otlp-grpc".headers]
+x-api-key = "your-api-key-here"
 ```
 
 ### 7.2 Log Aggregation Setup
 
 **Structured Logging Configuration**:
 ```bash
-# JSON format for machine parsing
-export RUST_LOG="info,code_core=debug,beacon_app_server=debug"
-export RUST_LOG_FORMAT="json"  # If supported by your logger
-
-# Example log output
-{"timestamp":"2025-12-21T10:30:45Z","level":"ERROR","target":"code_core::client","message":"API request failed","error":"Connection timeout","request_id":"req-123"}
+export RUST_LOG="info,code_core=debug,code_app_server=debug"
 ```
 
 **Log Collection** (Fluent Bit example):
@@ -268,9 +150,9 @@ export RUST_LOG_FORMAT="json"  # If supported by your logger
 # fluent-bit.conf
 [INPUT]
     Name              tail
-    Path              /var/log/containers/beacon-app-server*.log
+    Path              /var/log/containers/code-app-server*.log
     Parser            docker
-    Tag               kube.beacon-app-server
+    Tag               kube.code-app-server
     Refresh_Interval  5
 
 [FILTER]
@@ -282,72 +164,18 @@ export RUST_LOG_FORMAT="json"  # If supported by your logger
 
 [OUTPUT]
     Name  es
-    Match kube.beacon-app-server
+    Match kube.code-app-server
     Host  elasticsearch.monitoring.svc
     Port  9200
     Index beacon-logs
 ```
 
-### 7.3 Dashboard Recommendations
+### 7.3 Dashboard Recommendations (HTTP wrapper only)
 
-**Key Metrics to Display**:
-1. **Request Rate & Errors**
-   - Total requests/sec
-   - Error rate (%)
-   - Status code distribution
+If you expose an HTTP gateway around `code-app-server`, use standard request
+rate/error/latency panels for the gateway. Example Prometheus queries:
 
-2. **Latency Percentiles**
-   - P50, P95, P99 latency
-   - Request duration histogram
-
-3. **Resource Usage**
-   - CPU utilization (%)
-   - Memory usage (MB)
-   - Pod restart count
-
-4. **Business Metrics**
-   - Active sessions
-   - API calls by endpoint
-   - Token usage
-
-**Grafana Dashboard JSON** (starter template):
-```json
-{
-  "dashboard": {
-    "title": "Beacon App Server - Production",
-    "panels": [
-      {
-        "title": "Request Rate",
-        "targets": [{"expr": "sum(rate(http_requests_total[5m]))"}]
-      },
-      {
-        "title": "Error Rate",
-        "targets": [{"expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m])) / sum(rate(http_requests_total[5m]))"}]
-      },
-      {
-        "title": "P99 Latency",
-        "targets": [{"expr": "histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m]))"}]
-      }
-    ]
-  }
-}
-```
-
-**Prometheus Scrape Config**:
-```yaml
-# prometheus.yml
-scrape_configs:
-  - job_name: 'beacon-app-server'
-    kubernetes_sd_configs:
-      - role: pod
-        namespaces:
-          names: ['production']
-    relabel_configs:
-      - source_labels: [__meta_kubernetes_pod_label_app]
-        action: keep
-        regex: beacon-app-server
-      - source_labels: [__meta_kubernetes_pod_name]
-        target_label: pod
-    scrape_interval: 15s
-    scrape_timeout: 10s
-```
+- **Error rate**:
+  `sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m]))`
+- **P99 latency**:
+  `histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m]))`
