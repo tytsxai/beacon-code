@@ -29,7 +29,7 @@ code-app-server-protocol = { workspace = true }
 code-otel = { workspace = true, features = ["otel"] }
 code-browser = { path = "../browser" }
 code-version = { path = "../code-version" }
-agent-client-protocol = "0.4.3"
+agent-client-protocol = "0.9.2"
 dirs = { workspace = true }
 dunce = { workspace = true }
 env-flags = { workspace = true }
