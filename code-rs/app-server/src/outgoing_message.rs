@@ -22,12 +22,12 @@ use crate::error_code::INTERNAL_ERROR_CODE;
 /// Sends messages to the client and manages request callbacks.
 pub struct OutgoingMessageSender {
     next_request_id: AtomicI64,
-    sender: mpsc::UnboundedSender<OutgoingMessage>,
+    sender: mpsc::Sender<OutgoingMessage>,
     request_id_to_callback: Mutex<HashMap<RequestId, oneshot::Sender<Result>>>,
 }
 
 impl OutgoingMessageSender {
-    pub fn new(sender: mpsc::UnboundedSender<OutgoingMessage>) -> Self {
+    pub fn new(sender: mpsc::Sender<OutgoingMessage>) -> Self {
         Self {
             next_request_id: AtomicI64::new(0),
             sender,
@@ -42,10 +42,11 @@ impl OutgoingMessageSender {
     ) -> oneshot::Receiver<Result> {
         let id = RequestId::Integer(self.next_request_id.fetch_add(1, Ordering::Relaxed));
         let outgoing_message_id = id.clone();
+        let request_id = id.clone();
         let (tx_approve, rx_approve) = oneshot::channel();
         {
             let mut request_id_to_callback = self.request_id_to_callback.lock().await;
-            request_id_to_callback.insert(id, tx_approve);
+            request_id_to_callback.insert(request_id, tx_approve);
         }
 
         let outgoing_message = OutgoingMessage::Request(OutgoingRequest {
@@ -53,7 +54,11 @@ impl OutgoingMessageSender {
             method: method.to_string(),
             params,
         });
-        let _ = self.sender.send(outgoing_message);
+        if let Err(err) = self.sender.send(outgoing_message).await {
+            let mut request_id_to_callback = self.request_id_to_callback.lock().await;
+            request_id_to_callback.remove(&id);
+            warn!("failed to send request {id:?}: {err}");
+        }
         rx_approve
     }
 
@@ -78,8 +83,11 @@ impl OutgoingMessageSender {
     pub async fn send_response<T: Serialize>(&self, id: RequestId, response: T) {
         match serde_json::to_value(response) {
             Ok(result) => {
+                let response_id = id.clone();
                 let outgoing_message = OutgoingMessage::Response(OutgoingResponse { id, result });
-                let _ = self.sender.send(outgoing_message);
+                if let Err(err) = self.sender.send(outgoing_message).await {
+                    warn!("failed to send response {response_id:?}: {err}");
+                }
             }
             Err(err) => {
                 self.send_error(
@@ -99,12 +107,17 @@ impl OutgoingMessageSender {
     /// [`OutgoingMessage::Notification`] should be removed.
     pub async fn send_notification(&self, notification: OutgoingNotification) {
         let outgoing_message = OutgoingMessage::Notification(notification);
-        let _ = self.sender.send(outgoing_message);
+        if let Err(err) = self.sender.send(outgoing_message).await {
+            warn!("failed to send notification: {err}");
+        }
     }
 
     pub async fn send_error(&self, id: RequestId, error: JSONRPCErrorError) {
+        let error_id = id.clone();
         let outgoing_message = OutgoingMessage::Error(OutgoingError { id, error });
-        let _ = self.sender.send(outgoing_message);
+        if let Err(err) = self.sender.send(outgoing_message).await {
+            warn!("failed to send error {error_id:?}: {err}");
+        }
     }
 }
 
