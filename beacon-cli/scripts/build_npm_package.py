@@ -2,6 +2,7 @@
 """Stage and optionally package the @tytsxai/beacon-code npm module."""
 
 import argparse
+import hashlib
 import json
 import shutil
 import subprocess
@@ -25,6 +26,14 @@ COMPONENT_DEST_DIR: dict[str, str] = {
     "code": "code",
     "code-responses-api-proxy": "code-responses-api-proxy",
 }
+
+CHECKSUM_TARGETS: list[tuple[str, bool]] = [
+    ("aarch64-apple-darwin", False),
+    ("aarch64-unknown-linux-musl", False),
+    ("x86_64-apple-darwin", False),
+    ("x86_64-pc-windows-msvc", True),
+    ("x86_64-unknown-linux-musl", False),
+]
 
 
 def parse_args() -> argparse.Namespace:
@@ -104,6 +113,9 @@ def main() -> int:
                 )
 
             copy_native_binaries(vendor_src, staging_dir, package, native_components)
+            if package == "beacon-code":
+                checksums = build_checksums(vendor_src)
+                write_checksums(staging_dir, checksums)
 
         if release_version:
             staging_dir_str = str(staging_dir)
@@ -163,6 +175,15 @@ def stage_sources(staging_dir: Path, version: str, package: str) -> None:
         rg_manifest = BEACON_CLI_ROOT / "bin" / "rg"
         if rg_manifest.exists():
             shutil.copy2(rg_manifest, bin_dir / "rg")
+
+        shutil.copy2(BEACON_CLI_ROOT / "postinstall.js", staging_dir / "postinstall.js")
+        scripts_dir = staging_dir / "scripts"
+        scripts_dir.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(BEACON_CLI_ROOT / "scripts" / "preinstall.js", scripts_dir / "preinstall.js")
+        shutil.copy2(
+            BEACON_CLI_ROOT / "scripts" / "windows-cleanup.ps1",
+            scripts_dir / "windows-cleanup.ps1",
+        )
 
         readme_src = REPO_ROOT / "README.md"
         if readme_src.exists():
@@ -277,6 +298,46 @@ def copy_native_binaries(
             if dest_component_dir.exists():
                 shutil.rmtree(dest_component_dir)
             shutil.copytree(src_component_dir, dest_component_dir)
+
+
+def sha256_file(path: Path) -> str:
+    hasher = hashlib.sha256()
+    with open(path, "rb") as fh:
+        while True:
+            chunk = fh.read(1024 * 1024)
+            if not chunk:
+                break
+            hasher.update(chunk)
+    return hasher.hexdigest()
+
+
+def build_checksums(vendor_src: Path) -> dict[str, str]:
+    checksums: dict[str, str] = {}
+    missing: list[str] = []
+
+    for target, is_windows in CHECKSUM_TARGETS:
+        binary_name = "code.exe" if is_windows else "code"
+        binary_path = vendor_src / target / "code" / binary_name
+        if not binary_path.exists():
+            missing.append(str(binary_path))
+            continue
+        checksum_name = f"code-{target}{'.exe' if is_windows else ''}"
+        checksums[checksum_name] = sha256_file(binary_path)
+
+    if missing:
+        missing_list = "\n".join(f"- {path}" for path in missing)
+        raise RuntimeError(
+            "Missing native binaries required for checksums:\n" f"{missing_list}"
+        )
+
+    return checksums
+
+
+def write_checksums(staging_dir: Path, checksums: dict[str, str]) -> None:
+    output = staging_dir / "checksums.json"
+    with open(output, "w", encoding="utf-8") as out:
+        json.dump(checksums, out, indent=2, sort_keys=True)
+        out.write("\n")
 
 
 def run_npm_pack(staging_dir: Path, output_path: Path) -> Path:

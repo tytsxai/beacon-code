@@ -21,6 +21,8 @@ jobs:
         run: pnpm -w install --frozen-lockfile
       - name: prettier check
         run: pnpm -w run format
+      - name: beacon-cli postinstall tests
+        run: node --test beacon-cli/test/postinstall.test.js
 
   check:
     runs-on: ubuntu-latest
