@@ -911,6 +911,7 @@ dependencies = [
  "code-file-search",
  "code-login",
  "code-mcp-types",
+ "code-process-hardening",
  "code-protocol",
  "code-utils-json-to-toml",
  "serde",

@@ -17,6 +17,7 @@ use tokio::sync::mpsc;
 use tracing::debug;
 use tracing::error;
 use tracing::info;
+use tracing::warn;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::filter::filter_fn;
 use tracing_subscriber::prelude::*;
@@ -102,6 +103,12 @@ pub async fn run_main(
         }
         None => tracing_subscriber::registry().with(fmt_layer).try_init(),
     };
+    let housekeeping_home = config.code_home.clone();
+    tokio::task::spawn_blocking(move || {
+        if let Err(err) = code_core::run_housekeeping_if_due(&housekeeping_home) {
+            warn!("code home housekeeping failed: {err}");
+        }
+    });
 
     // Task: process incoming messages.
     let processor_handle = tokio::spawn({

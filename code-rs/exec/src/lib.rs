@@ -46,6 +46,7 @@ use supports_color::Stream;
 use tracing::debug;
 use tracing::error;
 use tracing::info;
+use tracing::warn;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::filter::filter_fn;
 use tracing_subscriber::prelude::*;
@@ -282,6 +283,9 @@ pub async fn run_main(mut cli: Cli, code_linux_sandbox_exe: Option<PathBuf>) -> 
             .try_init(),
         None => tracing_subscriber::registry().with(fmt_layer).try_init(),
     };
+    if let Err(err) = code_core::run_housekeeping_if_due(&config.code_home) {
+        warn!("code home housekeeping failed: {err}");
+    }
     let stop_on_task_complete = auto_drive_goal.is_none();
     let mut event_processor: Box<dyn EventProcessor> = if json_mode {
         Box::new(EventProcessorWithJsonOutput::new(last_message_file.clone()))
