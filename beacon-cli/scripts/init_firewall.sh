@@ -10,6 +10,10 @@ ipv6_enabled() {
     [ -s /proc/net/if_inet6 ]
 }
 
+validate_domain() {
+    [[ "$1" =~ ^[a-zA-Z0-9][a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]
+}
+
 IP6TABLES_AVAILABLE=0
 if has_cmd ip6tables; then
     IP6TABLES_AVAILABLE=1
@@ -37,11 +41,44 @@ fi
 
 # Read allowed domains from file
 ALLOWED_DOMAINS_FILE="/etc/beacon-code/allowed_domains.txt"
-if [ -f "$ALLOWED_DOMAINS_FILE" ]; then
-    ALLOWED_DOMAINS=()
+ALLOWED_DOMAINS=()
+if [ -n "${OPENAI_ALLOWED_DOMAINS:-}" ]; then
+    env_domains=()
+    IFS=$' \t\n' read -r -a env_domains <<< "$OPENAI_ALLOWED_DOMAINS"
+    for domain in "${env_domains[@]}"; do
+        if [ -z "$domain" ]; then
+            continue
+        fi
+        if ! validate_domain "$domain"; then
+            echo "ERROR: Invalid domain format: $domain"
+            exit 1
+        fi
+        ALLOWED_DOMAINS+=("$domain")
+    done
+    if [ "${#ALLOWED_DOMAINS[@]}" -eq 0 ]; then
+        echo "ERROR: OPENAI_ALLOWED_DOMAINS is empty."
+        exit 1
+    fi
+    mkdir -p "$(dirname "$ALLOWED_DOMAINS_FILE")"
+    printf '%s\n' "${ALLOWED_DOMAINS[@]}" > "$ALLOWED_DOMAINS_FILE"
+    chmod 444 "$ALLOWED_DOMAINS_FILE"
+    chown root:root "$ALLOWED_DOMAINS_FILE"
+    echo "Using domains from OPENAI_ALLOWED_DOMAINS: ${ALLOWED_DOMAINS[*]}"
+elif [ -f "$ALLOWED_DOMAINS_FILE" ]; then
     while IFS= read -r domain; do
+        if [ -z "$domain" ]; then
+            continue
+        fi
+        if ! validate_domain "$domain"; then
+            echo "ERROR: Invalid domain format in $ALLOWED_DOMAINS_FILE: $domain"
+            exit 1
+        fi
         ALLOWED_DOMAINS+=("$domain")
     done < "$ALLOWED_DOMAINS_FILE"
+    if [ "${#ALLOWED_DOMAINS[@]}" -eq 0 ]; then
+        echo "ERROR: No allowed domains specified"
+        exit 1
+    fi
     echo "Using domains from file: ${ALLOWED_DOMAINS[*]}"
 else
     # Fallback to default domains

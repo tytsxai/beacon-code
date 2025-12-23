@@ -59,8 +59,11 @@ COPY scripts/init_firewall.sh /usr/local/bin/
 RUN chmod 500 /usr/local/bin/init_firewall.sh
 
 # Allow node user to invoke the firewall init script via sudo without a password.
-RUN echo 'Defaults:node !requiretty' > /etc/sudoers.d/beacon-firewall && \
-  echo 'node ALL=(root) NOPASSWD: /usr/local/bin/init_firewall.sh' >> /etc/sudoers.d/beacon-firewall && \
+RUN { \
+  echo 'Defaults:node !requiretty'; \
+  echo 'Defaults:node env_keep += "OPENAI_ALLOWED_DOMAINS"'; \
+  echo 'node ALL=(root) NOPASSWD: /usr/local/bin/init_firewall.sh'; \
+} > /etc/sudoers.d/beacon-firewall && \
   chmod 440 /etc/sudoers.d/beacon-firewall
 
 # Install container entrypoint to enforce firewall initialization.
