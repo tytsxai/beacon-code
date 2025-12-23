@@ -502,7 +502,9 @@ export async function runPostinstall(options = {}) {
   // Download only the primary binary; we'll create wrappers for legacy names.
   const binaries = ["code"];
 
-  console.log(`Installing @tytsxai/beacon-code v${version} for ${targetTriple}...`);
+  console.log(
+    `Installing @tytsxai/beacon-code v${version} for ${targetTriple}...`,
+  );
 
   for (const binary of binaries) {
     const binaryName = `${binary}-${targetTriple}${binaryExt}`;
@@ -1049,7 +1051,9 @@ export async function runPostinstall(options = {}) {
         if (skippedCmds.length) {
           for (const s of skippedCmds)
             console.error(`Commands skipped: ${s.name} (${s.reason})`);
-          console.error("→ Use `beacon` (or `coder` for legacy) to run this tool.");
+          console.error(
+            "→ Use `beacon` (or `coder` for legacy) to run this tool.",
+          );
         }
         // Final friendly usage hint
         if (installedCmds.has("code")) {
@@ -1141,7 +1145,9 @@ export async function runPostinstall(options = {}) {
                 `⚠ Could not remove npm shim '${ourShim}': ${e.message}`,
               );
             }
-            console.error("→ Use `beacon` (or `coder` for legacy) to run this tool.");
+            console.error(
+              "→ Use `beacon` (or `coder` for legacy) to run this tool.",
+            );
           } else {
             console.log(
               "Note: could not determine npm global bin; skipping alias creation.",

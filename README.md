@@ -59,7 +59,7 @@ code   // 兼容短命令；若被 VS Code 占用可用 `coder`
   - 运行 `code` 选择 "Sign in with ChatGPT"
 - **API Key**（按量计费）
   - 设置 `export OPENAI_API_KEY=xyz` 然后运行 `code`
-Beacon Code 默认只使用内置模型与能力，不需要额外安装其他 AI CLI。
+    Beacon Code 默认只使用内置模型与能力，不需要额外安装其他 AI CLI。
 
 &ensp;
 
