@@ -48,6 +48,7 @@ RUN npm install -g beacon-code.tgz \
 
 # Inside the container we consider the environment already sufficiently locked
 # down, therefore instruct Beacon Code CLI to allow running without sandboxing.
+# Ensure you enforce container-level isolation (e.g., init_firewall.sh).
 ENV BEACON_UNSAFE_ALLOW_NO_SANDBOX=1
 
 # Copy and set up firewall script as root.

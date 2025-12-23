@@ -27,6 +27,11 @@ this project; state lives under `$CODE_HOME` (default `~/.code`).
 - [ ] **Container**: `beacon-cli/Dockerfile` is supported for container builds.
   It sets `BEACON_UNSAFE_ALLOW_NO_SANDBOX=1` because the container is expected
   to provide its own isolation.
+  - Enforce network isolation with `beacon-cli/scripts/init_firewall.sh` (or
+    use `beacon-cli/scripts/run_in_container.sh`).
+  - Required Docker flags: `--cap-add=NET_ADMIN --cap-add=NET_RAW`.
+  - Provide allowed domains via `/etc/beacon-code/allowed_domains.txt` or
+    `OPENAI_ALLOWED_DOMAINS`.
 
 ### 2.2 App-server (optional)
 - [ ] **Binary name**: `code-app-server` (service name can be anything, e.g.
