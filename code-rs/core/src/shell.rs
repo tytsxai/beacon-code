@@ -116,7 +116,9 @@ fn format_shell_invocation_with_rc(
         .or_else(|| shlex::try_join(command.iter().map(String::as_str)).ok())?;
 
     let rc_command = if std::path::Path::new(rc_path).exists() {
-        format!("source {rc_path} && ({joined})")
+        let rc_arg =
+            shlex::try_join(std::iter::once(rc_path)).unwrap_or_else(|_| rc_path.to_string());
+        format!("source {rc_arg} && ({joined})")
     } else {
         joined
     };

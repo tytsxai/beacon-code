@@ -47,6 +47,7 @@ use tokio::sync::Mutex;
 use tokio::sync::mpsc;
 use tokio::sync::oneshot;
 use tokio::time;
+use tracing::Level;
 use tracing::debug;
 use tracing::error;
 use tracing::info;
@@ -87,13 +88,19 @@ impl McpClient {
         args: Vec<OsString>,
         env: Option<HashMap<String, String>>,
     ) -> std::io::Result<Self> {
+        let stderr = if tracing::enabled!(Level::DEBUG) {
+            std::process::Stdio::inherit()
+        } else {
+            std::process::Stdio::null()
+        };
+
         let mut child = Command::new(program)
             .args(args)
             .env_clear()
             .envs(create_env_for_mcp_server(env))
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::null())
+            .stderr(stderr)
             // As noted in the `kill_on_drop` documentation, the Tokio runtime makes
             // a "best effort" to reap-after-exit to avoid zombie processes, but it
             // is not a guarantee.

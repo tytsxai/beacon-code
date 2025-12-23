@@ -67,10 +67,10 @@ async fn discover_ws_via_host_port(host: &str, port: u16) -> Result<String> {
 
 /// Scan for Chrome processes with debug ports and verify accessibility
 async fn scan_for_chrome_debug_port() -> Option<u16> {
-    use std::process::Command;
+    use tokio::process::Command;
 
     // Use ps to find Chrome processes with remote-debugging-port
-    let output = Command::new("ps").args(["aux"]).output().ok()?;
+    let output = Command::new("ps").args(["aux"]).output().await.ok()?;
 
     let ps_output = String::from_utf8_lossy(&output.stdout);
 

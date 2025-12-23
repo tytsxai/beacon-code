@@ -48,32 +48,68 @@ const DEFAULT_STARTUP_TIMEOUT: Duration = Duration::from_secs(10);
 /// spawned successfully.
 pub type ClientStartErrors = HashMap<String, anyhow::Error>;
 
+fn sanitize_tool_name(tool_name: &str) -> String {
+    let mut sanitized = String::with_capacity(tool_name.len());
+    for ch in tool_name.chars() {
+        if ch.is_ascii_alphanumeric() || ch == '_' || ch == '-' {
+            sanitized.push(ch);
+        } else {
+            sanitized.push('_');
+        }
+    }
+    sanitized
+}
+
+fn hash_tool_name(server_name: &str, tool_name: &str) -> String {
+    let mut hasher = Sha1::new();
+    hasher.update(server_name.as_bytes());
+    hasher.update(MCP_TOOL_NAME_DELIMITER.as_bytes());
+    hasher.update(tool_name.as_bytes());
+    let sha1 = hasher.finalize();
+    format!("{sha1:x}")
+}
+
+fn truncate_with_hash(name: &str, hash: &str) -> String {
+    let prefix_len = MAX_TOOL_NAME_LENGTH.saturating_sub(hash.len());
+    let prefix = if name.len() > prefix_len {
+        &name[..prefix_len]
+    } else {
+        name
+    };
+    format!("{prefix}{hash}")
+}
+
+fn build_qualified_name(server_name: &str, tool_name: &str) -> String {
+    let sanitized_tool_name = sanitize_tool_name(tool_name);
+    format!("{server_name}{MCP_TOOL_NAME_DELIMITER}{sanitized_tool_name}")
+}
+
 fn qualify_tools(tools: Vec<ToolInfo>) -> HashMap<String, ToolInfo> {
-    let mut used_names = HashSet::new();
-    let mut qualified_tools = HashMap::new();
+    let mut qualified_tools: HashMap<String, ToolInfo> = HashMap::new();
     for tool in tools {
-        let mut qualified_name = format!(
-            "{}{}{}",
-            tool.server_name, MCP_TOOL_NAME_DELIMITER, tool.tool_name
-        );
-        if qualified_name.len() > MAX_TOOL_NAME_LENGTH {
-            let mut hasher = Sha1::new();
-            hasher.update(qualified_name.as_bytes());
-            let sha1 = hasher.finalize();
-            let sha1_str = format!("{sha1:x}");
+        let base_name = build_qualified_name(&tool.server_name, &tool.tool_name);
+        let mut qualified_name = if base_name.len() > MAX_TOOL_NAME_LENGTH {
+            let hash = hash_tool_name(&tool.server_name, &tool.tool_name);
+            truncate_with_hash(&base_name, &hash)
+        } else {
+            base_name.clone()
+        };
 
-            // Truncate to make room for the hash suffix
-            let prefix_len = MAX_TOOL_NAME_LENGTH - sha1_str.len();
+        if let Some(existing) = qualified_tools.get(&qualified_name) {
+            if existing.server_name == tool.server_name && existing.tool_name == tool.tool_name {
+                warn!("skipping duplicated tool {qualified_name}");
+                continue;
+            }
 
-            qualified_name = format!("{}{}", &qualified_name[..prefix_len], sha1_str);
+            let hash = hash_tool_name(&tool.server_name, &tool.tool_name);
+            let hashed_name = truncate_with_hash(&base_name, &hash);
+            if qualified_tools.contains_key(&hashed_name) {
+                warn!("skipping duplicated tool {hashed_name}");
+                continue;
+            }
+            qualified_name = hashed_name;
         }
 
-        if used_names.contains(&qualified_name) {
-            warn!("skipping duplicated tool {}", qualified_name);
-            continue;
-        }
-
-        used_names.insert(qualified_name.clone());
         qualified_tools.insert(qualified_name, tool);
     }
 
@@ -468,6 +504,7 @@ fn is_valid_mcp_server_name(server_name: &str) -> bool {
 mod tests {
     use super::*;
     use mcp_types::ToolInputSchema;
+    use pretty_assertions::assert_eq;
 
     fn create_test_tool(server_name: &str, tool_name: &str) -> ToolInfo {
         ToolInfo {
@@ -514,6 +551,39 @@ mod tests {
         // Only the first tool should remain, the second is skipped
         assert_eq!(qualified_tools.len(), 1);
         assert!(qualified_tools.contains_key("server1__duplicate_tool"));
+    }
+
+    #[test]
+    fn test_qualify_tools_sanitizes_invalid_characters() {
+        let tools = vec![create_test_tool("server1", "tool name")];
+
+        let qualified_tools = qualify_tools(tools);
+
+        assert_eq!(qualified_tools.len(), 1);
+        assert!(qualified_tools.contains_key("server1__tool_name"));
+    }
+
+    #[test]
+    fn test_qualify_tools_disambiguates_sanitized_collisions() {
+        let tools = vec![
+            create_test_tool("server1", "tool name"),
+            create_test_tool("server1", "tool/name"),
+        ];
+
+        let qualified_tools = qualify_tools(tools);
+
+        assert_eq!(qualified_tools.len(), 2);
+
+        let mut keys: Vec<_> = qualified_tools.keys().cloned().collect();
+        keys.sort();
+
+        assert!(keys.iter().any(|key| key == "server1__tool_name"));
+        assert!(keys.iter().any(|key| key != "server1__tool_name"));
+        assert!(keys.iter().all(|key| key.len() <= MAX_TOOL_NAME_LENGTH));
+        assert!(keys.iter().all(|key| {
+            key.chars()
+                .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+        }));
     }
 
     #[test]
