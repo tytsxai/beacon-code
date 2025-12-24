@@ -58,9 +58,14 @@ this project; state lives under `$CODE_HOME` (default `~/.code`).
       - `scripts/code-home-backup.sh restore --in /path/backup.tgz --code-home /tmp/code-restore`
       - Verify `code --version` and `code resume --last` after restore.
       - Add `--include-worktrees` if you need to preserve `working/` worktrees.
+    - [ ] Verify backup archives before rollout:
+      - `scripts/ops/verify-backup.sh --in /path/backup.tgz`
+      - Add `--require-worktrees` if you rely on `working/` worktrees.
     - [ ] Housekeeping can prune sessions/worktrees/logs. Defaults: sessions 7d,
           worktrees 3d, logs 14d, log size 50 MiB. Set `CODE_CLEANUP_*` (or
           `CODE_CLEANUP_DISABLE=1`) to meet retention requirements.
+    - [ ] Verify `CODE_HOME` permissions (service user only):
+      - `scripts/ops/verify-code-home.sh --code-home /var/lib/code`
     - [ ] Review `docs/ops/production.env.example` for a baseline env template.
 
 ## 1.5 Functional & Failure-Mode Validation

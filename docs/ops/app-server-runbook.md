@@ -11,6 +11,7 @@ single writer per `CODE_HOME`.
 - Do not expose `code-app-server` on a network socket without authn/z.
 - Run one `code-app-server` process per `CODE_HOME` at a time. If you need
   parallel instances, use distinct `CODE_HOME` paths.
+- Verify `CODE_HOME` permissions with `scripts/ops/verify-code-home.sh --code-home /var/lib/code`.
 
 ## Systemd (Unix socket via socat)
 This is the simplest supervised deployment. It listens on a Unix socket and
@@ -128,6 +129,7 @@ scripts/ops/healthcheck-app-server.sh /run/code-app-server/app-server.sock --tim
 ## Backup and rollback
 - Back up `CODE_HOME` using `scripts/code-home-backup.sh` (see
   `docs/production_checklist.md`).
+- Verify archives with `scripts/ops/verify-backup.sh --in /path/backup.tgz`.
 - Roll back by swapping the binary and restarting the service; restore the last
   known good `CODE_HOME` if needed.
 
