@@ -81,7 +81,7 @@ run_task secret_like_strings bash -lc 'rg -n "(SECRET|API_KEY|TOKEN|PASSWORD|PRI
 run_task ci_workflow_check bash -lc 'sed -n "1,260p" .github/workflows/ci.yml'
 
 run_task js_format bash -lc 'pnpm -w run format'
-run_task js_tests bash -lc 'pnpm -w test || true'
+run_task js_tests bash -lc 'pnpm -w test'
 
 run_task rust_fmt bash -lc 'cd code-rs && cargo fmt --all -- --check'
 run_task rust_clippy bash -lc 'cd code-rs && cargo clippy --all-targets -- -D warnings'
