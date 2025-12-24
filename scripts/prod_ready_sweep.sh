@@ -89,3 +89,5 @@ run_task rust_tests bash -lc 'cd code-rs && cargo test --all-features'
 run_task rust_audit bash -lc 'cd code-rs && cargo audit'
 
 run_task cli_smokes bash -lc 'bash scripts/ci-tests.sh'
+run_task code_home_perms bash -lc 'if [[ -d "${CODE_HOME:-$HOME/.code}" ]]; then scripts/ops/verify-code-home.sh --code-home "${CODE_HOME:-$HOME/.code}"; else echo "skip: CODE_HOME not found"; fi'
+run_task backup_verify bash -lc 'if [[ -n "${CODE_HOME_BACKUP_ARCHIVE:-}" ]]; then scripts/ops/verify-backup.sh --in "$CODE_HOME_BACKUP_ARCHIVE"; else echo "skip: CODE_HOME_BACKUP_ARCHIVE not set"; fi'
