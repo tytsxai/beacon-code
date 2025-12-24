@@ -29,6 +29,9 @@ this project; state lives under `$CODE_HOME` (default `~/.code`).
       network_access = false
       ```
     - [ ] For long-running services, set `CODE_SECURE_MODE=1` in the environment.
+    - [ ] Ensure `CODE_HOME` is owned by the service user and not group/world
+          readable (e.g., `chmod 700` on the directory or `UMask=0077` in your
+          service manager).
 - [ ] **Runtime guardrails**:
     - [ ] Pin `auto_upgrade_enabled` explicitly (recommended: `false` for production).
     - [ ] If Auto Drive is enabled, set `[auto_drive]` limits for `token_budget`,
@@ -107,7 +110,7 @@ this project; state lives under `$CODE_HOME` (default `~/.code`).
   service directly on a network socket; the app-server has no built-in auth. If
   you wrap it with HTTP, add authn/z and restrict clients to trusted callers.
 - [ ] **Liveness**: treat a successful `Initialize` response as a health check.
-  - Optional script: `scripts/ops/healthcheck-app-server.sh /path/to/socket`.
+  - Optional script: `scripts/ops/healthcheck-app-server.sh /path/to/socket --timeout 5`.
 - [ ] **Runbook**: follow `docs/ops/app-server-runbook.md` for supervisor and
   socket activation examples.
 - [ ] **Environment**:

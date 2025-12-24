@@ -38,6 +38,7 @@ Environment=RUST_LOG=info
 ExecStart=/usr/bin/socat -d -d UNIX-LISTEN=/run/code-app-server/app-server.sock,mode=0660,fork EXEC:/usr/local/bin/code-app-server,stderr
 RuntimeDirectory=code-app-server
 RuntimeDirectoryMode=0750
+UMask=0077
 Restart=on-failure
 RestartSec=2
 LimitNOFILE=65536
@@ -94,6 +95,7 @@ Environment=CODE_HOME=/var/lib/code
 Environment=CODE_SECURE_MODE=1
 Environment=RUST_LOG=info
 ExecStart=/usr/local/bin/code-app-server
+UMask=0077
 ```
 
 Enable the socket unit:
@@ -115,7 +117,7 @@ printf '{"id":0,"method":"initialize","params":{"clientInfo":{"name":"healthchec
 
 Optional automation:
 ```
-scripts/ops/healthcheck-app-server.sh /run/code-app-server/app-server.sock
+scripts/ops/healthcheck-app-server.sh /run/code-app-server/app-server.sock --timeout 5
 ```
 
 ## Observability
