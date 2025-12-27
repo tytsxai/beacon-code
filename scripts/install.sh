@@ -7,6 +7,10 @@
 #   或
 #   ./install.sh [--version 0.6.0] [--install-dir ~/.beacon-code]
 #
+# 说明:
+# - 默认会下载并校验 GitHub Release 附带的 SHA256SUMS.txt。
+# - 如需跳过校验（不推荐）：BEACON_SKIP_CHECKSUM=1
+#
 
 set -euo pipefail
 
@@ -107,6 +111,53 @@ download() {
     fi
 }
 
+sha256_file() {
+    local path="$1"
+
+    if command -v sha256sum &>/dev/null; then
+        sha256sum "$path" | awk '{print $1}'
+    elif command -v shasum &>/dev/null; then
+        shasum -a 256 "$path" | awk '{print $1}'
+    else
+        error "需要 sha256sum 或 shasum 来校验下载内容"
+        exit 1
+    fi
+}
+
+verify_release_asset_checksum() {
+    local sums_path="$1"
+    local asset_name="$2"
+    local asset_path="$3"
+
+    if [[ "${BEACON_SKIP_CHECKSUM:-0}" == "1" ]]; then
+        warn "跳过校验 (BEACON_SKIP_CHECKSUM=1): $asset_name"
+        return 0
+    fi
+
+    if [[ ! -f "$sums_path" ]]; then
+        error "缺少校验文件: $sums_path"
+        exit 1
+    fi
+
+    local expected actual
+    expected=$(awk -v f="$asset_name" '$2==f {print $1; exit}' "$sums_path")
+    if [[ -z "$expected" ]]; then
+        error "在 SHA256SUMS.txt 中找不到: $asset_name"
+        exit 1
+    fi
+    actual=$(sha256_file "$asset_path")
+    local actual_l expected_l
+    actual_l=$(echo "$actual" | tr '[:upper:]' '[:lower:]')
+    expected_l=$(echo "$expected" | tr '[:upper:]' '[:lower:]')
+    if [[ "$actual_l" != "$expected_l" ]]; then
+        error "校验失败: $asset_name"
+        error "expected: $expected"
+        error "actual:   $actual"
+        exit 1
+    fi
+    info "校验通过: $asset_name"
+}
+
 # 解压 zstd 文件
 extract_zst() {
     local src="$1"
@@ -163,7 +214,20 @@ install() {
 
     local archive_path="$tmp_dir/$archive_name"
 
+    # Download checksums first so we can verify every asset.
+    local sums_url sums_path
+    sums_url="${base_url}/SHA256SUMS.txt"
+    sums_path="$tmp_dir/SHA256SUMS.txt"
+    if [[ "${BEACON_SKIP_CHECKSUM:-0}" != "1" ]]; then
+        if ! download "$sums_url" "$sums_path"; then
+            error "无法下载 SHA256SUMS.txt: $sums_url"
+            error "如需跳过校验（不推荐），请设置: BEACON_SKIP_CHECKSUM=1"
+            exit 1
+        fi
+    fi
+
     download "$download_url" "$archive_path"
+    verify_release_asset_checksum "$sums_path" "$archive_name" "$archive_path"
 
     # 解压
     if ! extract_zst "$archive_path" "$bin_path"; then
@@ -173,7 +237,8 @@ install() {
             download_url="${base_url}/${archive_name}"
             archive_path="$tmp_dir/$archive_name"
             download "$download_url" "$archive_path"
-            tar -xzf "$archive_path" -C "$INSTALL_DIR/bin"
+            verify_release_asset_checksum "$sums_path" "$archive_name" "$archive_path"
+            tar -xzf "$archive_path" -C "$INSTALL_DIR/bin" --no-same-owner --no-same-permissions
         else
             error "无法解压文件，请安装 zstd"
             exit 1
@@ -225,6 +290,7 @@ Beacon Code 安装脚本
 环境变量:
     BEACON_VERSION       同 --version
     BEACON_INSTALL_DIR   同 --install-dir
+    BEACON_SKIP_CHECKSUM 跳过 SHA256 校验 (不推荐，默认: 0)
 
 示例:
     $0                           # 安装最新版本

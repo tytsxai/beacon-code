@@ -122,6 +122,25 @@ case "$action" in
       exit 1
     fi
 
+    # Reject archives with paths that could escape the target directory.
+    # Allow only relative paths without '..' components.
+    unsafe_paths="$(tar -tzf "$backup_in" \
+      | sed -e 's#^\./##' \
+      | awk '
+          $0 ~ /^\// { print; next }
+          $0 == ".." { print; next }
+          $0 ~ /^\.\.$/ { print; next }
+          $0 ~ /^\.\.\// { print; next }
+          $0 ~ /\/\.\.(\/|$)/ { print; next }
+          $0 ~ /\\/ { print; next }
+        '
+      | head -n 20)"
+    if [ -n "$unsafe_paths" ]; then
+      echo "Error: backup contains unsafe paths (refusing to extract):" >&2
+      echo "$unsafe_paths" >&2
+      exit 1
+    fi
+
     mkdir -p "$code_home"
 
     if [ "$force_restore" != "true" ]; then
@@ -134,7 +153,7 @@ case "$action" in
       done <<< "$entries"
     fi
 
-    tar -xzf "$backup_in" -C "$code_home"
+    tar -xzf "$backup_in" -C "$code_home" --no-same-owner --no-same-permissions
     echo "Restore completed into: $code_home"
     ;;
   *)
