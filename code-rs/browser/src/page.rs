@@ -2164,14 +2164,9 @@ impl Page {
 }})()"#
         );
 
-        tracing::debug!("Executing JavaScript code: {}", code);
-        tracing::debug!("Wrapped code: {}", wrapped);
-
         // Execute the wrapped code - chromiumoxide's evaluate method handles async functions
         let result = self.cdp_page.evaluate(wrapped).await?;
         let result_value = result.value().cloned().unwrap_or(serde_json::Value::Null);
-
-        tracing::debug!("JavaScript execution result: {}", result_value);
 
         // Give a very brief moment for potential navigation or DOM updates triggered
         // by the script. Keep this low to avoid inflating tool latency.
